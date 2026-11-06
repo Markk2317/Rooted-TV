@@ -1919,12 +1919,51 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
 }
 
 HttpFrontDoor::~HttpFrontDoor() {
+    if (homeKeyWatcher_) homeKeyWatcher_->stop();
     std::shared_ptr<LunaSubscription> subscription;
     {
         std::lock_guard<std::mutex> lock(homePictureMutex_);
         subscription = std::move(homePictureVideoSubscription_);
     }
     if (subscription) subscription->stop();
+}
+
+void HttpFrontDoor::startHomeKeyWatcher() {
+    if (homeKeyWatcher_) return;
+    // Where Native Tv Home can take LG's Home's place, the takeover does this job.
+    if (service::homeStatusSupported(homeStatusWebosVersion(systemRoot_),
+                                     config_.document["allowExperimentalHome"].boolean())["ok"].boolean())
+        return;
+    HomeKeyWatcherOptions options;
+    options.logPath = (systemRoot_ == "/" ? std::string() : systemRoot_) + "/var/log/messages";
+    std::unique_ptr<HomeKeyWatcher> watcher(new HomeKeyWatcher(
+        [this]() { return currentConfigDocument()["homeButtonOpensNativeHome"].boolean(); },
+        [this](const std::string &foregroundId) {
+            // The TV app in front already: a launch would change nothing (sam brings forward only
+            // a card that is behind), so Back closes the ribbon over it, and the app, given the
+            // focus back, opens its Home from /api/caps. Back goes as the network remote's 412:
+            // KEY_BACK written to the IR remote's input device leaves the ribbon open on webOS 3.4.
+            if (foregroundId == kHomeClientApp) {
+                Json back = Json::object();
+                back.set("keyCode", Json::numeric(412));
+                LunaReply reply;
+                (void)waitForLuna(luna_, "com.webos.service.networkinput/test/sendKeyCode", back,
+                                  reply);
+                return;
+            }
+            // Launched over the ribbon, the app comes to the front within 20 ms and the ribbon
+            // goes (an OLED55C6V on webOS 3.4.3); a cold start opens on Home.
+            Json params = Json::object();
+            params.set("screen", Json::text("home"));
+            Json payload = Json::object();
+            payload.set("id", Json::text(kHomeClientApp));
+            payload.set("params", params);
+            LunaReply reply;
+            if (!waitForLuna(luna_, "com.webos.applicationManager/launch", payload, reply) && logger_)
+                logger_->warning("home key: the TV app did not open");
+        },
+        logger_, options));
+    if (watcher->start()) homeKeyWatcher_ = std::move(watcher);
 }
 
 void HttpFrontDoor::ensureHomePictureTracking() const {
@@ -2456,6 +2495,9 @@ Json HttpFrontDoor::serverStatus() const {
     // Whether films and series are on: the key itself is never sent back.
     status.set("tmdbKeySet", Json::flag(!trimmedText(document["tmdbKey"].string()).empty()));
     status.set("youtubeKeySet", Json::flag(!trimmedText(document["youtubeKey"].string()).empty()));
+    // Offered where the watcher runs: webOS 3.4's Home is the compositor's, not an app.
+    status.set("homeButton", homeKeyWatcher_
+        ? Json::flag(document["homeButtonOpensNativeHome"].boolean()) : Json());
     status.set("watchHistory", historyRecorder_ ? historyRecorder_->status() : Json());
 
     Json backupDaily = Json::object();
@@ -2573,6 +2615,16 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         if (!releaseChecker_) return fail("no release check configured");
         std::string error;
         (void)releaseChecker_->check(error); // a failure is shown by the status, with the reason
+        return answer();
+    }
+    if (action == "setHomeButton") {
+        if (!value.isBoolean()) return fail("setHomeButton takes true or false");
+        Json change = Json::object();
+        change.set("homeButtonOpensNativeHome", Json::flag(value.boolean()));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
         return answer();
     }
     if (action == "setTmdbKey") {
@@ -12360,6 +12412,9 @@ void HttpFrontDoor::setControl(HttpExchange &exchange) const {
                 const CommandDecision decision = commandPolicy_->executeLocal(
                     localCommand, policyContext, false,
                     [this]() {
+                        // LG's Home asked for: not taken for a press of the Home button.
+                        if (homeKeyWatcher_)
+                            homeKeyWatcher_->suppressFor(std::chrono::milliseconds(4000));
                         return service::injectRemoteHomeKey(procRoot_, systemRoot_);
                     }, reply);
                 answered = decision.kind == CommandDecisionKind::Allowed &&
@@ -17021,8 +17076,13 @@ Json HttpFrontDoor::openLgHomeEscape(int &status) const {
     LunaReply launchReply;
     if (!waitForLuna(luna_, "com.webos.applicationManager/launch",
                      launchPayload, launchReply) ||
-        !service::javascriptTruthy(launchReply.response["returnValue"]))
-        return fail(say::msg("srv.home.launchRefused", "the TV would not open it"));
+        !service::javascriptTruthy(launchReply.response["returnValue"])) {
+        // webOS 3 to 5 have no Home app: LG's Home is the compositor's, opened by the Home key,
+        // which the Home button watcher is told to leave alone.
+        if (homeKeyWatcher_) homeKeyWatcher_->suppressFor(std::chrono::milliseconds(4000));
+        if (!service::injectRemoteHomeKey(procRoot_, systemRoot_))
+            return fail(say::msg("srv.home.launchRefused", "the TV would not open it"));
+    }
 
     Json success = Json::object();
     success.set("ok", Json::flag(true));
@@ -18178,8 +18238,12 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
         return;
     }
     if (request.uri == "/api/caps") {
-        const Json caps = nativeCapabilities(config_, version_, dataRoot_, request.remoteAddress,
-                                             localIpv4Address());
+        Json caps = nativeCapabilities(config_, version_, dataRoot_, request.remoteAddress,
+                                       localIpv4Address());
+        if (homeKeyWatcher_) {
+            const Json homeKey = homeKeyWatcher_->status();
+            if (homeKey.isObject()) caps.set("homeKey", homeKey);
+        }
         (void)exchange.respond(200,
                                {{"Content-Type", "application/json"},
                                 {"Cache-Control", "no-store"},

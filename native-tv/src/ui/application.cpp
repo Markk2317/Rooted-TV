@@ -108,6 +108,9 @@ void Application::active(bool value) {
     if (value) {
         capsAt_ = std::min(capsAt_, now_ + 300);
         if (state_.screen != Screen::Splash) {
+            // Asked again on every return: where the server brings the app forward for LG's Home
+            // button (webOS 3.4), the answer says so and the app opens its Home.
+            services_.read("caps", Operation::Capabilities);
             syncWallpaper();
             refresh();
         }

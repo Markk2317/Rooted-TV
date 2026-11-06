@@ -4,6 +4,7 @@
 #include "daemon/command_policy.hpp"
 #include "daemon/app_install_upload_reservation.hpp"
 #include "daemon/http_auth.hpp"
+#include "daemon/home_key_watcher.hpp"
 #include "daemon/hostname_cache.hpp"
 #include "daemon/http_proxy.hpp"
 #include "daemon/http_static_assets.hpp"
@@ -161,6 +162,9 @@ class HttpFrontDoor {
     // daemon's main scope, so it hands the front door their accessors.
     void setStatusProviders(std::function<Json()> ntp, std::function<Json()> syslog);
     void setTvAppManager(TvAppManager *manager) { tvAppManager_ = manager; }
+    // Where LG's Home cannot be replaced (webOS 3.4), follows the compositor for LG's Home being
+    // opened and, with `homeButtonOpensNativeHome` set, brings Native Tv Home forward instead.
+    void startHomeKeyWatcher();
     // Whether GitHub has a newer release: the Server tab's Check button, and
     // the opt-in daily check (checkReleaseIfDue, run hourly).
     void setReleaseChecker(service::ReleaseChecker *checker) { releaseChecker_ = checker; }
@@ -574,6 +578,8 @@ class HttpFrontDoor {
     mutable std::string handoffCode_;
     mutable std::string retiredHandoffCode_;
     mutable std::chrono::steady_clock::time_point handoffExpires_;
+    // Last, so its thread, which calls into the front door, stops before anything else goes.
+    std::unique_ptr<HomeKeyWatcher> homeKeyWatcher_;
 };
 } // namespace daemon
 } // namespace nativetv

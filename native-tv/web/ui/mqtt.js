@@ -494,6 +494,11 @@ async function saveSettings() {
     device: { id: q('cfg-devid').value, name: q('cfg-devname').value },
     iconServer: cfgIcons
   };
+  // Home Assistant's web port given as the broker's: the bridge would get HTTP back, not MQTT.
+  if (String(body.mqtt.port) === '8123') {
+    cfgMsg(t('mqtt.portIsHa', 'Port 8123 is Home Assistant’s web page, not its MQTT broker, which usually listens on 1883.'), 'bad');
+    return;
+  }
   // An untouched password field means "keep the stored one", not "clear it".
   const pass = q('cfg-pass').value;
   if (pass !== '' || !cfgPasswordSet) body.mqtt.password = pass;

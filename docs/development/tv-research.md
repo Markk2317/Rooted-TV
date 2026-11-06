@@ -1755,3 +1755,14 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   to the Wi-Fi MAC (`network.wolwowlOnOff` on) brought it back in 7 s with the
   server answering at once: same pid, uptime carried on, the screen saver's
   bind mount still in place.
+- LG's Home is not an app: `com.webos.app.home` is refused, and the Home key shows a
+  ribbon the surface manager draws (`com.webos.app.remoteUserList`, with
+  `com.webos.app.scrim`) over the card in front, which stays the foreground app.
+  Each opening is logged at once as `LSM NL_HOME_SHOWN {"CLOCK":...,"foregroundId":
+  "<the card in front>"}` in `/var/log/messages`. A launch of another app while
+  the ribbon shows brings that app to the front (16 ms after the launch) and
+  the ribbon goes; a launch of the app that is in front changes nothing. The
+  network remote's Back (`networkinput/test/sendKeyCode` with 412) closes the
+  ribbon, and the app beneath gets its focus back; `KEY_BACK` written to the IR
+  remote's input device (`LGE RCU`, event1) does not, while `KEY_LEFTMETA`
+  written there opens the ribbon.

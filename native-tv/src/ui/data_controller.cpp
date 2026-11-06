@@ -149,6 +149,16 @@ void Application::response(const Response &response) {
         if (data["setupNeeded"].boolean() &&
             !(screen_ && screen_->name().compare(0, 6, "setup:") == 0))
             route("setup:welcome");
+        // Brought forward by the Home button within the last seconds (the server's HomeKeyWatcher,
+        // webOS 3.4): open Home, as the TV's Home button would. An older press is only noted.
+        const Json homeKey = data["homeKey"];
+        if (homeKey["seq"].isNumber()) {
+            const double seq = homeKey["seq"].number();
+            if (seq != homeKeySeq_ && homeKey["agoMs"].number() < 5000 &&
+                !(screen_ && screen_->name().compare(0, 6, "setup:") == 0))
+                route("home");
+            homeKeySeq_ = seq;
+        }
     } else if (response.channel == "catalogue") {
         state_.catalogue = data;
         if (state_.serverSilent) {

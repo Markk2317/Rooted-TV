@@ -58,6 +58,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/daily_backup_scheduler.cpp src/daemon/game_frame_rate.cpp
   src/daemon/home_boot_manager.cpp
   src/daemon/home_crash_breaker.cpp
+  src/daemon/home_key_watcher.cpp
   src/daemon/home_orchestrator.cpp
   src/daemon/home_probe_gate.cpp
   src/daemon/home_restore_manager.cpp
@@ -361,6 +362,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-home-now-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-now-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
   add_test(NAME native-home-now COMMAND native-home-now-tests)
+  add_executable(native-home-key-watcher-tests tests/home_key_watcher.cpp)
+  target_link_libraries(native-home-key-watcher-tests PRIVATE nativetv_daemon Threads::Threads)
+  target_compile_options(native-home-key-watcher-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-home-key-watcher COMMAND native-home-key-watcher-tests)
   add_executable(native-home-status-tests tests/home_status.cpp)
   target_link_libraries(native-home-status-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-status-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)

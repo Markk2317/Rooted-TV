@@ -1456,6 +1456,39 @@
               </button>
             </div>
           </div>
+          <div class="prot-row" id="home-button-row" hidden>
+            <div class="prot-main">
+              <div
+                class="prot-title"
+                id="home-button-title"
+                data-t="home.button"
+              >
+                Home button
+              </div>
+              <div
+                class="prot-desc"
+                id="home-button-desc"
+                data-t="home.buttonDesc"
+              >
+                Opens Native Tv Home when LG's Home is opened with the remote's
+                Home button. LG's Home shows for a moment first; the LG Home
+                tile still opens it.
+              </div>
+            </div>
+            <div class="prot-status">
+              <button
+                type="button"
+                class="pill idle"
+                id="home-button"
+                onclick="homeButtonToggle()"
+                aria-labelledby="home-button-title"
+                aria-describedby="home-button-desc"
+                aria-pressed="false"
+              >
+                &mdash;
+              </button>
+            </div>
+          </div>
           <div class="prot-row" id="home-startup-row" hidden>
             <div class="prot-main">
               <div

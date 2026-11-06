@@ -111,6 +111,7 @@ class Application : private ScreenHost {
     // ink cover for at most 2.5 s so the page that is about to be replaced is not seen.
     bool capsAnswered_ = false, holdForCaps_ = false;
     uint32_t capsAt_ = 0;
+    double homeKeySeq_ = -1; // the server's count of Home presses it brought the app forward for
     std::string initial_;
     unsigned recentSnapshot_ = 0;
     std::string confirmId_;

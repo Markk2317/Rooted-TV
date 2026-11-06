@@ -67,14 +67,31 @@ async function loadHome(afterSave) {
    Each key is saved on the TV through the server and never read back: the page only learns whether one is set. */
 let tmdbKeySet = false;
 let youtubeKeySet = false;
+// null where the server offers no Home button switch (LG's Home is replaced, or none to watch).
+let homeButtonOn = null;
 async function loadHomeKeys() {
   try {
     const status = await (await fetch(api('/api/update'), { cache: 'no-store' })).json();
     tmdbKeySet = status.tmdbKeySet === true;
     youtubeKeySet = status.youtubeKeySet === true;
+    homeButtonOn = typeof status.homeButton === 'boolean' ? status.homeButton : null;
   } catch (e) { return; }
+  renderHomeButton();
   renderTmdb();
   renderYoutube();
+}
+function renderHomeButton() {
+  const row = q('home-button-row'), btn = q('home-button');
+  if (!row || !btn) return;
+  row.hidden = homeButtonOn === null;
+  updateToggle(btn, { cls: homeButtonOn ? 'good' : 'idle', label: homeButtonOn ? t('home.buttonNativeTv', 'Native Tv Home') : t('home.buttonLg', 'LG’s Home'), on: !!homeButtonOn });
+  btn.setAttribute('aria-pressed', String(!!homeButtonOn));
+  btn.disabled = !homeWritable();
+}
+async function homeButtonToggle() {
+  if (homeButtonOn === null) return;
+  const r = await sendCommand('setHomeButton', !homeButtonOn);
+  if (r && r.ok) { homeButtonOn = r.homeButton === true; renderHomeButton(); }
 }
 function renderTmdb() {
   const row = q('home-tmdb-row');
