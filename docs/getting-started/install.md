@@ -95,6 +95,8 @@ version (webOS 2.2 and older webOS 3 releases are untried). Hardware acceptance 
 covers a B3 on webOS 10.3.2 and a 2016 C6 on webOS 3.4.3. webOS 3.4 runs no root hook at
 boot, so there the server starts once the Native Tv tile or the Homebrew Channel is opened after
 a power-on: the tile asks the Homebrew Channel to run its startup script when no server answers.
+With Quick Start on, switching off and on keeps the server running, so only a full restart or a
+power cut needs the tile.
 
 Then, from the repository root in a terminal:
 

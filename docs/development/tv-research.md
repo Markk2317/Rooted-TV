@@ -1749,3 +1749,9 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   `_WEBOS_WINDOW_TYPE_SCREENSAVER` (Qt 5.4, `Eos.Window`, QtQuick 2.4 and
   `QtQuick.Particles` are there), started by tvpower like LG's and closed by any
   key. `applicationManager/blockSystemApp` is refused.
+- With Quick Start on (`option.quickStartMode`), a power-off from the dashboard
+  went to Active Standby while the short panel cycle ran (about 5 minutes,
+  `pnwash/state` `1 0`), then to standby, off the network. A Wake-on-LAN packet
+  to the Wi-Fi MAC (`network.wolwowlOnOff` on) brought it back in 7 s with the
+  server answering at once: same pid, uptime carried on, the screen saver's
+  bind mount still in place.
