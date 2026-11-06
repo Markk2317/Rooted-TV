@@ -124,6 +124,8 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab, float away) {
     bar.settingsFocus = static_cast<float>(motion.value("f:gr"));
     bar.search = state.discover["titlesEnabled"].boolean();
     bar.searchFocus = static_cast<float>(motion.value("f:sr"));
+    bar.assistant = state.discover["assistant"].boolean();
+    bar.assistantFocus = static_cast<float>(motion.value("f:as"));
     bar.clock = clockText(state);
     bar.enter = {1 - away, -kBarRise * away};
     kit::topBar(paint, bar);

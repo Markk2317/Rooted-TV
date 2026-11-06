@@ -248,7 +248,10 @@ void topBar(Paint paint, const TopBar &bar) {
     Rect tabCapsule = geometry::capsule(geometry::capsuleLeft(), tabsRight + layout::capsulePad);
     scene.shape(tabCapsule, alpha::capsule, roundRadius(tabCapsule));
     Rect gear = geometry::settingsButton(tabsRight);
-    Rect gearCapsule = geometry::capsule(gear.x - 2 * layout::capsulePad,
+    const Rect assistantButton = gear;
+    if (bar.assistant)
+        gear.x += layout::circle + 2 * layout::capsulePad;
+    Rect gearCapsule = geometry::capsule(assistantButton.x - 2 * layout::capsulePad,
                                          gear.x + gear.w + 2 * layout::capsulePad);
     scene.shape(gearCapsule, alpha::capsule, roundRadius(gearCapsule));
     tabPill(paint, bar.pillLeft, bar.pillRight, bar.pillHot, bar.pillAlpha);
@@ -283,6 +286,16 @@ void topBar(Paint paint, const TopBar &bar) {
               type::nav.line},
              bar.tabs[i], type::nav, ink, Node::Align::Center);
         hit(scene, tabs[i], "nav:tab:" + std::to_string(i));
+    }
+
+    if (bar.assistant) {
+        RoundButton assistant;
+        assistant.rest = assistantButton;
+        assistant.id = "tool:3";
+        assistant.icon = "sparkle";
+        assistant.fill = clear;
+        assistant.focus = bar.assistantFocus;
+        roundButton(paint, assistant);
     }
 
     RoundButton settings;

@@ -37,6 +37,8 @@
 #include "daemon/volume_ceiling_enforcer.hpp"
 #include "daemon/state_subscriptions.hpp"
 #include "domain/names.hpp"
+#include <curl/curl.h>
+#include <map>
 #include "domain/say.hpp"
 #include "domain/say_translation.hpp"
 #include "service/hdmi_inputs.hpp"
@@ -2521,6 +2523,7 @@ Json HttpFrontDoor::serverStatus() const {
     // Whether films and series are on: the key itself is never sent back.
     status.set("tmdbKeySet", Json::flag(!trimmedText(document["tmdbKey"].string()).empty()));
     status.set("youtubeKeySet", Json::flag(!trimmedText(document["youtubeKey"].string()).empty()));
+    status.set("geminiKeySet", Json::flag(!trimmedText(document["geminiKey"].string()).empty()));
     // The Google account of the Home profile in use; the client secret and tokens are never sent.
     {
         Json account = youtubeAccounts_.status(activeHomeProfile(dataRoot_));
@@ -2739,6 +2742,25 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
                                                      live["youtubeClientSecret"].string(),
                                                      activeHomeProfile(dataRoot_));
         if (!started["ok"].boolean()) return fail(started["error"].string());
+        return answer();
+    }
+    if (action == "setGeminiKey") {
+        // The owner's Gemini API key, from Google AI Studio; "" removes it.
+        const std::string badKey = say::msg("srv.assistant.badKey",
+                                            "A Gemini API key is 20 to 100 letters, digits, - and _");
+        if (!value.isString()) return fail(badKey);
+        const std::string key = trimmedText(value.string());
+        bool valid = key.size() >= 20 && key.size() <= 100;
+        for (char character : key)
+            valid = valid && (std::isalnum(static_cast<unsigned char>(character)) ||
+                              character == '-' || character == '_');
+        if (!key.empty() && !valid) return fail(badKey);
+        Json change = Json::object();
+        change.set("geminiKey", Json::text(key));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
         return answer();
     }
     if (action == "setSaverCity") {
@@ -16625,6 +16647,9 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         result.set("rows", rows);
         result.set("profileTitles", service::HomeTitles::summary(titles));
     }
+    // The bar offers the assistant where a Gemini key is saved.
+    if (!document["geminiKey"].string().empty())
+        result.set("assistant", Json::flag(true));
     if (result["enabled"].boolean() && result["rows"].isArray() &&
         result["rows"].size())
         homeImageProxy_.retainAndWarm(result["rows"]);
@@ -16848,6 +16873,218 @@ void HttpFrontDoor::handleHomeWallpaperUpload(HttpExchange &exchange) const {
                             {"Cache-Control", "no-store"},
                             {"X-Content-Type-Options", "nosniff"}},
                            response.dump());
+}
+
+namespace {
+size_t appendLoopback(char *data, size_t size, size_t count, void *context) {
+    std::string *body = static_cast<std::string *>(context);
+    if (body->size() + size * count > 256 * 1024) return 0;
+    body->append(data, size * count);
+    return size * count;
+}
+} // namespace
+
+Json HttpFrontDoor::loopbackPost(const std::string &path, const Json &body) const {
+    CURL *curl = curl_easy_init();
+    if (!curl) return Json();
+    const std::string url = "http://127.0.0.1:" +
+                            std::to_string(config_.port != 0 ? config_.port : 8080) + path;
+    const std::string payload = body.dump();
+    std::string answer;
+    struct curl_slist *headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    if (!config_.token.empty())
+        headers = curl_slist_append(headers, ("Authorization: Bearer " + config_.token).c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, static_cast<long>(payload.size()));
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 20000L);
+    curl_easy_setopt(curl, CURLOPT_PROXY, "");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, appendLoopback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &answer);
+    const CURLcode code = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    curl_slist_free_all(headers);
+    return code == CURLE_OK ? Json::parse(answer) : Json();
+}
+
+void HttpFrontDoor::handleAssistant(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const auto json = [&exchange](int status, const Json &body) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               body.dump());
+    };
+    const auto failure = [&json](int status, const std::string &error) {
+        Json body = Json::object();
+        body.set("ok", Json::flag(false));
+        body.set("error", Json::text(error));
+        json(status, body);
+    };
+    if (!config_.allowControl && !isLoopbackPeer(request.remoteAddress)) {
+        failure(403, say::msg("srv.controlsOff", "controls disabled in config"));
+        return;
+    }
+    Json payload;
+    if (!readAppInstallJson(exchange, payload, true))
+        return;
+    const Json document = currentConfigDocument();
+    const std::string key = document["geminiKey"].string();
+    if (key.empty()) {
+        failure(400, say::msg("srv.assistant.noKey", "Save a Gemini API key on the Native Tv Home tab first."));
+        return;
+    }
+    const std::string tmdbKey = document["tmdbKey"].string();
+    const std::string region = tvRegion(dataRoot_);
+    homeContent_.setRegion(region);
+    const Json apps = homeCatalogueAppsSnapshot();
+
+    // Where the TV is, for Gemini's instructions.
+    std::string installed;
+    for (const names::StreamingService &service : names::streamingServices())
+        if (!names::streamingApp(service, apps).empty())
+            installed += (installed.empty() ? "" : ", ") + service.name;
+    std::string context = "The TV is in the country with the ISO code " +
+                          (region.empty() ? std::string("unknown") : region) + ".";
+    context += installed.empty() ? " It has no streaming app of Netflix, Prime Video or Disney+."
+                                 : " Its streaming apps are " + installed + ".";
+
+    std::map<std::string, Json> found; // "movie:42" -> the title as search found it
+    Json shown = Json::array();
+    const auto titleOf = [&](const std::string &type, const Json &id) {
+        const std::string titleKey = type + ":" + (id.isNumber() ? compactNumber(id.number()) : id.string());
+        const auto known = found.find(titleKey);
+        if (known != found.end()) return known->second;
+        const Json details = homeContent_.details(tmdbKey, false, type,
+                                                  titleKey.substr(titleKey.find(':') + 1));
+        return details["item"].isObject() ? details["item"] : Json();
+    };
+    const service::Assistant::Tool tool = [&](const std::string &name, const Json &args) {
+        Json answer = Json::object();
+        if (name == "search_titles") {
+            const Json results = homeContent_.search(tmdbKey, args["query"].string());
+            Json list = Json::array();
+            for (const Json &item : results["items"].items()) {
+                if (list.size() == 8) break;
+                const std::string type = item["type"].string();
+                found[type + ":" + (item["id"].isNumber() ? compactNumber(item["id"].number())
+                                                          : item["id"].string())] = item;
+                Json brief = Json::object();
+                for (const char *field : {"id", "type", "title", "year", "rating"})
+                    brief.set(field, item[field]);
+                brief.set("overview", Json::text(item["overview"].string().substr(0, 200)));
+                list.add(brief);
+            }
+            answer.set("results", list);
+            if (!results["ok"].boolean(true)) answer.set("error", results["error"]);
+        } else if (name == "show_titles") {
+            for (const Json &wanted : args["titles"].items()) {
+                if (shown.size() == 8) break;
+                const Json item = titleOf(wanted["type"].string(), wanted["id"]);
+                if (item.isObject()) shown.add(item);
+            }
+            answer.set("shown", Json::numeric(static_cast<double>(shown.size())));
+        } else if (name == "open_title") {
+            const std::string type = args["type"].string();
+            const Json item = titleOf(type, args["id"]);
+            const Json details = item.isObject()
+                ? homeContent_.details(tmdbKey, false, type,
+                                       item["id"].isNumber() ? compactNumber(item["id"].number())
+                                                             : item["id"].string())
+                : Json();
+            answer.set("opened", Json::flag(false));
+            for (const Json &serviceKey : details["item"]["services"].items()) {
+                const names::StreamingService *service = names::streamingService(serviceKey.string());
+                if (!service || names::streamingApp(*service, apps).empty()) continue;
+                Json open = Json::object();
+                open.set("kind", Json::text("service"));
+                open.set("service", serviceKey);
+                open.set("type", Json::text(type));
+                open.set("id", details["item"]["id"]);
+                if (loopbackPost("/api/home/open", open)["ok"].boolean()) {
+                    answer.set("opened", Json::flag(true));
+                    answer.set("app", Json::text(service->name));
+                    break;
+                }
+            }
+            if (!answer["opened"].boolean())
+                answer.set("reason", Json::text("It is not on a streaming app of this TV in this country."));
+        } else if (name == "tv_control") {
+            const std::string action = args["action"].string();
+            const std::string value = args["value"].string();
+            Json control = Json::object();
+            std::string path = "/api/control";
+            if (action == "volume") {
+                control.set("action", Json::text("volume"));
+                control.set("value", Json::numeric(std::max(0, std::min(100, std::atoi(value.c_str())))));
+            } else if (action == "volume_up" || action == "volume_down") {
+                control.set("action", Json::text("volumeStep"));
+                control.set("value", Json::numeric(action == "volume_up" ? 5 : -5));
+            } else if (action == "mute" || action == "unmute") {
+                control.set("action", Json::text("mute"));
+                control.set("value", Json::flag(action == "mute"));
+            } else if (action == "screen_off") {
+                control.set("action", Json::text("screenOff"));
+            } else if (action == "input") {
+                control.set("action", Json::text("input"));
+                const std::string digits = value.substr(value.find_first_of("0123456789") == std::string::npos
+                                                            ? value.size() : value.find_first_of("0123456789"));
+                control.set("value", Json::text("hdmi" + digits.substr(0, 1)));
+            } else if (action == "play" || action == "pause") {
+                control.set("action", Json::text("media"));
+                control.set("value", Json::text(action));
+            } else if (action == "open_app") {
+                std::string wanted = value;
+                std::transform(wanted.begin(), wanted.end(), wanted.begin(),
+                               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                std::string appId;
+                for (const Json &app : apps.items()) {
+                    std::string title = app["title"].string();
+                    std::transform(title.begin(), title.end(), title.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                    if (!wanted.empty() && (title == wanted || title.find(wanted) != std::string::npos)) {
+                        appId = app["id"].string();
+                        if (title == wanted) break;
+                    }
+                }
+                if (appId.empty()) {
+                    answer.set("ok", Json::flag(false));
+                    answer.set("error", Json::text("No app of that name is installed."));
+                    return answer;
+                }
+                path = "/api/home/open";
+                control.set("kind", Json::text("app"));
+                control.set("id", Json::text(appId));
+            } else {
+                answer.set("ok", Json::flag(false));
+                answer.set("error", Json::text("unknown action"));
+                return answer;
+            }
+            const Json done = loopbackPost(path, control);
+            answer.set("ok", Json::flag(done["ok"].boolean()));
+            if (!done["ok"].boolean())
+                answer.set("error", done["error"].isString() ? done["error"] : Json::text("refused"));
+        } else {
+            answer.set("error", Json::text("unknown tool"));
+        }
+        return answer;
+    };
+    Json result = assistant_.ask(key, document["geminiModel"].string(),
+                                 payload["question"].string(), context, tool);
+    result.set("titles", shown);
+    if (shown.size()) homeImageProxy_.retainAndWarm([&shown]() {
+        Json rows = Json::array();
+        Json row = Json::object();
+        row.set("key", Json::text("assistant"));
+        row.set("items", shown);
+        rows.add(row);
+        return rows;
+    }());
+    json(result["ok"].boolean() ? 200 : 502, result);
 }
 
 bool HttpFrontDoor::handleScreensaverPhotos(HttpExchange &exchange) const {
@@ -18594,6 +18831,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (handleScreensaverPhotos(exchange))
         return;
+    if (request.uri == "/api/assistant" && request.method == "POST") {
+        handleAssistant(exchange);
+        return;
+    }
     if (request.uri == "/api/screensaver" && screensaverManager_) {
         if (request.method == "GET" || request.method == "HEAD") {
             sendScreensaverList(exchange);

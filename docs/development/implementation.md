@@ -1861,6 +1861,15 @@ title with its runtime in `HomeWatching` for the active profile; the daemon's `a
 was in front, at most four hours a session. The feed's `continue` row lists what has two
 minutes or more and is under 90% of the runtime, with `service` and `progress`.
 
+`POST /api/assistant` with `{question}` runs `service::Assistant`: Gemini's
+`generateContent` (`geminiModel`, default `gemini-flash-latest`) with four function
+declarations, `search_titles`, `show_titles`, `open_title` and `tv_control`, for up to six
+rounds; each model turn goes back as it came (thought signatures included) followed by the
+tools' answers. The front door runs the tools: TMDB search through `HomeContent`, the titles
+chosen for the reply, and opens and controls as loopback requests to `/api/home/open` and
+`/api/control`. The reply is `{ok, answer, titles}`; the feed carries `assistant: true` while
+a key is saved, and the TV's bar then shows the ✦ (`tool:3`, stop `tabs + 3`).
+
 `POST /api/home/open` with `kind: 'service'`, the service's key, type and
 TMDB ID opens the service's installed app (`netflix`; `amazon` or
 `amazon.global`; `com.disney.disneyplus-prod`), refused when none is

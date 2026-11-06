@@ -48,6 +48,7 @@ const GuardedRoute kGuardedRoutes[] = {
     {"/api/home/wallpapers/upload", ContentTypeRule::JpegExact},
     {"/api/screensaver/photos/upload", ContentTypeRule::JpegExact},
     {"/api/screensaver/photos/remove", ContentTypeRule::JsonPrefix},
+    {"/api/assistant", ContentTypeRule::JsonPrefix},
     {"/api/quickaccess", ContentTypeRule::JsonPrefix},
     {"/api/remotekeys", ContentTypeRule::JsonPrefix},
     {"/api/preload/toggle", ContentTypeRule::JsonPrefix},

@@ -312,6 +312,47 @@ void detailsFocusReturnChecks() {
 
 // ---- Editors ----------------------------------------------------------------------------------
 
+void assistantChecks() {
+    // With a Gemini key the bar has the assistant before the gear, as Google TV's Gemini button.
+    std::string feed = feedJson;
+    feed.replace(feed.find(R"("titlesEnabled":true)"), std::string(R"("titlesEnabled":true)").size(),
+                 R"("titlesEnabled":true,"assistant":true)");
+    World world;
+    world.reply("discover", feed.c_str(), 0);
+    world.settle(300);
+    check(world.app.activate("tool:3"), "The assistant is on the bar");
+    world.settle(300);
+    check(world.screen() == "assistant" && world.app.shows("Ask Gemini"), "It opens the assistant's page");
+    world.app.input("un film di boxe");
+    world.settle(600);
+    check(world.transport.count("assistant:ask") == 0, "Typing asks nothing yet");
+    check(world.app.activate("editor:kb:4:4"), "Ask is the keyboard's Done key");
+    check(world.transport.count("assistant:ask") == 1 &&
+              world.transport.last("assistant:ask").operation == Operation::Assistant &&
+              world.transport.last("assistant:ask").body["question"].string() == "un film di boxe" &&
+              world.snapshot()["contentState"].string() == "loading",
+          "Ask sends the question to the assistant");
+    world.reply("assistant:ask", R"({"ok":true,"answer":"Rocky is on Prime Video.","titles":[{"id":1366,"type":"movie","title":"Rocky"}]})");
+    world.settle(300);
+    check(world.snapshot()["answer"].string() == "Rocky is on Prime Video." &&
+              world.snapshot()["results"].number() == 1 && world.app.shows("Rocky is on Prime Video."),
+          "The answer shows over the titles it named");
+    check(world.app.activate("editor:kb:4:4") && world.snapshot()["zone"].string() == "results",
+          "Done with the question answered moves to the titles");
+    world.press(Key::Ok);
+    check(world.screen() == "details" && world.snapshot()["origin"].string() == "assistant",
+          "OK on a title opens its details over the answer");
+    world.press(Key::Back);
+    world.app.activate("editor:kb:4:4");
+    world.press(Key::Back);
+    world.app.input("?");
+    world.app.activate("editor:kb:4:4");
+    world.reply("assistant:ask", R"({"ok":false,"error":"Gemini: API key not valid."})", 502);
+    world.settle(300);
+    check(world.snapshot()["contentState"].string() == "error" && world.app.shows("Gemini: API key not valid."),
+          "Gemini's refusal is said as it gave it");
+}
+
 void searchChecks() {
     World world;
     world.openSearch();
@@ -671,6 +712,7 @@ int main() {
         profilesChecks();
         profilesFailureChecks();
         searchChecks();
+        assistantChecks();
         searchStateChecks();
         searchGridChecks();
         keyboardChecks();

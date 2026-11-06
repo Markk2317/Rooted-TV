@@ -19,6 +19,7 @@
 #include "service/home_titles.hpp"
 #include "service/home_watching.hpp"
 #include "service/weather.hpp"
+#include "service/assistant.hpp"
 #include "service/home_image_proxy.hpp"
 #include "service/home_picture.hpp"
 #include "service/home_open.hpp"
@@ -341,6 +342,11 @@ class HttpFrontDoor {
     // /api/screensaver/photos, /photo, /photos/upload, /photos/remove and /weather: the Photos
     // screen saver's pictures and weather. True when the request was one of them.
     bool handleScreensaverPhotos(HttpExchange &exchange) const;
+    // POST /api/assistant {"question"}: the Gemini assistant, with the TV's tools.
+    void handleAssistant(HttpExchange &exchange) const;
+    // A request to this server from itself, as the assistant's tools make them: the server's own
+    // checks apply. The reply's JSON, or null.
+    Json loopbackPost(const std::string &path, const Json &body) const;
     void sendHomeRecentApps(HttpExchange &exchange) const;
     void sendHomeRecentAppImage(HttpExchange &exchange) const;
     void handleHomeRecentAppsPost(HttpExchange &exchange) const;
@@ -450,6 +456,7 @@ class HttpFrontDoor {
     mutable service::HomeTitles homeTitles_;
     mutable service::HomeWatching homeWatching_;
     mutable service::Weather weather_;
+    mutable service::Assistant assistant_;
     mutable std::atomic<bool> screensaverPhotoUploadActive_{false};
     std::string configPath_;
     std::string hdmiSeenPath_;

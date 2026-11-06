@@ -20,6 +20,8 @@ void Application::route(const std::string &path) {
     }
     if (path == "search" && !state_.discover["titlesEnabled"].boolean())
         return;
+    if (path == "assistant" && !state_.discover["assistant"].boolean())
+        return;
     if (path != "refresh" && path.compare(0, 8, "install-") != 0 && path != "theme" &&
         path.compare(0, 4, "sub:") != 0) {
         if (std::unique_ptr<ScreenView> screen = registry_.create(path)) {
@@ -245,6 +247,7 @@ void Application::screenKey(Key key) {
             route(home.nav == home.tabs.size()       ? "profiles"
                   : home.nav == home.tabs.size() + 1 ? "quick"
                   : home.nav == home.tabs.size() + 2 ? "search"
+                  : home.nav == home.tabs.size() + 3 ? "assistant"
                                                      : "dashboard");
         return;
     }

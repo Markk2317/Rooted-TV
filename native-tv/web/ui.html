@@ -1841,6 +1841,56 @@
               <button type="button" class="pill bad" id="home-google-remove" onclick="homeGoogleRemove()" data-t="home.googleRemove" hidden>Remove client</button>
             </div>
           </div>
+          <div class="prot-row" id="home-gemini-row" hidden>
+            <div class="prot-main">
+              <div class="prot-title" data-t="home.gemini">
+                Gemini assistant
+              </div>
+              <div class="prot-desc" data-t="home.geminiDesc">
+                Adds the assistant to the bar of Native Tv Home, as Google TV's
+                Gemini button: ask for something to watch, or ask it to open a
+                title or turn the volume down. It needs a Gemini API key of your
+                own (free at aistudio.google.com, under Get API key). Each question
+                goes to Google with the key; the key is kept on the TV and never
+                shown again.
+              </div>
+              <div class="prot-desc" id="home-gemini-state" aria-live="polite"></div>
+              <div class="tmdb-key">
+                <input
+                  type="password"
+                  id="home-gemini-key"
+                  class="pill-sel"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="100"
+                  data-t-aria-label="home.geminiKeyLabel"
+                  aria-label="Gemini API key"
+                  placeholder="Gemini API key"
+                  data-t-placeholder="home.geminiKeyLabel"
+                />
+              </div>
+              <div class="tmdb-key" id="home-ask-box" hidden>
+                <input
+                  type="text"
+                  id="home-ask"
+                  class="pill-sel"
+                  autocomplete="off"
+                  maxlength="500"
+                  data-t-aria-label="home.askLabel"
+                  aria-label="Ask the assistant"
+                  placeholder="Ask the assistant"
+                  data-t-placeholder="home.askLabel"
+                  onkeydown="if (event.key === 'Enter') homeAsk()"
+                />
+                <button type="button" class="pill good" id="home-ask-send" onclick="homeAsk()" data-t="home.askSend">Ask</button>
+              </div>
+              <div class="prot-desc" id="home-ask-answer" aria-live="polite"></div>
+            </div>
+            <div class="prot-status">
+              <button type="button" class="pill good" id="home-gemini-save" onclick="homeGeminiSave()" data-t="home.geminiSave">Save</button>
+              <button type="button" class="pill bad" id="home-gemini-remove" onclick="homeGeminiRemove()" data-t="home.geminiRemove" hidden>Remove</button>
+            </div>
+          </div>
         </div>
 </article>
 <div id="home-more">

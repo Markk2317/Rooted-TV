@@ -41,6 +41,8 @@ The remote's **Red** key opens a focused title in Netflix immediately, without t
 ![A title's details on a B3: year, rating, genres, overview, cast, the Trailer button and More like this](../screenshots/tv-details.jpg)
 
 **Search**, which leads the bar's capsule before the tabs (Left from the first tab), finds films and series through TMDB.
+
+**Ask Gemini**, the ✦ before the gear where a Gemini API key is saved (below), is Google TV's Gemini button with the owner's own key: the same keyboard takes a question ("something funny on Prime tonight", "open Rocky", "turn the volume down"), **Ask** sends it, and the answer shows over the films and series it names, which open as from Search. Gemini can search TMDB, choose the titles to show, open a title in the streaming app of the TV that has it in the TV's country, and set the volume, mute, switch off the screen, change the HDMI input, open an installed app, and play or pause; each of these goes through the server's own routes, with their checks. It answers in the language of the question. The Native Tv Home tab has the same question box, for asking from a phone. The remote's microphone is not used.
 The on-screen keyboard, the one Setup uses, has Shift, a **123?** key for
 symbols, Delete, keys that move the caret and a space bar, with **Clear** under
 it; a physical keyboard also works. Search starts after two
@@ -142,6 +144,8 @@ A YouTube Data API key (free, made in the Google Cloud console with the YouTube 
 videos trending in the TV's country (in the US until the server knows it); OK plays the video in YouTube's app. YouTube's own
 personal suggestions cannot be read by anything but its app, so the row is the
 public list.
+
+**Gemini assistant**, on the same tab, takes a Gemini API key (free at aistudio.google.com, under Get API key), kept on the TV as `geminiKey` and never shown again; `geminiModel` in `config.json` picks a model other than `gemini-flash-latest`. With a key, the tab also has a box to ask the assistant from the phone, and the TV's bar the ✦.
 
 **Your YouTube subscriptions**, below it, signs the Home profile in use into a
 Google account with read-only access to YouTube (`youtube.readonly`), through

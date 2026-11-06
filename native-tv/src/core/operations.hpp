@@ -46,6 +46,7 @@ enum class Operation {
     ConfirmPackage,
     CancelPackage,
     Settings, // /api/settings: the dashboard's MQTT and device settings (setup's broker entry)
-    AdminUnlock // /api/admin/unlock: the four-digit admin PIN, answered with a session
+    AdminUnlock, // /api/admin/unlock: the four-digit admin PIN, answered with a session
+    Assistant    // /api/assistant: a question for the Gemini assistant
 };
 }

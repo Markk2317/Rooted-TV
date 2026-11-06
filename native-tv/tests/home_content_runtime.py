@@ -145,6 +145,9 @@ def main():
                 assert response.headers["Content-Type"] == "image/jpeg"
             status, body = post(port, "/api/screensaver/photos/upload", token, {"id": 1})
             assert status == 415
+            # Without a Gemini key the assistant asks nothing and says what it needs.
+            status, body = post(port, "/api/assistant", token, {"question": "un film"})
+            assert status == 400 and "Gemini" in json.loads(body)["error"], body
             status, body = get(port, "/api/screensaver/weather", token)
             assert status == 200 and json.loads(body)["ok"] is False
             status, body = post(port, "/api/screensaver/photos/remove", token, {"id": 0})

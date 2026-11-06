@@ -309,6 +309,8 @@ void Application::homeFocus(bool jump) {
             now = "f:gr";
         else if (home.nav == home.tabs.size() + 2)
             now = "f:sr";
+        else if (home.nav == home.tabs.size() + 3)
+            now = "f:as";
     } else if (home.editing && home.editHide)
         now = "f:eh"; // the Hide from Home button above the page
     else if (home.row < home.rows.size() && flow_.pendingTab < 0)

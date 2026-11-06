@@ -133,7 +133,8 @@ with `--time` and compares each with its PNG, per pixel with a tolerance,
 writing `<name>.actual.png` and `<name>.diff.png` when one fails;
 `golden.py update` rewrites the PNGs after an intended change. A case may name
 `"fixture": "home"`, which serves the stand-in daemon in `tests/home_fixture.py`
-(an invented catalogue, feed and generated artwork), and a `"script"` of timed
+(an invented catalogue, feed and generated artwork; `"assistant": true` adds the
+assistant to the bar and answers its questions), and a `"script"` of timed
 keys; the Home and Apps cases catch the page at rest, mid-entrance, with the
 pill stretched, after a row snap, on Continue watching (the bar gone up with the
 page) and with the recent apps open. The Quick drawer

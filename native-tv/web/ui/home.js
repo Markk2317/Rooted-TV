@@ -72,6 +72,7 @@ let homeButtonOn = null;
 // The Google account of the profile in use: {clientSet, linked, name, pending, error}.
 let googleAccount = null;
 let googleWatch = null;
+let geminiKeySet = false;
 async function loadHomeKeys() {
   try {
     const status = await (await fetch(api('/api/update'), { cache: 'no-store' })).json();
@@ -79,11 +80,13 @@ async function loadHomeKeys() {
     youtubeKeySet = status.youtubeKeySet === true;
     homeButtonOn = typeof status.homeButton === 'boolean' ? status.homeButton : null;
     googleAccount = status.youtubeAccount || null;
+    geminiKeySet = status.geminiKeySet === true;
   } catch (e) { return; }
   renderHomeButton();
   renderTmdb();
   renderYoutube();
   renderGoogle();
+  renderGemini();
 }
 function renderHomeButton() {
   const row = q('home-button-row'), btn = q('home-button');
@@ -181,6 +184,46 @@ async function homeGoogleSignIn() {
 async function homeGoogleSignOut() {
   const r = await sendCommand('youtubeSignOut');
   if (r && r.ok) { googleAccount = r.youtubeAccount || null; renderGoogle(); }
+}
+
+function renderGemini() {
+  const row = q('home-gemini-row');
+  if (!row) return;
+  row.hidden = false;
+  q('home-gemini-state').textContent = geminiKeySet
+    ? t('home.geminiOn', 'A Gemini key is saved. The assistant is on the bar of Native Tv Home.')
+    : t('home.geminiOff', 'No Gemini key is saved.');
+  q('home-gemini-remove').hidden = !geminiKeySet;
+  q('home-ask-box').hidden = !geminiKeySet;
+}
+async function homeGeminiSave() {
+  const input = q('home-gemini-key');
+  const key = input.value.trim();
+  if (!key) return;
+  const r = await sendCommand('setGeminiKey', key);
+  if (r && r.ok) { input.value = ''; geminiKeySet = r.geminiKeySet === true; renderGemini(); }
+}
+async function homeGeminiRemove() {
+  const r = await sendCommand('setGeminiKey', '');
+  if (r && r.ok) { geminiKeySet = r.geminiKeySet === true; renderGemini(); }
+}
+// Asked from the phone, answered here; what it opens or changes happens on the TV.
+async function homeAsk() {
+  const input = q('home-ask'), out = q('home-ask-answer'), send = q('home-ask-send');
+  const question = input.value.trim();
+  if (!question || send.disabled) return;
+  send.disabled = true;
+  out.textContent = t('home.askThinking', 'Asking…');
+  try {
+    const res = await fetch(api('/api/assistant'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question })
+    });
+    const r = await res.json();
+    if (!r.ok) throw new Error(r.error || t('home.askFailed', 'The assistant did not answer.'));
+    const names = (r.titles || []).map(x => x.title + (x.year ? ' (' + x.year + ')' : ''));
+    out.textContent = r.answer + (names.length ? '\n\n' + names.join(' · ') : '');
+  } catch (e) { out.textContent = e.message; }
+  finally { send.disabled = false; }
 }
 
 function homeWritable() { return !!(!homeSaving && homeStatus && (homeStatus.supported.ok || homeStatus.enabled || homeStatus.restorePending || homeStatus.inApp) && homeStatus.writable !== false); }

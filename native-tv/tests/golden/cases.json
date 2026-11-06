@@ -1015,6 +1015,10 @@
           "key": "left"
         },
         {
+          "at": 1590,
+          "key": "left"
+        },
+        {
           "at": 1620,
           "key": "ok"
         }
@@ -1040,6 +1044,10 @@
         },
         {
           "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 1590,
           "key": "left"
         },
         {
@@ -1080,6 +1088,10 @@
         },
         {
           "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 1590,
           "key": "left"
         },
         {
@@ -1174,6 +1186,38 @@
         },
         {
           "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 1800,
+          "key": "ok"
+        },
+        {
+          "at": 3000,
+          "text": "lo"
+        }
+      ]
+    },
+    {
+      "name": "assistant-answer",
+      "time": 4800,
+      "fixture": "home",
+      "assistant": true,
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
           "key": "right"
         },
         {
@@ -1190,7 +1234,39 @@
         },
         {
           "at": 3000,
-          "text": "lo"
+          "text": "stasera"
+        },
+        {
+          "at": 3200,
+          "key": "down"
+        },
+        {
+          "at": 3260,
+          "key": "down"
+        },
+        {
+          "at": 3320,
+          "key": "down"
+        },
+        {
+          "at": 3380,
+          "key": "right"
+        },
+        {
+          "at": 3440,
+          "key": "right"
+        },
+        {
+          "at": 3500,
+          "key": "right"
+        },
+        {
+          "at": 3560,
+          "key": "right"
+        },
+        {
+          "at": 3620,
+          "key": "ok"
         }
       ]
     }

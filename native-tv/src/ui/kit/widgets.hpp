@@ -66,6 +66,9 @@ struct TopBar {
     bool settingsSelected = false;
     // Search leads the tabs' capsule where titles can be searched.
     bool search = false;
+    // The assistant leads the gear's capsule where a Gemini key is saved, as Google TV's Gemini.
+    bool assistant = false;
+    float assistantFocus = 0;
     std::string clock;
     // After the clock and a divider, as Google TV ends its bar with its name.
     std::string wordmark = "Native Tv";
@@ -75,7 +78,7 @@ struct TopBar {
 // them along to make room for it.
 std::vector<Rect> tabRects(const Glyphs &glyphs, const std::vector<std::string> &tabs,
                            bool search = false);
-// Hits are "nav:avatar", "tool:2" (search), "nav:tab:<i>" and "nav:settings".
+// Hits are "nav:avatar", "tool:2" (search), "nav:tab:<i>", "tool:3" (assistant) and "nav:settings".
 void topBar(Paint paint, const TopBar &bar);
 void tabPill(Paint paint, float left, float right, float hot, float alpha = 1);
 

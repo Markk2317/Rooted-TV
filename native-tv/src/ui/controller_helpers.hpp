@@ -19,6 +19,9 @@ inline std::vector<size_t> navigationStops(const ViewState &state) {
     if (state.discover["titlesEnabled"].boolean())
         stops.insert(stops.begin() + (state.catalogue["profiles"].size() ? 1 : 0),
                      state.home.tabs.size() + 2);
+    // The assistant, where there is one, comes before the gear in their capsule.
+    if (state.discover["assistant"].boolean())
+        stops.push_back(state.home.tabs.size() + 3);
     stops.push_back(state.home.tabs.size() + 1);
     return stops;
 }

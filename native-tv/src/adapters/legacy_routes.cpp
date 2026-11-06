@@ -110,6 +110,8 @@ std::string legacyRoute(Operation operation, const Json &arguments) {
         return "/api/control";
     case Operation::OpenHomeItem:
         return "/api/home/open";
+    case Operation::Assistant:
+        return "/api/assistant";
     case Operation::SetProfile:
         return "/api/home/profile";
     case Operation::SetHomeLayout:

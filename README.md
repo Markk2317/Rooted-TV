@@ -183,6 +183,7 @@ Installing and running Native Tv needs no account or key: the dashboard, the TV 
 | :-- | :-- | :-- |
 | TMDB API key | The film and series rows, and what is popular on Netflix, Prime Video and Disney+ in the TV's country: titles, posters, details and trailers. Without it Home shows only what is on the TV | The browser dashboard: Apps, **Native Tv Home** tab, **Films and series** (or `"tmdbKey"` in `config.json`) |
 | YouTube Data API key | The **Trending on YouTube** row | The same tab, **Trending on YouTube** (or `"youtubeKey"` in `config.json`) |
+| Gemini API key | The ✦ assistant on Native Tv Home's bar, as Google TV's Gemini button | The same tab, **Gemini assistant** (or `"geminiKey"` in `config.json`) |
 | Google OAuth client (TVs and Limited Input devices) | **From your YouTube subscriptions**, for each profile signed in with Google | The same tab, **Your YouTube subscriptions** (or `"youtubeClientId"` and `"youtubeClientSecret"` in `config.json`) |
 
 The TV app has no field for either key. The Native Tv Home tab (`http://<tv-ip>:8080/?tab=home`) is on every TV the TV app runs on; it can switch Native Tv Home on in LG's Home's place on webOS 9 and 10, and on webOS 11 once `"allowExperimentalHome": true` is set. Elsewhere Native Tv Home is the TV app's own, opened with Back from its Settings.

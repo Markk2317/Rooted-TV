@@ -323,6 +323,13 @@ the account's subscriptions, its channels' latest uploads and those videos' deta
 hourly while Home is shown; the row is kept in `youtube-rows.json`, also 0600. Signing out
 deletes both and asks Google to revoke the token.
 
+A question asked of the assistant (on the TV or the dashboard) is sent to Google's Gemini
+API (`generativelanguage.googleapis.com`) with the saved `geminiKey`, together with the TV's
+country, which of Netflix, Prime Video and Disney+ it has, and the results of the tools
+Gemini calls: titles found on TMDB, whether a title opened, whether a control worked. Gemini
+gets nothing else from the TV. Its tools run as requests from the server to its own
+`/api/home/open` and `/api/control`, so `allowControl` and the other checks apply to them.
+
 A town saved for the Photos screen saver's weather is sent once to
 `geocoding-api.open-meteo.com` to find its coordinates, and those coordinates, rounded to
 three decimals, go to `api.open-meteo.com` at most every half hour while the screen saver

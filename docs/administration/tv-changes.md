@@ -236,6 +236,8 @@ marked not for it are kept in `home-titles.json` in the data directory, mode 060
 that app then stayed in front, are kept in `home-watching.json`, mode 0600, at most 20 for 30
 days.
 
+A saved Gemini API key is kept in `config.json` as `geminiKey`.
+
 The Photos screen saver's pictures are kept in `screensaver-photos/` in the data directory
 (at most 60 and 60 MB), and the town its weather is for in `config.json` as `saverWeather`
 (name and coordinates).

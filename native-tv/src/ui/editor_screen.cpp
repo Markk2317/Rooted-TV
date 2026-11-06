@@ -29,12 +29,15 @@ namespace layout = kit::layout;
 using kit::easing;
 using say::msg;
 
-constexpr const char *kSearch = "title:search", *kPad = "editor:kb", *kStatsMemory = "quick.stats";
+constexpr const char *kSearch = "title:search", *kAsk = "assistant:ask", *kPad = "editor:kb",
+                     *kStatsMemory = "quick.stats";
 constexpr float kLabelY = 150, kFieldY = 204, kFieldW = 890, kFieldH = 84, kStatusY = 300, kKeysY = 344,
                 kResultsX = 1020, kCardW = 396, kCardH = 222, kCardGap = 28, kCardPitch = kCardH + 32,
                 kResultsTop = 204, kResultsBottom = 1000;
 constexpr double kDebounceMs = 350;
-constexpr size_t kSearchMax = 80, kNameMax = 20, kMinQuery = 2;
+constexpr size_t kSearchMax = 80, kNameMax = 20, kMinQuery = 2, kQuestionMax = 300;
+// The assistant's answer sits over its titles: up to six lines of body text.
+constexpr int kAnswerLines = 6;
 
 std::string trim(const std::string &value) {
     size_t first = value.find_first_not_of(" \t\r\n");
@@ -63,10 +66,11 @@ class EditorScreen final : public ScreenView {
     enum class Zone { Keys, Clear, Results, Retry };
 
   public:
-    explicit EditorScreen(bool rename) : rename_(rename) {}
+    // `assistant`: the same page asks the Gemini assistant instead of searching as one types.
+    EditorScreen(bool rename, bool assistant) : rename_(rename), assistant_(assistant) {}
 
     std::string name() const override {
-        return details_ ? "details" : rename_ ? "rename" : "search";
+        return details_ ? "details" : rename_ ? "rename" : assistant_ ? "assistant" : "search";
     }
     bool hasBar() const override {
         return false;
@@ -85,10 +89,11 @@ class EditorScreen final : public ScreenView {
         KeyboardPad::Options options;
         options.id = kPad;
         options.origin = {kit::canvas::safeX, kKeysY, layout::keyW, layout::keyH};
-        options.maximum = rename_ ? kNameMax : kSearchMax;
+        options.maximum = rename_ ? kNameMax : assistant_ ? kQuestionMax : kSearchMax;
         pad_.begin(host.motion(), rename_ ? shownName(host) : "", options);
-        status_ = rename_ ? (pad_.value().empty() ? msg("tv.editor.enterName", "Enter a name") : hintForName())
-                          : msg("tv.editor.minimum", "Enter at least 2 characters");
+        status_ = rename_      ? (pad_.value().empty() ? msg("tv.editor.enterName", "Enter a name") : hintForName())
+                  : assistant_ ? askHint()
+                               : msg("tv.editor.minimum", "Enter at least 2 characters");
         Timeline timeline;
         Tween rise(1, 0, kit::motion::ms::base, easing(kit::motion::ease::out));
         for (int block = 0; block < 3; ++block) {
@@ -104,6 +109,7 @@ class EditorScreen final : public ScreenView {
             details_.reset();
         }
         host.services().cancel(kSearch);
+        host.services().cancel(kAsk);
         host.motion().erasePrefix("editor:");
     }
     bool update(ScreenHost &host) override {
@@ -150,7 +156,7 @@ class EditorScreen final : public ScreenView {
             if (key == Key::Left || key == Key::Up)
                 zoneTo(host, Zone::Keys);
             else if (key == Key::Ok)
-                searchTitles(host);
+                assistant_ ? ask(host) : searchTitles(host);
             break;
         }
         host.invalidate();
@@ -187,7 +193,7 @@ class EditorScreen final : public ScreenView {
             return;
         }
         if (id == "editor:retry") {
-            searchTitles(host);
+            assistant_ ? ask(host) : searchTitles(host);
         } else if (id == "editor:clear") {
             clearText(host);
         } else if (id.compare(0, 14, "editor:result:") == 0) {
@@ -208,6 +214,37 @@ class EditorScreen final : public ScreenView {
         if (details_) {
             details_->response(host, response);
             dropFinishedDetails(host);
+        }
+        if (response.channel == kAsk && searchGeneration_ && response.generation == searchGeneration_) {
+            searchGeneration_ = 0;
+            searching_ = false;
+            Json data = response.json();
+            results_.clear();
+            selected_ = 0;
+            if (!response.ok() || !data.valid() || !data["ok"].boolean()) {
+                searchError_ = true;
+                answer_.clear();
+                status_ = data["error"].string(msg("tv.editor.askFailed", "The assistant did not answer. Try again."));
+            } else {
+                searchError_ = false;
+                searchComplete_ = true;
+                answer_ = data["answer"].string();
+                for (const auto &item : data["titles"].items()) {
+                    Card card;
+                    card.id = item["id"].string();
+                    card.kind = "title";
+                    card.title = item["title"].string();
+                    card.subtitle = titleFacts(item);
+                    card.image = artwork(item);
+                    card.data = item;
+                    results_.push_back(card);
+                }
+                status_ = askHint();
+            }
+            if (results_.empty() && zone_ == Zone::Results)
+                zoneTo(host, Zone::Keys);
+            focusResult(host, true);
+            host.invalidate();
         }
         if (response.channel == kSearch && searchGeneration_ && response.generation == searchGeneration_) {
             searchGeneration_ = 0;
@@ -260,12 +297,14 @@ class EditorScreen final : public ScreenView {
         scene.pushOpacity(static_cast<float>(1 - headEnter));
         scene.pushTransform(Transform::translate(0, static_cast<float>(18 * headEnter)));
         paint.glyphs.text(scene, {kit::canvas::safeX, kLabelY, kFieldW, kit::type::title.line},
-                          rename_ ? msg("tv.editor.renameTitle", "Rename profile")
-                                  : msg("tv.editor.searchTitle", "Search films and series"),
+                          rename_      ? msg("tv.editor.renameTitle", "Rename profile")
+                          : assistant_ ? msg("tv.editor.askTitle", "Ask Gemini")
+                                       : msg("tv.editor.searchTitle", "Search films and series"),
                           kit::type::title, kit::color::onSurface2);
         kit::textField(paint, pad_.field(host.nowMs(), {kit::canvas::safeX, kFieldY, kFieldW, kFieldH},
-                                         rename_ ? msg("tv.editor.namePlaceholder", "Name")
-                                                 : msg("tv.editor.searchPlaceholder", "Title")));
+                                         rename_      ? msg("tv.editor.namePlaceholder", "Name")
+                                         : assistant_ ? msg("tv.editor.askPlaceholder", "Something to watch tonight")
+                                                      : msg("tv.editor.searchPlaceholder", "Title")));
         paint.glyphs.text(scene, {kit::canvas::safeX, kStatusY, kFieldW, kit::type::labelM.line}, status_,
                           kit::type::labelM,
                           searchError_ ? kit::color::bad : kit::color::onSurface3);
@@ -300,7 +339,7 @@ class EditorScreen final : public ScreenView {
     Json snapshot() const override {
         if (details_) {
             Json value = details_->snapshot();
-            value.set("origin", Json::text(rename_ ? "rename" : "search"));
+            value.set("origin", Json::text(rename_ ? "rename" : assistant_ ? "assistant" : "search"));
             return value;
         }
         Json value = Json::object();
@@ -314,6 +353,8 @@ class EditorScreen final : public ScreenView {
         value.set("focusedKey", Json::text(pad_.focusedKey()));
         value.set("contentStatus", Json::text(status_));
         value.set("contentState", Json::text(state()));
+        if (assistant_)
+            value.set("answer", Json::text(answer_));
         return value;
     }
 
@@ -330,6 +371,9 @@ class EditorScreen final : public ScreenView {
     static std::string hintForName() {
         return msg("tv.editor.limit", "Up to 20 characters");
     }
+    static std::string askHint() {
+        return msg("tv.editor.askHint", "Ask for something to watch, or to open a title or change the volume");
+    }
     std::string state() const {
         if (rename_)
             return trim(pad_.value()).empty() ? "empty" : "editing";
@@ -344,11 +388,16 @@ class EditorScreen final : public ScreenView {
     std::string doneLabel() const {
         if (rename_)
             return msg("tv.editor.save", "Save");
+        if (assistant_)
+            return results_.empty() || asked_ != trim(pad_.value()) ? msg("tv.editor.ask", "Ask")
+                                                                    : msg("tv.editor.resultsKey", "Results");
         return results_.empty() ? msg("tv.editor.search", "Search") : msg("tv.editor.resultsKey", "Results");
     }
     std::string doneIcon() const {
         if (rename_)
             return "check";
+        if (assistant_)
+            return results_.empty() || asked_ != trim(pad_.value()) ? "sparkle" : "arrowright";
         return results_.empty() ? "search" : "arrowright";
     }
     void close(ScreenHost &host) {
@@ -365,6 +414,12 @@ class EditorScreen final : public ScreenView {
     }
     // Typing: results of the old text are gone and the next search is scheduled.
     void changed(ScreenHost &host) {
+        if (assistant_) {
+            // The question is asked with Ask, not as it is typed; what was answered stays meanwhile.
+            status_ = askHint();
+            host.invalidate();
+            return;
+        }
         host.services().cancel(kSearch);
         results_.clear();
         selected_ = 0;
@@ -410,7 +465,38 @@ class EditorScreen final : public ScreenView {
         }
         host.invalidate();
     }
+    // The question goes to the assistant, which may also act on the TV; its answer and titles follow.
+    void ask(ScreenHost &host) {
+        const std::string question = trim(pad_.value());
+        if (question.empty()) {
+            status_ = askHint();
+            return;
+        }
+        host.services().cancel(kAsk);
+        asked_ = question;
+        answer_.clear();
+        results_.clear();
+        selected_ = 0;
+        searching_ = true;
+        searchError_ = searchComplete_ = false;
+        status_ = msg("tv.editor.asking", "Asking…");
+        searchGeneration_ = host.services().write(kAsk, Operation::Assistant,
+                                                  fields({{"question", Json::text(question)}}));
+        if (!searchGeneration_) {
+            searching_ = false;
+            searchError_ = true;
+            status_ = msg("tv.editor.askFailed", "The assistant did not answer. Try again.");
+        }
+        host.invalidate();
+    }
     void primary(ScreenHost &host) {
+        if (assistant_) {
+            if (!results_.empty() && asked_ == trim(pad_.value()))
+                zoneTo(host, Zone::Results);
+            else
+                ask(host);
+            return;
+        }
         if (rename_) {
             std::string name = trim(pad_.value());
             if (name.empty()) {
@@ -563,18 +649,40 @@ class EditorScreen final : public ScreenView {
                           msg("tv.editor.preview", "This is how the profile appears."), kit::type::body,
                           kit::color::onSurface2, Node::Align::Center);
     }
+    // Where the result cards start: under the assistant's answer, when there is one.
+    float cardsTop() const {
+        return assistant_ && !answer_.empty()
+                   ? kResultsTop + kit::type::bodyL.line * kAnswerLines + 32
+                   : kResultsTop;
+    }
     void drawResults(ScreenHost &host, kit::Paint paint) {
         const Motion &motion = host.motion();
         Scene &scene = paint.scene;
         Rect panel = {kResultsX, kResultsTop, 820, 380};
+        if (assistant_ && !answer_.empty())
+            paint.glyphs.text(scene, {kResultsX, kResultsTop, 820, kit::type::bodyL.line * kAnswerLines},
+                              answer_, kit::type::bodyL, kit::color::onSurface, Node::Align::Left,
+                              kAnswerLines);
+        if (results_.empty() && assistant_ && !answer_.empty())
+            return;
         if (results_.empty()) {
             kit::StatusPanel box;
             box.rest = panel;
             if (searching_) {
-                box.icon = "search";
-                box.title = msg("tv.editor.searching", "Searching…");
-                box.message = msg("tv.editor.searchingBody", "Looking for films and series that match your query.");
+                box.icon = assistant_ ? "sparkle" : "search";
+                box.title = assistant_ ? msg("tv.editor.asking", "Asking…") : msg("tv.editor.searching", "Searching…");
+                box.message = assistant_ ? msg("tv.editor.askingBody", "Gemini is thinking about your question.")
+                                         : msg("tv.editor.searchingBody", "Looking for films and series that match your query.");
                 box.loadingMs = host.nowMs();
+            } else if (assistant_ && searchError_) {
+                box.icon = "info";
+                box.error = true;
+                box.title = msg("tv.editor.askFailedTitle", "No answer");
+                box.message = status_;
+            } else if (assistant_) {
+                box.icon = "sparkle";
+                box.title = msg("tv.editor.askTitle", "Ask Gemini");
+                box.message = askHint();
             } else if (searchError_) {
                 box.icon = "info";
                 box.error = true;
@@ -594,19 +702,21 @@ class EditorScreen final : public ScreenView {
                 kit::PillButton retry;
                 retry.rest = {panel.x + 36, panel.y + panel.h - 36 - 56, 220, 56};
                 retry.id = "editor:retry";
-                retry.label = msg("tv.editor.retrySearch", "Retry search");
+                retry.label = assistant_ ? msg("tv.editor.retryAsk", "Ask again")
+                                         : msg("tv.editor.retrySearch", "Retry search");
                 retry.primary = true;
                 retry.focus = zone_ == Zone::Retry ? 1.0f : 0.0f;
                 kit::pillButton(paint, retry);
             }
             return;
         }
-        scene.pushClip({kResultsX - 20, kResultsTop - 24, 820 + 40, kResultsBottom - kResultsTop + 24});
+        const float top = cardsTop();
+        scene.pushClip({kResultsX - 20, top - 24, 820 + 40, kResultsBottom - top + 24});
         float scroll = static_cast<float>(motion.value("editor:rs"));
         for (size_t i = 0; i < results_.size(); ++i) {
             Rect rest = {kResultsX + static_cast<float>(i % 2) * (kCardW + kCardGap),
-                         kResultsTop + static_cast<float>(i / 2) * kCardPitch + scroll, kCardW, kCardH};
-            if (rest.y + rest.h < kResultsTop - 60 || rest.y > kResultsBottom + 40)
+                         top + static_cast<float>(i / 2) * kCardPitch + scroll, kCardW, kCardH};
+            if (rest.y + rest.h < top - 60 || rest.y > kResultsBottom + 40)
                 continue;
             kit::PosterCard card;
             card.rest = rest;
@@ -619,7 +729,8 @@ class EditorScreen final : public ScreenView {
         scene.popClip();
     }
 
-    bool rename_;
+    bool rename_, assistant_;
+    std::string asked_, answer_; // the question the assistant last answered, and its answer
     KeyboardPad pad_;
     Zone zone_ = Zone::Keys;
     size_t selected_ = 0;
@@ -634,8 +745,8 @@ class EditorScreen final : public ScreenView {
 } // namespace
 
 std::unique_ptr<ScreenView> makeEditorScreen(const std::string &route) {
-    if (route == "rename" || route == "search")
-        return std::unique_ptr<ScreenView>(new EditorScreen(route == "rename"));
+    if (route == "rename" || route == "search" || route == "assistant")
+        return std::unique_ptr<ScreenView>(new EditorScreen(route == "rename", route == "assistant"));
     return nullptr;
 }
 } // namespace nativetv

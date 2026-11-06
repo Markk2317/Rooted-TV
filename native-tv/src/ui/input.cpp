@@ -51,6 +51,7 @@ void Application::key(Key key) {
                     route(home.nav == home.tabs.size()       ? "profiles"
                           : home.nav == home.tabs.size() + 1 ? "quick"
                           : home.nav == home.tabs.size() + 2 ? "search"
+                          : home.nav == home.tabs.size() + 3 ? "assistant"
                                                              : "dashboard");
             }
         } else if (home.arranging) {
@@ -194,6 +195,7 @@ void Application::click(float x, float y) {
                 route(index == 0   ? "profiles"
                       : index == 1 ? "quick"
                       : index == 2 ? "search"
+                      : index == 3 ? "assistant"
                                    : "dashboard");
             } else if (type == "edit") {
                 if (state_.home.editing)

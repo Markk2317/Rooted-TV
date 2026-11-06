@@ -172,8 +172,8 @@ def catalogue(profiles=1, sort="custom"):
             "wallpapers": {"available": False, "slots": {}, "revision": ""}}
 
 
-def discover():
-    return {"ok": True, "enabled": True, "titlesEnabled": True, "rows": [
+def discover(assistant=False):
+    return {"ok": True, "enabled": True, "titlesEnabled": True, "assistant": assistant, "rows": [
         {"key": "trending", "items": [item(n) for n in range(8)]},
         {"key": "continue", "items": [dict(item(n), service="prime", progress=p)
                                       for n, p in ((8, .35), (3, .7), (9, .12))]},
@@ -186,6 +186,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     beats = 0
     profiles = 1
     sort = "custom" # the apps row's order: custom, recent or kind
+    assistant = False # a Gemini key saved: the bar has the assistant
 
     def log_message(self, *_):
         pass
@@ -223,7 +224,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif url.path == "/api/home/catalogue":
             self.json(catalogue(self.profiles, self.sort))
         elif url.path == "/api/home/discover":
-            self.json(discover())
+            self.json(discover(self.assistant))
         elif url.path == "/api/home/guide":
             self.json({"ok": True, "guide": {}})
         elif url.path == "/api/home/now":
@@ -262,6 +263,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if action in keys:
                 SETTINGS[keys[action]] = value
             return self.json({"ok": True})
+        if self.path == "/api/assistant":
+            return self.json({"ok": True, "titles": [item(n) for n in (3, 8, 1)],
+                              "answer": "Three quiet films for tonight: Northbound and Slow Rivers are "
+                                        "on Prime Video, and Harbor Lights is on Netflix."})
         if self.path == "/api/home/beat":
             self.json({"ok": True, "enabled": True, "build": "fixture@1", "layoutVersion": "1",
                        "wallpapers": {"available": False, "slots": {}, "revision": ""}})
@@ -270,12 +275,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 @contextlib.contextmanager
-def serve(art=None, port=0, profiles=1, sort="custom"):
+def serve(art=None, port=0, profiles=1, sort="custom", assistant=False):
     SETTINGS.update(volume=24, muted=False, backlight=70, sleepTimer="off", pictureMode="cinema",
                     soundOutput="tv_speaker")
     Handler.art = art
     Handler.profiles = profiles
     Handler.sort = sort
+    Handler.assistant = assistant
     server = http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

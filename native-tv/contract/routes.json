@@ -100,6 +100,15 @@
       "notes": "One photo for the Photos screen saver: a JPEG of at most 1920 x 1080 and 5 MiB that states its size, one upload at a time, at most 60 photos and 60 MiB kept, with free space for it twice over."
     },
     {
+      "paths": ["/api/assistant"],
+      "methods": ["POST"],
+      "auth": "token",
+      "csrf": "JSON body guard and same-origin Origin/Host comparison when Origin is present; requires allowControl unless from TV loopback",
+      "bodyLimit": {"max": 8192, "unit": "JS string code units"},
+      "owner": "native",
+      "notes": "Sends `question` to Gemini with the owner's `geminiKey` and the TV's tools: searching TMDB, choosing titles to show, opening a title in its installed streaming app and a few TV controls, which run as requests from the server to its own /api/home/open and /api/control. Answers `answer` and `titles`, or 502 with Gemini's error."
+    },
+    {
       "paths": ["/api/screensaver/photos/remove"],
       "methods": ["POST"],
       "auth": "token",
