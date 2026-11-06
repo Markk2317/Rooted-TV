@@ -102,6 +102,9 @@ nativetv::Json responseFor(const std::string &url) {
         "{\"results\":[{\"site\":\"YouTube\",\"type\":\"Trailer\",\"key\":\"bad\"},"
         "{\"site\":\"Other\",\"type\":\"Trailer\",\"key\":\"dQw4w9WgXcQ\"},"
         "{\"site\":\"YouTube\",\"type\":\"Trailer\",\"official\":true,\"key\":\"dQw4w9WgXcQ\"}]}"));
+    document.set("watch/providers", Json::parse(
+        "{\"results\":{\"IT\":{\"flatrate\":[{\"provider_id\":119},{\"provider_id\":999},"
+        "{\"provider_id\":8},{\"provider_id\":9}]},\"FR\":{\"flatrate\":[{\"provider_id\":337}]}}}"));
     document.set("similar", Json::parse("{\"results\":["
         "{\"id\":7,\"media_type\":\"movie\",\"poster_path\":\"/abcdefghijklmnop.jpg\"},"
         "{\"id\":20,\"media_type\":\"movie\",\"poster_path\":\"/abcdefghijklmnop.jpg\"},"
@@ -223,6 +226,23 @@ int main() {
         const Json cache = Json::parse(saved);
         assert(cache["version"].number() == 1);
         assert(cache["entries"].size() == 40);
+    }
+    // With the TV's country, a title's details say which services have it there, in TMDB's order,
+    // once each, and the answer is kept apart from another country's.
+    {
+        HomeContent regional(directory.path(), fetcher, [&clock] { return clock; });
+        assert(regional.details("private-test-key", false, "movie", "31")["item"]["services"].size() == 0);
+        regional.setRegion("IT");
+        const Json italian = regional.details("private-test-key", false, "movie", "31");
+        assert(asked.back().find("watch/providers&watch_region=IT") != std::string::npos);
+        const Json services = italian["item"]["services"];
+        assert(services.size() == 2 && services[0].string() == "prime" &&
+               services[1].string() == "netflix");
+        regional.setRegion("FR");
+        assert(regional.details("private-test-key", false, "movie", "31")["item"]["services"][0].string() ==
+               "disney");
+        regional.setRegion("italy");
+        assert(regional.details("private-test-key", false, "movie", "31")["item"]["services"].size() == 0);
     }
     return 0;
 }

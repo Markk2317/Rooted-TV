@@ -248,6 +248,7 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
                                                       {"movies", "Trending films this week"},
                                                       {"series", "Trending series this week"},
                                                       {"netflix", "Available on Netflix"},
+                                                      {"watchlist", "Your watchlist"},
                                                       {"youtube", "Trending on YouTube"}};
     std::map<std::string, Json> feedRows;
     for (const auto &source : discover["rows"].items())
@@ -278,7 +279,8 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
             }
         }
     }
-    keys.insert(keys.end(), {"movies", "series"});
+    // The profile's own: its watchlist, then the titles like the one it liked last.
+    keys.insert(keys.end(), {"watchlist", "liked", "movies", "series"});
     if (!serviceNames.count("on:netflix"))
         keys.push_back("netflix");
     keys.push_back("youtube");

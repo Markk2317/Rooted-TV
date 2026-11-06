@@ -1,5 +1,7 @@
 #pragma once
 #include "ui/screen.hpp"
+#include <string>
+#include <utility>
 
 namespace nativetv {
 // Title details: the backdrop, the lines about the film or series, its actions, a row of similar
@@ -36,8 +38,12 @@ class DetailsScreen final : public ScreenView {
 
   private:
     struct Action {
-        enum class Kind { Netflix, Service, Trailer, Overview, Retry } kind;
+        enum class Kind { Netflix, Service, Trailer, Watchlist, Like, Dislike, Overview, Retry } kind;
+        Action(Kind kind, std::string label) : kind(kind), label(std::move(label)) {}
         std::string label;
+        std::string service; // Service: the streaming service's key
+        std::string icon;
+        bool iconOnly = false; // drawn as a round button with its icon; the label is for the snapshot
     };
     struct Title {
         Json item;
@@ -49,7 +55,14 @@ class DetailsScreen final : public ScreenView {
     };
     void push(ScreenHost &host, const Json &item);
     void load(ScreenHost &host);
-    void rebuildActions(Title &title);
+    void rebuildActions(ScreenHost &host, Title &title);
+    void markTitle(ScreenHost &host, Action::Kind kind);
+    // The profile's marks on a title: what is being saved, else what Home's feed last said.
+    struct Marks {
+        bool watchlisted = false;
+        std::string rating; // "like", "dislike" or ""
+    };
+    static Marks marksOf(ScreenHost &host, const Json &item);
     void activate(ScreenHost &host);
     void focusMoved(ScreenHost &host, bool jump);
     void playEntrance(ScreenHost &host);

@@ -1840,6 +1840,18 @@ checks the installed app, resolves the mapping on the server, and launches
 this optional mapping after displaying TMDB details, so Wikidata does not
 hold up the details page.
 
+With the country known, details append `watch/providers` (and `watch_region`, which TMDB
+ignores but which keeps each country's reply apart in the cache) and carry `services`: the
+keys of the streaming services whose provider IDs are among the region's `flatrate`
+providers, in TMDB's order. The TV app offers Open on each one whose app is installed.
+
+`POST /api/control` with `setHomeTitle` and `{op, item}` (op `watch`, `unwatch`, `like`,
+`dislike` or `unrate`) changes the active profile's lists in `home-titles.json`
+(`HomeTitles`); `like` stores the title's `similar` from its details. When titles are on,
+`GET /api/home/discover` drops the profile's disliked titles from every row, appends a
+`watchlist` row and a `liked` row (with its own `title`, "Because you liked …") and adds
+`profileTitles`, the keys of each list, which the details screen marks its buttons from.
+
 `POST /api/home/open` with `kind: 'service'`, the service's key, type and
 TMDB ID opens the service's installed app (`netflix`; `amazon` or
 `amazon.global`; `com.disney.disneyplus-prod`), refused when none is

@@ -303,7 +303,10 @@ The daily Home feed refresh asks TMDB for the details of each title it would lis
 same request a title opens with, and keeps only titles with a YouTube trailer or, when
 `netflixDeepLinks` is on, a Netflix link. Once the TV's country is known, the same refresh
 asks TMDB's `discover` for what is popular on Netflix, Prime Video and Disney+ there, which
-sends TMDB the country's two-letter code and the services' provider numbers.
+sends TMDB the country's two-letter code and the services' provider numbers, and a title's
+details ask for its watch providers with the same code. A profile's watchlist and thumbs stay
+on the TV; liking a title asks TMDB for nothing new, since its similar titles come from the
+details already read.
 
 A configured YouTube key (set in the dashboard's Native Tv Home tab or as `youtubeKey` in
 `config.json`; the dashboard never shows it again) makes the same refresh ask

@@ -6584,8 +6584,8 @@
     },
     {
       "id": "E2E-174",
-      "title": "Search comes before Quick settings in the Home bar",
-      "purpose": "With the feed on (a TMDB key saved) the bar's focus goes from the last tab to Search and then to Quick settings, the order they are drawn in: from the first tab, Right three times reaches Search and a fourth Quick settings.",
+      "title": "Search leads the Home bar and Quick settings ends it",
+      "purpose": "With the feed on (a TMDB key saved) Search is the first stop after the avatar, in the tabs' capsule before the tabs, and Quick settings the last, as Google TV lays its bar out since 2025: from the first tab, Left reaches Search and four Rights from there reach Quick settings.",
       "kind": "run",
       "screen": "home",
       "script": "home-bar-order.json",
@@ -6616,12 +6616,12 @@
         "framesMin": 30,
         "checkpoints": [
           {
-            "name": "third",
+            "name": "search",
             "path": "nav",
             "equals": 5
           },
           {
-            "name": "fourth",
+            "name": "gear",
             "path": "nav",
             "equals": 4
           }
@@ -6724,7 +6724,7 @@
     {
       "id": "E2E-176",
       "title": "The avatar in the Home bar opens Who's watching? with one profile",
-      "purpose": "The avatar before the tabs is on the bar's path whatever the number of profiles (it was a decoration while there was one): from the first tab, Left reaches it and OK opens the profiles page, where that profile's colour and name are edited.",
+      "purpose": "The avatar before the tabs is on the bar's path whatever the number of profiles (it was a decoration while there was one): from the first tab, Left past Search reaches it and OK opens the profiles page, where that profile's colour and name are edited.",
       "kind": "run",
       "screen": "home",
       "script": "home-avatar.json",

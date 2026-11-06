@@ -20,6 +20,9 @@ class HomeContent {
 
     explicit HomeContent(std::string dataRoot, Fetcher fetcher = Fetcher(),
                          Clock clock = Clock());
+    // The TV's country ("IT"): a title's details then say which streaming services have it there,
+    // as "services". Empty, or anything but two capitals, leaves them out.
+    void setRegion(const std::string &region);
     Json details(const std::string &tmdbKey, bool netflixEnabled,
                  const std::string &type, const std::string &id);
     Json search(const std::string &tmdbKey, const std::string &query,
@@ -68,6 +71,7 @@ class HomeContent {
     size_t active_ = 0;
     size_t queued_ = 0;
     bool cacheLoaded_ = false;
+    std::string region_;
 };
 
 } // namespace service

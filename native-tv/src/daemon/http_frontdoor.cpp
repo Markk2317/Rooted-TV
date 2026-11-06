@@ -1765,7 +1765,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       homeContent_(dataRoot_),
       homeDiscover_(dataRoot_),
       homeImageProxy_(dataRoot_),
-      youtubeAccounts_(dataRoot_),
+      youtubeAccounts_(dataRoot_), homeTitles_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
       hiddenAppsPath_(dataFilePath(dataRoot_, "hidden_apps")),
@@ -2445,9 +2445,23 @@ Json HttpFrontDoor::currentConfigDocument() const {
     return config_.document;
 }
 
-// The shared server-status response: the Server tab's switches and the
-// daemon's own vitals. Node assembled the same document from its modules.
 namespace {
+// The TV's country in capitals ("IT"), as the ad blocker saves it from LG's settings; "" when not
+// known yet.
+std::string tvRegion(const std::string &dataRoot) {
+    std::ifstream input(dataFilePath(dataRoot, "country").c_str());
+    std::string value;
+    std::getline(input, value);
+    value.erase(std::remove_if(value.begin(), value.end(),
+                               [](unsigned char character) { return std::isspace(character); }),
+                value.end());
+    if (value.size() != 2 || !std::isalpha(static_cast<unsigned char>(value[0])) ||
+        !std::isalpha(static_cast<unsigned char>(value[1])))
+        return "";
+    for (char &character : value)
+        character = static_cast<char>(std::toupper(static_cast<unsigned char>(character)));
+    return value;
+}
 // The id of the Native Tv Home profile in use, "main" until there are others.
 std::string activeHomeProfile(const std::string &dataRoot) {
     JsonFile homeFile(dataFilePath(dataRoot, "home.json"));
@@ -2455,6 +2469,8 @@ std::string activeHomeProfile(const std::string &dataRoot) {
 }
 } // namespace
 
+// The shared server-status response: the Server tab's switches and the
+// daemon's own vitals. Node assembled the same document from its modules.
 Json HttpFrontDoor::serverStatus() const {
     const Json document = currentConfigDocument();
     Json status = Json::object();
@@ -2723,6 +2739,26 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
                                                      activeHomeProfile(dataRoot_));
         if (!started["ok"].boolean()) return fail(started["error"].string());
         return answer();
+    }
+    if (action == "setHomeTitle") {
+        // From a title's details on the TV: {"op": watch, unwatch, like, dislike or unrate, "item"}.
+        // A like keeps the titles TMDB finds similar, from the details the page has just shown.
+        Json item = value["item"].isObject() ? Json::parse(value["item"].dump()) : Json();
+        const std::string op = value["op"].string();
+        const std::string key = service::HomeTitles::keyOf(item);
+        if (op == "like" && !key.empty()) {
+            homeContent_.setRegion(tvRegion(dataRoot_));
+            const Json details = homeContent_.details(currentConfigDocument()["tmdbKey"].string(),
+                                                      false, item["type"].string(),
+                                                      key.substr(key.find(':') + 1));
+            item.set("similar", details["item"]["similar"]);
+        }
+        std::string error;
+        if (!homeTitles_.apply(activeHomeProfile(dataRoot_), op, item, error)) return fail(error);
+        Json done = Json::object();
+        done.set("ok", Json::flag(true));
+        response = done;
+        return true;
     }
     if (action == "youtubeSignOut") {
         youtubeAccounts_.signOut(activeHomeProfile(dataRoot_));
@@ -16513,6 +16549,7 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
     const std::string key = currentConfigDocument()["tmdbKey"].string();
     const bool netflixEnabled =
         config_.document["netflixDeepLinks"].boolean();
+    homeContent_.setRegion(tvRegion(dataRoot_));
     if (kind == "search") {
         const bool hasQuery = uniqueQueryParameter(request.query, "q", query);
         result = homeContent_.search(key, query, hasQuery);
@@ -16532,39 +16569,28 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
                            result.dump());
 }
 
-namespace {
-// The TV's country in capitals ("IT"), as the ad blocker saves it from LG's settings; "" when not
-// known yet.
-std::string tvRegion(const std::string &dataRoot) {
-    std::ifstream input(dataFilePath(dataRoot, "country").c_str());
-    std::string value;
-    std::getline(input, value);
-    value.erase(std::remove_if(value.begin(), value.end(),
-                               [](unsigned char character) { return std::isspace(character); }),
-                value.end());
-    if (value.size() != 2 || !std::isalpha(static_cast<unsigned char>(value[0])) ||
-        !std::isalpha(static_cast<unsigned char>(value[1])))
-        return "";
-    for (char &character : value)
-        character = static_cast<char>(std::toupper(static_cast<unsigned char>(character)));
-    return value;
-}
-} // namespace
-
 void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     const Json document = currentConfigDocument();
+    homeContent_.setRegion(tvRegion(dataRoot_));
     Json result = homeDiscover_.feed(document["tmdbKey"].string(),
                                      document["youtubeKey"].string(), tvRegion(dataRoot_));
     // The profile's own YouTube subscriptions, where it has signed in with Google.
+    const std::string profile = activeHomeProfile(dataRoot_);
     const Json subscriptions = youtubeAccounts_.row(document["youtubeClientId"].string(),
                                                     document["youtubeClientSecret"].string(),
-                                                    activeHomeProfile(dataRoot_));
+                                                    profile);
     if (subscriptions.isObject()) {
         Json rows = Json::array();
         for (const Json &row : result["rows"].items()) rows.add(row);
         rows.add(subscriptions);
         result.set("rows", rows);
         result.set("enabled", Json::flag(true));
+    }
+    // The profile's own titles: its watchlist and likes, and what it said was not for it.
+    if (result["titlesEnabled"].boolean()) {
+        const Json titles = homeTitles_.state(profile);
+        result.set("rows", service::HomeTitles::personalRows(result["rows"], titles));
+        result.set("profileTitles", service::HomeTitles::summary(titles));
     }
     if (result["enabled"].boolean() && result["rows"].isArray() &&
         result["rows"].size())

@@ -60,6 +60,17 @@ std::string castOf(const Json &item) {
     return names.empty() ? "" : msg("tv.details.cast", "Cast: {names}",
                                     fields({{"names", Json::text(names)}}));
 }
+// "movie:42", as Home's feed lists the profile's titles.
+std::string titleKey(const Json &item) {
+    return item["type"].string() + ":" +
+           (item["id"].isNumber() ? compactNumber(item["id"].number()) : item["id"].string());
+}
+bool listed(const Json &keys, const std::string &key) {
+    for (const auto &entry : keys.items())
+        if (entry.string() == key)
+            return true;
+    return false;
+}
 bool sameTitle(const Json &item, const std::string &type, const std::string &id) {
     return item["id"].string() == id && (type.empty() || item["type"].string() == type);
 }
@@ -97,33 +108,70 @@ void DetailsScreen::leave(ScreenHost &host) {
     host.services().cancel(kNetflix);
     host.motion().erasePrefix("details:");
 }
-void DetailsScreen::rebuildActions(Title &title) {
+void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
+    const ViewState &view = host.view();
     const Json &item = title.item;
-    std::string keep = title.action < title.actions.size() ? title.actions[title.action].label : "";
+    const bool kept = title.action < title.actions.size();
+    const Action::Kind keepKind = kept ? title.actions[title.action].kind : Action::Kind::Retry;
+    const std::string keepService = kept ? title.actions[title.action].service : "";
     title.actions.clear();
     if (!item["netflixId"].string().empty())
         title.actions.push_back({Action::Kind::Netflix, msg("tv.details.netflix", "Open on Netflix")});
-    // A title from a streaming service's row opens in that service's app; on Netflix, the Netflix
-    // link above does that already.
-    const names::StreamingService *service = names::streamingService(item["service"].string());
-    if (service && !(service->key == "netflix" && !item["netflixId"].string().empty()))
-        title.actions.push_back({Action::Kind::Service,
-                                 msg("tv.details.service", "Open on {service}",
-                                     fields({{"service", Json::text(service->name)}}))});
+    // As Google TV's watch options: each service that has the title in the TV's country and whose
+    // app is installed, the row the title came from first. On Netflix, the Netflix link above
+    // opens it already.
+    std::vector<std::string> services;
+    if (item["service"].isString())
+        services.push_back(item["service"].string());
+    for (const auto &key : item["services"].items())
+        if (std::find(services.begin(), services.end(), key.string()) == services.end())
+            services.push_back(key.string());
+    for (const std::string &key : services) {
+        const names::StreamingService *service = names::streamingService(key);
+        if (!service || (key == "netflix" && !item["netflixId"].string().empty()) ||
+            names::streamingApp(*service, view.catalogue["apps"]).empty())
+            continue;
+        Action open{Action::Kind::Service,
+                    msg("tv.details.service", "Open on {service}",
+                        fields({{"service", Json::text(service->name)}}))};
+        open.service = key;
+        title.actions.push_back(open);
+    }
     if (!item["trailer"].string().empty())
         title.actions.push_back({Action::Kind::Trailer, msg("tv.details.trailer", "Trailer")});
+    // The profile's own marks, as on Google TV's details: the watchlist, then thumbs up and down.
+    if (view.discover["titlesEnabled"].boolean() && !title.error) {
+        const Marks marks = marksOf(host, item);
+        Action watchlist{Action::Kind::Watchlist,
+                         marks.watchlisted ? msg("tv.details.watchlisted", "On watchlist")
+                                           : msg("tv.details.watchlist", "Watchlist")};
+        watchlist.icon = marks.watchlisted ? "bookmarked" : "bookmarkadd";
+        title.actions.push_back(watchlist);
+        Action like{Action::Kind::Like, marks.rating == "like" ? msg("tv.details.liked", "Liked")
+                                                               : msg("tv.details.like", "Like")};
+        like.icon = "thumbup";
+        like.iconOnly = true;
+        title.actions.push_back(like);
+        Action dislike{Action::Kind::Dislike,
+                       marks.rating == "dislike" ? msg("tv.details.disliked", "Not for me (marked)")
+                                                 : msg("tv.details.dislike", "Not for me")};
+        dislike.icon = "thumbdown";
+        dislike.iconOnly = true;
+        title.actions.push_back(dislike);
+    }
     if (!item["overview"].string().empty())
         title.actions.push_back({Action::Kind::Overview, msg("tv.details.overview", "Full overview")});
     if (title.error)
         title.actions.push_back({Action::Kind::Retry, msg("tv.details.retry", "Retry")});
     // Until the focus is moved it stays on the first action, which a late Netflix link or the
-    // details' trailer can put in front of the overview; after that it stays on what it was on.
+    // details' trailer can put in front of the overview; after that it stays on what it was on,
+    // whatever its label says now.
     title.action = std::min(title.action, title.actions.size() - 1);
     if (!title.moved)
         title.action = 0;
     else
         for (size_t i = 0; i < title.actions.size(); ++i)
-            if (title.actions[i].label == keep)
+            if (title.actions[i].kind == keepKind && title.actions[i].service == keepService)
                 title.action = i;
 }
 void DetailsScreen::push(ScreenHost &host, const Json &item) {
@@ -133,7 +181,7 @@ void DetailsScreen::push(ScreenHost &host, const Json &item) {
     }
     Title title;
     title.item = item;
-    rebuildActions(title);
+    rebuildActions(host, title);
     stack_.push_back(title);
     host.services().cancel(kNetflix);
     load(host);
@@ -152,13 +200,13 @@ void DetailsScreen::load(ScreenHost &host) {
     title.status = msg("tv.details.loading", "Loading details…");
     if (title.actions.size() && title.actions[title.action].kind == Action::Kind::Retry)
         title.action = 0;
-    rebuildActions(title);
+    rebuildActions(host, title);
     title.detailsGeneration = host.services().read(kDetails, Operation::TitleDetails, title.item);
     if (!title.detailsGeneration) {
         title.loading = false;
         title.error = true;
         title.status = msg("tv.details.unavailable", "Details are unavailable. Retry.");
-        rebuildActions(title);
+        rebuildActions(host, title);
     }
     host.invalidate();
 }
@@ -191,14 +239,14 @@ void DetailsScreen::response(ScreenHost &host, const Response &response) {
                 title.netflixGeneration =
                     host.services().read(kNetflix, Operation::NetflixTitle, title.item);
         }
-        rebuildActions(title);
+        rebuildActions(host, title);
         host.invalidate();
     } else if (response.channel == kNetflix && title.netflixGeneration &&
                response.generation == title.netflixGeneration) {
         title.netflixGeneration = 0;
         if (succeeded(response, data) && !data["netflixId"].string().empty()) {
             title.item.set("netflixId", data["netflixId"]);
-            rebuildActions(title);
+            rebuildActions(host, title);
             focusMoved(host, false);
             host.invalidate();
         }
@@ -263,6 +311,11 @@ void DetailsScreen::activate(ScreenHost &host) {
     case Action::Kind::Overview:
         toggleOverview(host, true);
         return;
+    case Action::Kind::Watchlist:
+    case Action::Kind::Like:
+    case Action::Kind::Dislike:
+        markTitle(host, title.actions[title.action].kind);
+        return;
     default:
         break;
     }
@@ -273,7 +326,7 @@ void DetailsScreen::activate(ScreenHost &host) {
         body.set("id", title.item["trailer"]);
     } else if (kind == Action::Kind::Service) {
         body.set("kind", Json::text("service"));
-        body.set("service", title.item["service"]);
+        body.set("service", Json::text(title.actions[title.action].service));
         body.set("type", title.item["type"]);
         body.set("id", title.item["id"]);
     } else {
@@ -287,6 +340,57 @@ void DetailsScreen::activate(ScreenHost &host) {
     write.body = [body](const Json &) { return body; };
     write.failure = msg("tv.details.openFailed", "That did not open");
     host.optimistic().run("details.open", write);
+}
+DetailsScreen::Marks DetailsScreen::marksOf(ScreenHost &host, const Json &item) {
+    const std::string key = titleKey(item);
+    const Json feed = host.view().discover["profileTitles"];
+    Marks marks;
+    marks.watchlisted =
+        host.optimistic().flag("details.wl:" + key, listed(feed["watchlist"], key));
+    marks.rating = host.optimistic().text("details.rt:" + key,
+                                          listed(feed["liked"], key)      ? "like"
+                                          : listed(feed["disliked"], key) ? "dislike"
+                                                                          : "");
+    return marks;
+}
+// The watchlist and the thumbs change at once on the page and are saved for the profile behind
+// it; Home's feed is read back after, so its rows follow, and a refusal puts the mark back.
+void DetailsScreen::markTitle(ScreenHost &host, Action::Kind kind) {
+    Title &title = top();
+    const std::string key = titleKey(title.item);
+    const Json feed = host.view().discover["profileTitles"];
+    Json item = Json::object();
+    for (const char *field : {"id", "type", "title", "year", "rating", "overview", "poster", "backdrop"})
+        item.set(field, title.item[field]);
+    const bool watch = kind == Action::Kind::Watchlist;
+    Write write;
+    write.operation = Operation::Control;
+    write.body = [item, watch](const Json &target) {
+        std::string op = watch ? (target.boolean() ? "watch" : "unwatch") : target.string();
+        if (op.empty())
+            op = "unrate";
+        return fields({{"action", Json::text("setHomeTitle")},
+                       {"value", fields({{"op", Json::text(op)}, {"item", item}})}});
+    };
+    write.readChannel = "discover";
+    write.readOperation = Operation::HomeDiscover;
+    write.failure = msg("tv.details.markFailed", "That was not saved");
+    const Marks shown = marksOf(host, title.item);
+    if (watch) {
+        const Json server = Json::flag(listed(feed["watchlist"], key));
+        host.optimistic().set("details.wl:" + key, Json::flag(!shown.watchlisted), server, write);
+        host.optimistic().commit("details.wl:" + key);
+    } else {
+        const std::string wanted = kind == Action::Kind::Like ? "like" : "dislike";
+        const Json server = Json::text(listed(feed["liked"], key)      ? "like"
+                                       : listed(feed["disliked"], key) ? "dislike"
+                                                                       : "");
+        host.optimistic().set("details.rt:" + key,
+                              Json::text(shown.rating == wanted ? "" : wanted), server, write);
+        host.optimistic().commit("details.rt:" + key);
+    }
+    rebuildActions(host, title);
+    host.invalidate();
 }
 bool DetailsScreen::key(ScreenHost &host, Key key) {
     if (stack_.empty())
@@ -473,6 +577,8 @@ void overviewSheet(kit::Paint paint, const std::string &title, const std::string
 void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
     if (stack_.empty())
         return;
+    // A mark being saved, or put back, changes its button's label as it is drawn.
+    rebuildActions(host, top());
     const Title &title = top();
     const Motion &motion = host.motion();
     Scene &scene = paint.scene;
@@ -534,8 +640,13 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
     float x = kit::canvas::safeX;
     for (size_t i = 0; i < title.actions.size(); ++i) {
         kit::PillButton button;
-        button.label = title.actions[i].label;
-        float width = std::max(160.0f, paint.glyphs.measure(button.label, kit::type::title) + 72);
+        const Action &action = title.actions[i];
+        button.label = action.iconOnly ? "" : action.label;
+        button.icon = action.icon;
+        float width = action.iconOnly
+                          ? kActionH
+                          : std::max(160.0f, paint.glyphs.measure(button.label, kit::type::title) +
+                                                 72 + (action.icon.empty() ? 0 : 40));
         button.rest = {x, y, width, kActionH};
         button.id = "details:action:" + std::to_string(i);
         button.primary = i == 0 && (title.actions[i].kind == Action::Kind::Netflix ||

@@ -189,10 +189,69 @@ void detailsFailureChecks() {
           "A request the transport cannot take is an error, not a spinner");
 }
 
+void detailsMarksChecks() {
+    World world;
+    world.openDetails();
+    world.press(Key::Right); // past the trailer
+    check(world.snapshot()["focus"].string() == "Watchlist", "The watchlist follows the trailer, as on Google TV");
+    world.press(Key::Ok);
+    world.settle(50);
+    check(world.snapshot()["focus"].string() == "On watchlist", "The watchlist button says so at once");
+    auto sent = world.on("w:details.wl:movie:7");
+    check(sent.size() == 1 && sent.back().operation == Operation::Control &&
+              sent.back().body["action"].string() == "setHomeTitle" &&
+              sent.back().body["value"]["op"].string() == "watch" &&
+              sent.back().body["value"]["item"]["title"].string() == "Coast" &&
+              !sent.back().body["value"]["item"].has("similar"),
+          "The title goes to the profile's watchlist through the server");
+    world.answer(sent.back(), false, "Refused");
+    world.settle(300);
+    const bool said = world.toasted("That was not saved: Refused");
+    check(said && world.snapshot()["focus"].string() == "Watchlist",
+          "A refusal puts the button back and says why");
+    world.press(Key::Right);
+    check(world.snapshot()["focus"].string() == "Like", "Thumbs up follows, a round button");
+    world.press(Key::Ok);
+    world.settle(50);
+    auto rated = world.on("w:details.rt:movie:7");
+    check(rated.size() == 1 && rated.back().body["value"]["op"].string() == "like" &&
+              world.snapshot()["focus"].string() == "Liked",
+          "Thumbs up likes the title");
+    world.answer(rated.back());
+    world.settle(300);
+    world.press(Key::Right);
+    world.press(Key::Ok);
+    world.settle(50);
+    rated = world.on("w:details.rt:movie:7");
+    check(rated.back().body["value"]["op"].string() == "dislike" &&
+              world.snapshot()["focus"].string() == "Not for me (marked)",
+          "Thumbs down replaces the like");
+}
+
+void detailsWatchOptionsChecks() {
+    // The services that have the title, as Google TV's watch options, where their app is installed.
+    std::string catalogue = catalogueJson;
+    catalogue.replace(catalogue.find(R"([{"id":"a","title":"Alpha"}])"),
+                      std::string(R"([{"id":"a","title":"Alpha"}])").size(),
+                      R"([{"id":"a","title":"Alpha"},{"id":"amazon.global","title":"Prime Video"}])");
+    World world(catalogue.c_str());
+    world.openDetails(R"({"ok":true,"enabled":true,"item":{"id":7,"type":"movie","title":"Coast","overview":"A journey.","services":["disney","prime"]}})");
+    check(world.snapshot()["focus"].string() == "Open on Prime Video" && !world.app.shows("Open on Disney+"),
+          "Open on Prime Video leads; Disney+ has no app here");
+    world.press(Key::Ok);
+    check(world.on("w:details.open").size() == 1 &&
+              world.on("w:details.open").back().body["kind"].string() == "service" &&
+              world.on("w:details.open").back().body["service"].string() == "prime" &&
+              world.on("w:details.open").back().body["id"].string() == "7",
+          "It opens the title through the server, which finds the app and the link");
+}
+
 void detailsOverviewChecks() {
     World world;
     world.openDetails();
-    world.press({Key::Right, Key::Right});
+    // After the opens and the trailer: the watchlist and the two thumbs, then the overview.
+    for (int i = 0; i < 5; ++i)
+        world.press(Key::Right);
     check(world.snapshot()["focus"].string() == "Full overview", "Full overview is an action");
     world.press(Key::Ok);
     world.settle(300);
@@ -213,7 +272,7 @@ void detailsOverviewChecks() {
     paged.press(Key::Ok);
     paged.reply("title:details", std::string(R"({"ok":true,"enabled":true,"item":{"id":7,"type":"movie","title":"Coast","overview":")") +
                                      long_text + R"("}})");
-    paged.press({Key::Right});
+    paged.press({Key::Right, Key::Right, Key::Right}); // past the watchlist and the thumbs
     paged.press(Key::Ok);
     paged.press(Key::PageDown);
     check(paged.snapshot()["overviewPage"].number() == 1, "A long overview has more than one page");
@@ -603,6 +662,8 @@ int main() {
         kitChecks();
         detailsChecks();
         detailsFailureChecks();
+        detailsMarksChecks();
+        detailsWatchOptionsChecks();
         detailsOverviewChecks();
         detailsDepthChecks();
         detailsFocusReturnChecks();

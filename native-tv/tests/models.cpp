@@ -142,6 +142,16 @@ int main() {
               "The services' rows follow the top picks in the apps' order, without a hidden app's");
         check(rows[2].title == "Popular on Prime Video" && rows[3].title == "Popular on Netflix",
               "A service's row is named after it");
+        Json personalFeed = Json::parse(
+            R"({"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","poster":"/p.jpg"}]},{"key":"movies","items":[{"id":2,"type":"movie","title":"Two","poster":"/m.jpg"}]},{"key":"liked","title":"Because you liked One","items":[{"id":3,"type":"tv","title":"Three","poster":"/l.jpg"}]},{"key":"watchlist","items":[{"id":4,"type":"movie","title":"Four","poster":"/w.jpg"}]}]})");
+        auto personal = homeRows("home", catalogue, personalFeed, Json());
+        check(personal.size() == 5 && personal[0].key == "trending" && personal[1].key == "app" &&
+                  personal[2].key == "watchlist" && personal[2].title == "Your watchlist" &&
+                  personal[3].key == "liked" && personal[3].title == "Because you liked One" &&
+                  personal[4].key == "movies",
+              "The profile's watchlist and the titles like its last like follow the apps");
+        check(personal[2].cards[0].kind == "title" && personal[2].cards[0].command.route == "details",
+              "OK on a watchlist title opens its details");
         Json withSubscriptions = Json::parse(
             R"({"apps":[{"id":"youtube.leanback.v4","title":"YouTube"},{"id":"netflix","title":"Netflix"}],"devices":[],"channels":[],"order":{"app":["youtube.leanback.v4","netflix"]},"layout":{"rows":["app"],"hidden":{}},"sources":{"channels":0}})");
         Json subscriptionsFeed = Json::parse(

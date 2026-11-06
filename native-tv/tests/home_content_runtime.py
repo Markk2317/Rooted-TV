@@ -43,6 +43,17 @@ def get(port, path, token):
         return error.code, error.read()
 
 
+def post(port, path, token, payload):
+    req = Request("http://127.0.0.1:%d%s" % (port, path), data=json.dumps(payload).encode(),
+                  headers={"Authorization": "Bearer " + token,
+                           "Content-Type": "application/json"})
+    try:
+        with urlopen(req, timeout=5) as response:
+            return response.status, response.read()
+    except HTTPError as error:
+        return error.code, error.read()
+
+
 def main():
     binary = Path(sys.argv[1]).resolve()
     fake_luna = Path(sys.argv[2]).resolve()
@@ -99,6 +110,23 @@ def main():
             assert json.loads(body) == {
                 "ok": True, "enabled": False, "rows": []
             }
+
+            # A title from the TV app's details goes to the watchlist of the profile in use, cut to
+            # the fields Home shows; anything but a film or series is refused.
+            title = {"id": 7, "type": "movie", "title": "Coast", "year": "2026",
+                     "poster": "/p.jpg", "service": "prime"}
+            status, body = post(port, "/api/control", token,
+                                {"action": "setHomeTitle",
+                                 "value": {"op": "watch", "item": title}})
+            assert status == 200 and json.loads(body)["ok"] is True, body
+            saved = json.loads((root / "home-titles.json").read_text())
+            assert saved["main"]["watchlist"][0]["title"] == "Coast"
+            assert "service" not in saved["main"]["watchlist"][0]
+            assert oct((root / "home-titles.json").stat().st_mode & 0o777) == "0o600"
+            status, body = post(port, "/api/control", token,
+                                {"action": "setHomeTitle",
+                                 "value": {"op": "watch", "item": {"id": 7, "type": "person"}}})
+            assert json.loads(body)["ok"] is False
 
             status, body = get(
                 port,

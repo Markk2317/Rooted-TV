@@ -1,5 +1,6 @@
 #include "service/home_content.hpp"
 #include "core/md5.hpp"
+#include "domain/names.hpp"
 #include <algorithm>
 #include <array>
 #include <cerrno>
@@ -282,8 +283,28 @@ Json trimRows(const Json &results, const std::string &type) {
     return output;
 }
 
+// The streaming services of names::streamingServices that TMDB's watch providers (JustWatch's)
+// list for `region` with a subscription, in TMDB's order: ["netflix", "prime"].
+Json servicesIn(const Json &document, const std::string &region) {
+    Json services = Json::array();
+    if (region.empty()) return services;
+    std::vector<std::string> seen;
+    for (const Json &provider : document["watch/providers"]["results"][region]["flatrate"].items()) {
+        const std::string providerId = jsString(provider["provider_id"]);
+        for (const names::StreamingService &service : names::streamingServices()) {
+            const std::string ids = "|" + service.providers + "|";
+            if (providerId.empty() || ids.find("|" + providerId + "|") == std::string::npos ||
+                std::find(seen.begin(), seen.end(), service.key) != seen.end())
+                continue;
+            seen.push_back(service.key);
+            services.add(Json::text(service.key));
+        }
+    }
+    return services;
+}
+
 Json detailsValue(const Json &document, const std::string &type,
-                  const std::string &id) {
+                  const std::string &id, const std::string &region) {
     if (!document.isObject() || truthy(document["adult"])) return Json();
     const std::string documentIdText = jsString(document["id"]);
     char *end = nullptr;
@@ -370,6 +391,7 @@ Json detailsValue(const Json &document, const std::string &type,
 
     const std::string qid = jsString(document["external_ids"]["wikidata_id"]);
     item.set("wikidataId", Json::text(wikidataId(qid) ? qid : ""));
+    item.set("services", servicesIn(document, region));
     Json similar = trimRows(document["similar"]["results"], type);
     Json filteredSimilar = Json::array();
     for (const Json &entry : similar.items()) {
@@ -468,16 +490,32 @@ Json HomeContent::details(const std::string &tmdbKey, bool netflixEnabled,
     if (tmdbKey.empty()) return disabled();
     if ((type != "movie" && type != "tv") || !validTitleId(id))
         return failed("Invalid title");
+    std::string region;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        region = region_;
+    }
+    // TMDB ignores watch_region on a title; it keeps each country's answer apart in the cache.
     Json result = request(tmdbKey, type + "/" + id,
-                         "&append_to_response=credits,videos,similar,external_ids",
-                         kDayMs, [type, id](const Json &document) {
-                             return detailsValue(document, type, id);
+                         region.empty()
+                             ? "&append_to_response=credits,videos,similar,external_ids"
+                             : "&append_to_response=credits,videos,similar,external_ids,"
+                               "watch/providers&watch_region=" + region,
+                         kDayMs, [type, id, region](const Json &document) {
+                             return detailsValue(document, type, id, region);
                          });
     Json copy = result.valid() ? Json::parse(result.dump()) : Json::object();
     copy.set("netflixEnabled", Json::flag(
         netflixEnabled && copy["item"].valid() &&
         !copy["item"]["wikidataId"].string().empty()));
     return copy;
+}
+
+void HomeContent::setRegion(const std::string &region) {
+    const bool valid = region.size() == 2 && std::all_of(region.begin(), region.end(),
+        [](unsigned char c) { return c >= 'A' && c <= 'Z'; });
+    std::lock_guard<std::mutex> lock(mutex_);
+    region_ = valid ? region : "";
 }
 
 Json HomeContent::search(const std::string &tmdbKey, const std::string &query,
