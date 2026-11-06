@@ -15,6 +15,8 @@ const size_t kWatchlistMax = 60;
 const size_t kLikedMax = 30;
 const size_t kDislikedMax = 300;
 const size_t kSimilarMax = 12;
+const size_t kPicksMax = 10;     // of the profile's own in its top picks
+const size_t kTopPicksMax = 16;  // the row, as the feed makes it
 
 // At most `maximum` characters, never cutting one in two.
 std::string utf8Prefix(const std::string &text, size_t maximum) {
@@ -143,15 +145,58 @@ Json HomeTitles::personalRows(const Json &rows, const Json &state) {
             if (wanted(item)) kept.add(item);
         return kept;
     };
+    // The profile's own top picks, as Google TV's are an account's: the titles like the ones it
+    // liked, newest like first, then like the ones on its watchlist, one from each in turn, and none
+    // it has already marked. The week's trending titles fill the row after them.
+    std::vector<std::string> known(disliked);
+    for (const char *list : {"liked", "watchlist"})
+        for (const Json &entry : state[list].items()) known.push_back(keyOf(entry));
+    std::vector<std::vector<Json>> sources;
+    for (const char *list : {"liked", "watchlist"})
+        for (const Json &entry : state[list].items()) {
+            const std::vector<Json> similar = entry["similar"].items();
+            if (!similar.empty()) sources.push_back(similar);
+        }
+    std::vector<Json> picks;
+    for (size_t depth = 0; picks.size() < kPicksMax; ++depth) {
+        bool any = false;
+        for (const std::vector<Json> &source : sources) {
+            if (depth >= source.size() || picks.size() == kPicksMax) continue;
+            any = true;
+            const std::string pickKey = keyOf(source[depth]);
+            if (pickKey.empty() || std::find(known.begin(), known.end(), pickKey) != known.end())
+                continue;
+            known.push_back(pickKey);
+            picks.push_back(source[depth]);
+        }
+        if (!any) break;
+    }
     Json result = Json::array();
     for (const Json &row : rows.items()) {
         Json copy = Json::object();
         for (const std::string &name : row.keys())
             if (name != "items") copy.set(name, row[name]);
-        copy.set("items", filtered(row["items"]));
+        Json items = filtered(row["items"]);
+        if (row["key"].string() == "trending" && !picks.empty()) {
+            Json blended = Json::array();
+            for (const Json &pick : picks) blended.add(pick);
+            for (const Json &item : items.items())
+                if (blended.size() < kTopPicksMax &&
+                    std::find(known.begin(), known.end(), keyOf(item)) == known.end())
+                    blended.add(item);
+            items = blended;
+        }
+        copy.set("items", items);
         if (copy["items"].size()) result.add(copy);
     }
-    const Json watchlist = filtered(state["watchlist"]);
+    // The watchlist's own similar titles stay on the TV; the row needs the titles alone.
+    Json watchlist = Json::array();
+    for (const Json &entry : filtered(state["watchlist"]).items()) {
+        Json card = Json::object();
+        for (const std::string &name : entry.keys())
+            if (name != "similar") card.set(name, entry[name]);
+        watchlist.add(card);
+    }
     if (watchlist.size()) {
         Json row = Json::object();
         row.set("key", Json::text("watchlist"));
@@ -209,22 +254,26 @@ bool HomeTitles::apply(const std::string &profile, const std::string &op, const 
     Json current = emptyProfile();
     for (const char *list : {"watchlist", "liked", "disliked"})
         if (profiles_[profile][list].isArray()) current.set(list, copyOf(profiles_[profile][list]));
+    // A title liked or put on the watchlist keeps the titles TMDB finds similar, from which the
+    // profile's top picks are drawn.
+    const auto withSimilar = [&item, &key](const Json &trimmedTitle) {
+        Json kept = copyOf(trimmedTitle);
+        Json similar = Json::array();
+        for (const Json &entry : item["similar"].items()) {
+            const Json other = trimmed(entry);
+            if (other.valid() && keyOf(other) != key) similar.add(other);
+            if (similar.size() == kSimilarMax) break;
+        }
+        kept.set("similar", similar);
+        return kept;
+    };
     if (op == "watch" || op == "unwatch")
         current.set("watchlist", withFront(current["watchlist"], key,
-                                           op == "watch" ? title : Json(), kWatchlistMax));
+                                           op == "watch" ? withSimilar(title) : Json(),
+                                           kWatchlistMax));
     if (op == "like" || op == "dislike" || op == "unrate") {
-        Json liked;
-        if (op == "like") {
-            liked = copyOf(title);
-            Json similar = Json::array();
-            for (const Json &entry : item["similar"].items()) {
-                const Json other = trimmed(entry);
-                if (other.valid() && keyOf(other) != key) similar.add(other);
-                if (similar.size() == kSimilarMax) break;
-            }
-            liked.set("similar", similar);
-        }
-        current.set("liked", withFront(current["liked"], key, liked, kLikedMax));
+        current.set("liked", withFront(current["liked"], key,
+                                       op == "like" ? withSimilar(title) : Json(), kLikedMax));
         current.set("disliked", withFront(current["disliked"], key,
                                           op == "dislike" ? Json::text(key) : Json(),
                                           kDislikedMax));

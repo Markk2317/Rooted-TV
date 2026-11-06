@@ -17,12 +17,14 @@ class HomeTitles {
     // {"watchlist": [items], "liked": [items with "similar"], "disliked": ["movie:42", ...]}.
     Json state(const std::string &profile);
     // `op` is watch, unwatch, like, dislike or unrate; `item` a title as the feed lists it
-    // ({id, type, title, year, rating, overview, poster, backdrop}), and for like its `similar`.
+    // ({id, type, title, year, rating, overview, poster, backdrop}), and for like and watch its
+    // `similar`.
     // False with `error` set when either is not one.
     bool apply(const std::string &profile, const std::string &op, const Json &item,
                std::string &error);
-    // The feed's rows for a profile's `state`: without the titles it said were not for it, then its
-    // watchlist ("watchlist") and the titles like the one it liked last ("liked", with its title).
+    // The feed's rows for a profile's `state`: without the titles it said were not for it, the top
+    // picks led by titles like the ones it liked and put on its watchlist, then its watchlist
+    // ("watchlist") and the titles like the one it liked last ("liked", with its title).
     static Json personalRows(const Json &rows, const Json &state);
     // The keys of each list, for the TV app to mark a title's buttons: {"watchlist": ["movie:42"],
     // "liked": [...], "disliked": [...]}.

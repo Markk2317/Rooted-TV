@@ -11,6 +11,8 @@ namespace nativetv {
 namespace {
 namespace layout = kit::layout;
 
+// How far up the bar goes as it leaves, and over how much of the rows' scroll.
+constexpr float kBarRise = 48, kBarLeaveSpan = 160;
 // A row's items enter one after another; a page leaving takes them all with it.
 kit::Enter enterOf(const Motion &motion, const std::string &id) {
     double hidden = std::max(motion.value(id), motion.value("pgx"));
@@ -103,7 +105,7 @@ kit::Hero heroOf(const Frame &frame) {
 
 // pageTab: the bar's tab a registered screen belongs to; -1 keeps the pill off every tab. Home
 // passes its own selected tab.
-void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab) {
+void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab, float away) {
     const ViewState &state = frame.state;
     const HomeState &home = state.home;
     const Motion &motion = frame.motion;
@@ -123,6 +125,7 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab) {
     bar.search = state.discover["titlesEnabled"].boolean();
     bar.searchFocus = static_cast<float>(motion.value("f:sr"));
     bar.clock = clockText(state);
+    bar.enter = {1 - away, -kBarRise * away};
     kit::topBar(paint, bar);
     if (state.catalogue["layout"]["picture"].boolean() && !home.editing)
         paint.glyphs.text(paint.scene, {800, 136, 1040, kit::type::labelM.line},
@@ -231,6 +234,8 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 poster.image = card.image;
                 poster.title = card.title;
                 poster.subtitle = card.subtitle;
+                if (card.data["progress"].isNumber())
+                    poster.progress = static_cast<float>(card.data["progress"].number());
                 poster.focus = focus;
                 poster.enter = enter;
                 kit::card(paint, poster);
@@ -386,7 +391,12 @@ void drawHome(kit::Paint paint, const Frame &frame) {
         hide.focus = static_cast<float>(motion.value("f:eh"));
         kit::pillButton(paint, hide);
     }
-    drawTopBar(paint, frame, static_cast<int>(home.tab));
+    // On Home's first page the bar leaves with the page once the rows below the first two are
+    // scrolled up under it, and comes back with the focus.
+    float away = 0;
+    if (!apps && !home.navigation && !home.editing)
+        away = kit::focus::clamp01(-static_cast<float>(motion.value("sy")) / kBarLeaveSpan);
+    drawTopBar(paint, frame, static_cast<int>(home.tab), away);
     float fault = static_cast<float>(motion.value("fault"));
     if (fault > .002f)
         banner(paint, fault);

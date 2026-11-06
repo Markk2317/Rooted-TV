@@ -124,10 +124,10 @@ int main() {
         Json topPicks = Json::parse(
             R"({"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","poster":"/p.jpg"}]}]})");
         rows = homeRows("home", catalogue, topPicks, Json());
-        check(rows.size() == 2 && rows[0].key == "app" && rows[1].key == "trending" &&
-                  rows[1].title == "Top picks for you",
-              "The apps lead Home and the top picks follow them");
-        check(rows[1].cards[0].image == "tmdb:w342:/p.jpg",
+        check(rows.size() == 2 && rows[0].key == "trending" && rows[1].key == "app" &&
+                  rows[0].title == "Top picks for you",
+              "The top picks lead Home and the apps follow them, as on Google TV since 2025");
+        check(rows[0].cards[0].image == "tmdb:w342:/p.jpg",
               "A title with no backdrop shows its poster on the landscape card");
         // A streaming service's row follows the top picks in the order of its app in Your apps,
         // only for an app there (not one hidden from the row), and its Netflix row stands in for
@@ -137,8 +137,8 @@ int main() {
         Json streamingFeed = Json::parse(
             R"({"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","poster":"/p.jpg"}]},{"key":"series","items":[{"id":3,"type":"tv","title":"Three","poster":"/s.jpg"}]},{"key":"on:netflix","items":[{"id":4,"type":"tv","title":"Four","poster":"/n.jpg","service":"netflix"}]},{"key":"on:prime","items":[{"id":5,"type":"movie","title":"Five","poster":"/a.jpg","service":"prime"}]},{"key":"on:disney","items":[{"id":6,"type":"movie","title":"Six","poster":"/d.jpg","service":"disney"}]},{"key":"netflix","items":[{"id":7,"type":"tv","title":"Seven","backdrop":"/x.jpg"}]}]})");
         rows = homeRows("home", streamingCatalogue, streamingFeed, Json());
-        check(rows.size() == 5 && rows[1].key == "trending" && rows[2].key == "on:prime" &&
-                  rows[3].key == "on:netflix" && rows[4].key == "series",
+        check(rows.size() == 5 && rows[0].key == "trending" && rows[1].key == "app" &&
+                  rows[2].key == "on:prime" && rows[3].key == "on:netflix" && rows[4].key == "series",
               "The services' rows follow the top picks in the apps' order, without a hidden app's");
         check(rows[2].title == "Popular on Prime Video" && rows[3].title == "Popular on Netflix",
               "A service's row is named after it");
@@ -152,6 +152,17 @@ int main() {
               "The profile's watchlist and the titles like its last like follow the apps");
         check(personal[2].cards[0].kind == "title" && personal[2].cards[0].command.route == "details",
               "OK on a watchlist title opens its details");
+        Json continueFeed = Json::parse(
+            R"({"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","poster":"/p.jpg"}]},{"key":"watchlist","items":[{"id":4,"type":"movie","title":"Four","poster":"/w.jpg"}]},{"key":"continue","items":[{"id":5,"type":"movie","title":"Five","poster":"/c.jpg","service":"prime","progress":0.4}]}]})");
+        auto continuing = homeRows("home", catalogue, continueFeed, Json());
+        check(continuing.size() == 4 && continuing[2].key == "continue" &&
+                  continuing[2].title == "Continue watching" && continuing[3].key == "watchlist",
+              "Continue watching follows the top picks and the apps");
+        const Card &resume = continuing[2].cards[0];
+        check(resume.kind == "continue" && resume.command.body["kind"].string() == "service" &&
+                  resume.command.body["service"].string() == "prime" &&
+                  resume.data["progress"].number() == 0.4,
+              "OK on a title being watched goes back into its app, and the card knows how far");
         Json withSubscriptions = Json::parse(
             R"({"apps":[{"id":"youtube.leanback.v4","title":"YouTube"},{"id":"netflix","title":"Netflix"}],"devices":[],"channels":[],"order":{"app":["youtube.leanback.v4","netflix"]},"layout":{"rows":["app"],"hidden":{}},"sources":{"channels":0}})");
         Json subscriptionsFeed = Json::parse(

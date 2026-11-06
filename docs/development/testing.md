@@ -135,7 +135,8 @@ writing `<name>.actual.png` and `<name>.diff.png` when one fails;
 `"fixture": "home"`, which serves the stand-in daemon in `tests/home_fixture.py`
 (an invented catalogue, feed and generated artwork), and a `"script"` of timed
 keys; the Home and Apps cases catch the page at rest, mid-entrance, with the
-pill stretched, after a row snap and with the recent apps open. The Quick drawer
+pill stretched, after a row snap, on Continue watching (the bar gone up with the
+page) and with the recent apps open. The Quick drawer
 (mid-slide, at rest, a list of choices, the switches), Profiles (`"profiles": 3`
 gives the fixture three profiles), the profile editor, title details with and
 without the overview sheet and the search with results each have a case; the

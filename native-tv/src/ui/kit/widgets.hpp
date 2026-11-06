@@ -156,6 +156,8 @@ struct PosterCard {
     std::string id, image, title;
     std::string subtitle; // the facts line that appears under the title on focus
     float focus = 0;
+    // How far it was watched, 0 to 1, as a bar along the card's foot; below 0, none.
+    float progress = -1;
     Enter enter;
 };
 void card(Paint paint, const PosterCard &card);

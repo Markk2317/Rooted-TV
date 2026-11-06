@@ -1765,7 +1765,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       homeContent_(dataRoot_),
       homeDiscover_(dataRoot_),
       homeImageProxy_(dataRoot_),
-      youtubeAccounts_(dataRoot_), homeTitles_(dataRoot_),
+      youtubeAccounts_(dataRoot_), homeTitles_(dataRoot_), homeWatching_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
       hiddenAppsPath_(dataFilePath(dataRoot_, "hidden_apps")),
@@ -2742,11 +2742,12 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
     }
     if (action == "setHomeTitle") {
         // From a title's details on the TV: {"op": watch, unwatch, like, dislike or unrate, "item"}.
-        // A like keeps the titles TMDB finds similar, from the details the page has just shown.
+        // A like or a watch keeps the titles TMDB finds similar, from the details the page has just
+        // shown, for the profile's top picks.
         Json item = value["item"].isObject() ? Json::parse(value["item"].dump()) : Json();
         const std::string op = value["op"].string();
         const std::string key = service::HomeTitles::keyOf(item);
-        if (op == "like" && !key.empty()) {
+        if ((op == "like" || op == "watch") && !key.empty()) {
             homeContent_.setRegion(tvRegion(dataRoot_));
             const Json details = homeContent_.details(currentConfigDocument()["tmdbKey"].string(),
                                                       false, item["type"].string(),
@@ -16569,6 +16570,10 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
                            result.dump());
 }
 
+void HttpFrontDoor::foregroundChanged(const std::string &appId) {
+    homeWatching_.foreground(appId, homeNowMilliseconds());
+}
+
 void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     const Json document = currentConfigDocument();
     homeContent_.setRegion(tvRegion(dataRoot_));
@@ -16586,10 +16591,14 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         result.set("rows", rows);
         result.set("enabled", Json::flag(true));
     }
-    // The profile's own titles: its watchlist and likes, and what it said was not for it.
+    // The profile's own titles: its watchlist and likes, what it said was not for it, and what it
+    // is watching.
     if (result["titlesEnabled"].boolean()) {
         const Json titles = homeTitles_.state(profile);
-        result.set("rows", service::HomeTitles::personalRows(result["rows"], titles));
+        Json rows = service::HomeTitles::personalRows(result["rows"], titles);
+        const Json watching = homeWatching_.row(profile, homeNowMilliseconds());
+        if (watching.isObject()) rows.add(watching);
+        result.set("rows", rows);
         result.set("profileTitles", service::HomeTitles::summary(titles));
     }
     if (result["enabled"].boolean() && result["rows"].isArray() &&
@@ -17580,6 +17589,17 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
             fail(say::msg("srv.home.launchRefused", "the TV would not open it"));
             return;
         }
+    }
+
+    // A title opened in its streaming app is the profile's to continue watching.
+    if (kind == "service" || kind == "netflix") {
+        homeContent_.setRegion(tvRegion(dataRoot_));
+        const Json details = homeContent_.details(currentConfigDocument()["tmdbKey"].string(), false,
+                                                  type, id);
+        if (details["item"].isObject())
+            homeWatching_.opened(activeHomeProfile(dataRoot_), details["item"],
+                                 kind == "netflix" ? "netflix" : resolved.service, resolved.appId,
+                                 homeNowMilliseconds());
     }
 
     // Recorded only for a row set to Last opened, and only while Native Tv

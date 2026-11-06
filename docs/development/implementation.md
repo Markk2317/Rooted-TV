@@ -1852,6 +1852,15 @@ providers, in TMDB's order. The TV app offers Open on each one whose app is inst
 `watchlist` row and a `liked` row (with its own `title`, "Because you liked …") and adds
 `profileTitles`, the keys of each list, which the details screen marks its buttons from.
 
+`HomeTitles::personalRows` also leads the `trending` row with up to ten titles from the
+`similar` lists kept with the profile's liked and watchlisted titles (a watch, like a like,
+stores them from the cached details), taken one from each list in turn, and drops from it the
+titles the profile already marked. A launch of `kind: 'service'` or `'netflix'` records the
+title with its runtime in `HomeWatching` for the active profile; the daemon's `application`
+`app_id` events (and `screenOn` false) end or resume the count, which adds the time the app
+was in front, at most four hours a session. The feed's `continue` row lists what has two
+minutes or more and is under 90% of the runtime, with `service` and `progress`.
+
 `POST /api/home/open` with `kind: 'service'`, the service's key, type and
 TMDB ID opens the service's installed app (`netflix`; `amazon` or
 `amazon.global`; `com.disney.disneyplus-prod`), refused when none is

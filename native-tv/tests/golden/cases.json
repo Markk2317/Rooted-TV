@@ -63,6 +63,25 @@
       ]
     },
     {
+      "name": "home-continue",
+      "time": 4200,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "down"
+        },
+        {
+          "at": 2300,
+          "key": "down"
+        }
+      ]
+    },
+    {
       "name": "home-bar",
       "time": 2600,
       "fixture": "home",

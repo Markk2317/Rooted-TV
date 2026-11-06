@@ -249,6 +249,7 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
                                                       {"series", "Trending series this week"},
                                                       {"netflix", "Available on Netflix"},
                                                       {"watchlist", "Your watchlist"},
+                                                      {"continue", "Continue watching"},
                                                       {"youtube", "Trending on YouTube"}};
     std::map<std::string, Json> feedRows;
     for (const auto &source : discover["rows"].items())
@@ -261,7 +262,8 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     // A streaming service's row follows the top picks, as on Google TV, in the order its app has
     // in Your apps: a service whose app is not there (not installed, or hidden from the row by
     // this profile) has no row. Its Netflix row stands in for Available on Netflix.
-    std::vector<std::string> keys = {"trending"};
+    // Continue watching comes first after the top picks and the apps, as on Google TV.
+    std::vector<std::string> keys = {"trending", "continue"};
     std::map<std::string, std::string> serviceNames;
     // The videos from the profile's YouTube subscriptions take YouTube's place among them.
     for (const Card &card : apps.cards) {
@@ -300,7 +302,10 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         for (const auto &item : source["items"].items()) {
             Card card;
             card.id = item["id"].string();
-            card.kind = videos ? "youtube" : row.key == "netflix" ? "netflix" : "title";
+            card.kind = videos                 ? "youtube"
+                        : row.key == "netflix"  ? "netflix"
+                        : row.key == "continue" ? "continue"
+                                                : "title";
             card.data = item;
             card.title = item["title"].string();
             card.subtitle = titleFacts(item);
@@ -311,6 +316,13 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
                 // OK opens the title in Netflix itself, as a YouTube card opens YouTube.
                 card.command = post(Operation::OpenHomeItem,
                                     fields({{"kind", Json::text("netflix")}, {"id", item["id"]},
+                                            {"type", item["type"]}}));
+            } else if (card.kind == "continue") {
+                // Back into the service's app on the title, where its own Resume is.
+                card.command = post(Operation::OpenHomeItem,
+                                    fields({{"kind", Json::text("service")},
+                                            {"service", item["service"]},
+                                            {"id", item["id"]},
                                             {"type", item["type"]}}));
             } else if (card.kind == "youtube") {
                 card.image = "youtube:" + card.id;

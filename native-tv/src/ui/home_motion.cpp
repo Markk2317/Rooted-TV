@@ -29,7 +29,8 @@ bool due(uint32_t now, uint32_t at) {
     return static_cast<int32_t>(now - at) >= 0;
 }
 bool isTitle(const Card &card) {
-    return card.kind == "title" || card.kind == "youtube" || card.kind == "netflix";
+    return card.kind == "title" || card.kind == "youtube" || card.kind == "netflix" ||
+           card.kind == "continue";
 }
 std::string artOf(const Card &card) {
     return isTitle(card) ? (card.backdrop.empty() ? card.image : card.backdrop) : "";

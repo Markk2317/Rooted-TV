@@ -89,7 +89,8 @@ int main() {
         onlyDisliked.set("items", lone);
         rows.add(onlyDisliked);
         const Json personal = HomeTitles::personalRows(rows, state);
-        assert(count(personal, "trending") == 1 && count(personal, "series") == 0);
+        // Trending: the pick like title 3 (title 4), then title 6; title 5 is not for it.
+        assert(count(personal, "trending") == 2 && count(personal, "series") == 0);
         assert(count(personal, "watchlist") == 2);
         assert(count(personal, "liked") == 1); // title 4: title 5 is not for it
         for (const Json &row : personal.items())
@@ -97,8 +98,35 @@ int main() {
                 assert(row["title"].string() == "Because you liked Title 3");
         assert(trending["items"].size() == 2); // the feed's own rows are not changed
 
+        // The top picks lead with titles like the ones liked and put on the watchlist, one from
+        // each in turn, none already marked, then the week's trending titles.
+        Json watched = title(2, "tv");
+        Json watchedSimilar = Json::array();
+        watchedSimilar.add(title(30));
+        watchedSimilar.add(title(31));
+        watched.set("similar", watchedSimilar);
+        assert(titles.apply("main", "watch", watched, error));
+        state = titles.state("main");
+        Json picksFeed = Json::array();
+        Json trendingRow = Json::object();
+        trendingRow.set("key", Json::text("trending"));
+        Json trendingItems = Json::array();
+        trendingItems.add(title(40));
+        trendingItems.add(title(1)); // on the watchlist already
+        trendingItems.add(title(30)); // also a pick: listed once
+        trendingRow.set("items", trendingItems);
+        picksFeed.add(trendingRow);
+        const Json picked = HomeTitles::personalRows(picksFeed, state);
+        const Json picks = picked[0]["items"];
+        assert(picked[0]["key"].string() == "trending");
+        assert(picks.size() == 4 && picks[0]["id"].number() == 4 && picks[1]["id"].number() == 30 &&
+               picks[2]["id"].number() == 31 && picks[3]["id"].number() == 40);
+        for (const Json &row : picked.items())
+            if (row["key"].string() == "watchlist")
+                assert(!row["items"][0].has("similar"));
+
         const Json summary = HomeTitles::summary(state);
-        assert(summary["watchlist"][0].string() == "movie:1" && summary["liked"][0].string() == "movie:3" &&
+        assert(summary["watchlist"][0].string() == "tv:2" && summary["liked"][0].string() == "movie:3" &&
                summary["disliked"][0].string() == "tv:5");
     }
     // Kept for the next start, readable by root alone.
@@ -107,7 +135,8 @@ int main() {
     assert(stat(path.c_str(), &info) == 0 && (info.st_mode & 0777) == 0600);
     {
         HomeTitles again(directory);
-        assert(again.state("main")["watchlist"].size() == 2);
+        assert(again.state("main")["watchlist"].size() == 2 &&
+               again.state("main")["watchlist"][0]["similar"].size() == 2);
     }
     (void)unlink(path.c_str());
     (void)rmdir(directory.c_str());

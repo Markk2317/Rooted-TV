@@ -98,7 +98,9 @@ struct Frame {
     double nowMs;
 };
 void drawHome(kit::Paint paint, const Frame &frame);
-void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab);
+// `away` 0 to 1: how far the bar has gone up with the page, as Google TV's does once the rows are
+// scrolled.
+void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab, float away = 0);
 void drawRecents(kit::Paint paint, const Frame &frame);
 void drawMenu(Scene &scene, const ViewState &state);
 class Application : private ScreenHost {

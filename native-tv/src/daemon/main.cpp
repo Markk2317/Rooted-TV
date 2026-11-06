@@ -1767,6 +1767,12 @@ int main(int argc, char **argv) {
                     syslogForwarder->flush();
                 if (historyRecorder && stateSubscriptions)
                     historyRecorder->observe(event, stateSubscriptions->snapshot());
+                if (frontDoor && event.group == "application" && event.key == "app_id" &&
+                    event.value.isString())
+                    frontDoor->foregroundChanged(event.value.string());
+                if (frontDoor && event.group == "power" && event.key == "screenOn" &&
+                    event.value.isBoolean() && !event.value.boolean())
+                    frontDoor->foregroundChanged("");
                 if (remoteBattery && event.group == "power" && event.key == "systemOn" &&
                     event.value.isBoolean())
                     remoteBattery->setPowerOn(event.value.boolean());

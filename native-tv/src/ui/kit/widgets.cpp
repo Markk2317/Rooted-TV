@@ -496,6 +496,14 @@ void card(Paint paint, const PosterCard &poster) {
             factsText(paint, {left, bottom - type::labelM.line, width, type::labelM.line},
                       poster.subtitle, type::labelM, faded(color::onSurface2, amount));
     }
+    if (poster.progress >= 0) {
+        // Google TV's Continue watching: a thin track along the foot, filled as far as watched.
+        const float progress = focus::clamp01(poster.progress);
+        Rect track = {poster.rest.x + 16, poster.rest.y + poster.rest.h - 10, poster.rest.w - 32, 4};
+        scene.shape(track, faded(white, .32f), 2);
+        if (progress > 0)
+            scene.shape({track.x, track.y, track.w * progress, track.h}, color::accent, 2);
+    }
     hit(scene, look.rect, poster.id);
 }
 void appCircle(Paint paint, const AppCircle &circle) {

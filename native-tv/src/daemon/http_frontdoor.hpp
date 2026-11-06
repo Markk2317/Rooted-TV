@@ -17,6 +17,7 @@
 #include "service/home_discover.hpp"
 #include "service/youtube_accounts.hpp"
 #include "service/home_titles.hpp"
+#include "service/home_watching.hpp"
 #include "service/home_image_proxy.hpp"
 #include "service/home_picture.hpp"
 #include "service/home_open.hpp"
@@ -167,6 +168,8 @@ class HttpFrontDoor {
     // Where LG's Home cannot be replaced (webOS 3.4), follows the compositor for LG's Home being
     // opened and, with `homeButtonOpensNativeHome` set, brings Native Tv Home forward instead.
     void startHomeKeyWatcher();
+    // The app now in front ("" with the screen off), for Continue watching.
+    void foregroundChanged(const std::string &appId);
     // Whether GitHub has a newer release: the Server tab's Check button, and
     // the opt-in daily check (checkReleaseIfDue, run hourly).
     void setReleaseChecker(service::ReleaseChecker *checker) { releaseChecker_ = checker; }
@@ -441,6 +444,7 @@ class HttpFrontDoor {
     mutable service::HomeImageProxy homeImageProxy_;
     mutable service::YoutubeAccounts youtubeAccounts_;
     mutable service::HomeTitles homeTitles_;
+    mutable service::HomeWatching homeWatching_;
     std::string configPath_;
     std::string hdmiSeenPath_;
     std::string lastAppPath_;
