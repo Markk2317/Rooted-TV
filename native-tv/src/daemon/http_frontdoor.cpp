@@ -16471,10 +16471,30 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
                            result.dump());
 }
 
+namespace {
+// The TV's country in capitals ("IT"), as the ad blocker saves it from LG's settings; "" when not
+// known yet.
+std::string tvRegion(const std::string &dataRoot) {
+    std::ifstream input(dataFilePath(dataRoot, "country").c_str());
+    std::string value;
+    std::getline(input, value);
+    value.erase(std::remove_if(value.begin(), value.end(),
+                               [](unsigned char character) { return std::isspace(character); }),
+                value.end());
+    if (value.size() != 2 || !std::isalpha(static_cast<unsigned char>(value[0])) ||
+        !std::isalpha(static_cast<unsigned char>(value[1])))
+        return "";
+    for (char &character : value)
+        character = static_cast<char>(std::toupper(static_cast<unsigned char>(character)));
+    return value;
+}
+} // namespace
+
 void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     const Json document = currentConfigDocument();
     const Json result = homeDiscover_.feed(document["tmdbKey"].string(),
-                                           document["youtubeKey"].string());
+                                           document["youtubeKey"].string(),
+                                           tvRegion(dataRoot_));
     if (result["enabled"].boolean() && result["rows"].isArray() &&
         result["rows"].size())
         homeImageProxy_.retainAndWarm(result["rows"]);
@@ -17369,7 +17389,8 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     }
     const std::string kind = payload["kind"].string();
     std::string id = payload["id"].isString() ? payload["id"].string() : "";
-    if ((kind == "youtube" || kind == "netflix") && payload["id"].isNumber())
+    if ((kind == "youtube" || kind == "netflix" || kind == "service") &&
+        payload["id"].isNumber())
         id = payload["id"].dump();
     const std::string type = payload["type"].isString()
                                  ? payload["type"].string() : "";
@@ -17386,7 +17407,7 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     Json apps;
     Json devices;
     Json channels;
-    if (kind == "app" || kind == "youtube" || kind == "netflix") {
+    if (kind == "app" || kind == "youtube" || kind == "netflix" || kind == "service") {
         apps = homeCatalogueAppsSnapshot();
     } else if (kind == "dev") {
         devices = homeCatalogueDevicesSnapshot();
@@ -17396,7 +17417,8 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     }
 
     const service::HomeOpenPlan plan =
-        service::planHomeOpen(kind, id, apps, devices, channels);
+        kind == "service" ? service::planHomeServiceOpen(payload["service"].string(), apps)
+                          : service::planHomeOpen(kind, id, apps, devices, channels);
     if (!plan.handled) {
         (void)proxy_.forwardBufferedBody(exchange, body);
         return;
@@ -17407,6 +17429,18 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
             currentConfigDocument()["tmdbKey"].string(),
             config_.document["netflixDeepLinks"].boolean(), type, id);
         service::resolveHomeNetflixOpen(resolved, lookup);
+    }
+    if (resolved.ok && !resolved.service.empty()) {
+        // The live file, so that a link switched on applies without a restart.
+        const Json live = currentConfigDocument();
+        const std::string tmdbKey = live["tmdbKey"].string();
+        if (resolved.service == "netflix")
+            service::resolveHomeServiceOpen(
+                resolved, homeContent_.netflix(tmdbKey, live["netflixDeepLinks"].boolean(),
+                                               type, id));
+        if (resolved.service == "prime")
+            service::resolveHomeServiceOpen(
+                resolved, homeContent_.prime(tmdbKey, live["primeDeepLinks"].boolean(), type, id));
     }
     if (!resolved.ok) {
         fail(resolved.error);

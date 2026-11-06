@@ -19,6 +19,7 @@ struct HomeOpenPlan {
     std::string channelId; // openChannel target for channel tiles
     std::string row;      // recent-history row stamped when it opens
     std::string rowId;    // recent-history id stamped when it opens
+    std::string service;  // a streaming service's title: the service's key
 };
 
 // LG's Home escape stays on Node until the lifecycle slice.
@@ -27,7 +28,7 @@ bool homeOpenHandledKind(const std::string &kind, const std::string &id);
 // Decide what an open request does from the catalogue sources. An app tile
 // launches its launch point, a device opens its HDMI input, a channel tunes,
 // and YouTube videos and Netflix titles create app-specific launch parameters.
-// Those two are the only deep links; a title is never opened in another app.
+// A streaming service's title is planned by planHomeServiceOpen below.
 HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
                           const Json &apps, const Json &devices,
                           const Json &channels);
@@ -35,6 +36,12 @@ HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
 // Complete the external Wikidata lookup before launching Netflix. The native
 // HomeContent service returns the same P1874 link data as the public endpoint.
 void resolveHomeNetflixOpen(HomeOpenPlan &plan, const Json &lookup);
+
+// A title from a streaming service's row opens the service's app, which must be installed.
+// resolveHomeServiceOpen then puts it on the title where a lookup gave its ID there (Netflix's
+// numeric ID, Prime Video's GTI); without one, the app opens on its own Home.
+HomeOpenPlan planHomeServiceOpen(const std::string &service, const Json &apps);
+void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup);
 
 // An opened row is recorded only while Native Tv Home is on and the row sorts
 // by Last opened.

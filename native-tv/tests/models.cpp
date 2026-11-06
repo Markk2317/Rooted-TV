@@ -129,6 +129,22 @@ int main() {
               "The apps lead Home and the top picks follow them");
         check(rows[1].cards[0].image == "tmdb:w342:/p.jpg",
               "A title with no backdrop shows its poster on the landscape card");
+        // A streaming service's row follows the top picks in the order of its app in Your apps,
+        // only for an app there (not one hidden from the row), and its Netflix row stands in for
+        // Available on Netflix.
+        Json streamingCatalogue = Json::parse(
+            R"({"apps":[{"id":"netflix","title":"Netflix"},{"id":"amazon.global","title":"Prime Video"},{"id":"com.disney.disneyplus-prod","title":"Disney+"}],"devices":[],"channels":[],"order":{"app":["amazon.global","netflix","com.disney.disneyplus-prod"]},"layout":{"rows":["app"],"hidden":{"app":["com.disney.disneyplus-prod"]}},"sources":{"channels":0}})");
+        Json streamingFeed = Json::parse(
+            R"({"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","poster":"/p.jpg"}]},{"key":"series","items":[{"id":3,"type":"tv","title":"Three","poster":"/s.jpg"}]},{"key":"on:netflix","items":[{"id":4,"type":"tv","title":"Four","poster":"/n.jpg","service":"netflix"}]},{"key":"on:prime","items":[{"id":5,"type":"movie","title":"Five","poster":"/a.jpg","service":"prime"}]},{"key":"on:disney","items":[{"id":6,"type":"movie","title":"Six","poster":"/d.jpg","service":"disney"}]},{"key":"netflix","items":[{"id":7,"type":"tv","title":"Seven","backdrop":"/x.jpg"}]}]})");
+        rows = homeRows("home", streamingCatalogue, streamingFeed, Json());
+        check(rows.size() == 5 && rows[1].key == "trending" && rows[2].key == "on:prime" &&
+                  rows[3].key == "on:netflix" && rows[4].key == "series",
+              "The services' rows follow the top picks in the apps' order, without a hidden app's");
+        check(rows[2].title == "Popular on Prime Video" && rows[3].title == "Popular on Netflix",
+              "A service's row is named after it");
+        check(rows[2].cards[0].kind == "title" && rows[2].cards[0].command.route == "details" &&
+                  rows[2].cards[0].data["service"].string() == "prime",
+              "OK on a service's title opens its details, which know the service");
         Json oled = Json::parse(
             R"({"ok":true,"isOled":true,"writable":true,"serviceControls":true,"gsr":true,"panelHours":123})");
         auto menu = dashboardRows("oled", oled, Json());

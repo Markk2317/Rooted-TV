@@ -121,6 +121,37 @@ int main() {
     assert(!plan.ok && plan.error ==
            "No Netflix link is available for this title");
 
+    // A streaming service's title opens its app, on the title where the lookup gave its ID there.
+    Json streamingApps = Json::array();
+    streamingApps.add(app("netflix"));
+    streamingApps.add(app("amazon.global"));
+    plan = planHomeServiceOpen("prime", streamingApps);
+    assert(plan.handled && plan.ok && plan.action == "launch");
+    assert(plan.appId == "amazon.global" && plan.service == "prime");
+    Json primeLookup = Json::object();
+    primeLookup.set("ok", Json::flag(true));
+    primeLookup.set("enabled", Json::flag(true));
+    primeLookup.set("gti", Json::text("amzn1.dv.gti.afd5bf09-38ee-44f6-b4c0-78d991a104fd"));
+    resolveHomeServiceOpen(plan, primeLookup);
+    assert(plan.ok && plan.launchParams["contentTarget"].string() ==
+                          "amzn1.dv.gti.afd5bf09-38ee-44f6-b4c0-78d991a104fd");
+    // Without a usable ID the app opens on its own Home rather than failing.
+    plan = planHomeServiceOpen("prime", streamingApps);
+    primeLookup.set("gti", Json::text("amzn1.dv.gti.NOT-A-UUID"));
+    resolveHomeServiceOpen(plan, primeLookup);
+    assert(plan.ok && plan.appId == "amazon.global" && !plan.launchParams.valid());
+    plan = planHomeServiceOpen("netflix", streamingApps);
+    resolveHomeServiceOpen(plan, netflixLookup); // its ID above is not a Netflix ID
+    assert(plan.ok && plan.appId == "netflix" && !plan.launchParams.valid());
+    netflixLookup.set("netflixId", Json::text("80123456"));
+    resolveHomeServiceOpen(plan, netflixLookup);
+    assert(plan.launchParams["contentTarget"].string() ==
+           "m=https://www.netflix.com/title/80123456&source_type=4");
+    plan = planHomeServiceOpen("disney", streamingApps);
+    assert(plan.handled && !plan.ok && plan.error == "Disney+ is not installed on this TV");
+    plan = planHomeServiceOpen("hbo", streamingApps);
+    assert(plan.handled && !plan.ok);
+
     // LG's Home escape stays on Node. Unknown kinds are refused natively.
     const char *const forwarded[] = {"lg"};
     for (const char *kind : forwarded) {

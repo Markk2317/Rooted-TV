@@ -205,6 +205,22 @@ bool netflixId(const std::string &id) {
         });
 }
 
+// amzn1.dv.gti. and a lower-case UUID, as Prime Video's app takes it in contentTarget.
+bool primeGti(const std::string &id) {
+    const std::string prefix = "amzn1.dv.gti.";
+    if (id.size() != prefix.size() + 36 || id.compare(0, prefix.size(), prefix) != 0)
+        return false;
+    for (size_t index = 0; index < 36; ++index) {
+        const char character = id[prefix.size() + index];
+        const bool dash = index == 8 || index == 13 || index == 18 || index == 23;
+        if (dash ? character != '-'
+                 : !((character >= '0' && character <= '9') ||
+                     (character >= 'a' && character <= 'f')))
+            return false;
+    }
+    return true;
+}
+
 std::string titleType(const Json &raw, const std::string &fallback) {
     const Json media = raw["media_type"];
     const std::string type = truthy(media) ? jsString(media) : fallback;
@@ -496,26 +512,41 @@ Json HomeContent::search(const std::string &tmdbKey, const std::string &query,
 Json HomeContent::netflix(const std::string &tmdbKey, bool netflixEnabled,
                           const std::string &type, const std::string &id) {
     if (!netflixEnabled || tmdbKey.empty()) return disabled();
+    return wikidataLookup(tmdbKey, type, id, "P1874", netflixId, "netflixId");
+}
+
+Json HomeContent::prime(const std::string &tmdbKey, bool primeEnabled,
+                        const std::string &type, const std::string &id) {
+    if (!primeEnabled || tmdbKey.empty()) return disabled();
+    return wikidataLookup(tmdbKey, type, id, "P14462", primeGti, "gti");
+}
+
+Json HomeContent::wikidataLookup(const std::string &tmdbKey, const std::string &type,
+                                 const std::string &id, const std::string &property,
+                                 const IdCheck &valid, const std::string &field) {
     const Json title = details(tmdbKey, true, type, id);
     const std::string qid = title["item"]["wikidataId"].string();
     if (!title["ok"].boolean() || qid.empty()) {
         Json result = Json::object();
         result.set("ok", title["ok"].valid() ? title["ok"] : Json::flag(false));
         result.set("enabled", Json::flag(true));
-        result.set("netflixId", Json::text(""));
+        result.set(field, Json::text(""));
         if (title["error"].valid()) result.set("error", title["error"]);
         return result;
     }
-    return request(tmdbKey, "wikidata/" + qid, "", 7 * kDayMs,
-                   [qid](const Json &document) {
-        const Json claims = document["entities"][qid]["claims"]["P1874"];
+    // One entity answers every property, but each is kept apart in the cache: Netflix's lookup is
+    // the entity alone, as before there were others.
+    const std::string part = property == "P1874" ? "" : "&" + property;
+    return request(tmdbKey, "wikidata/" + qid, part, 7 * kDayMs,
+                   [qid, property, valid, field](const Json &document) {
+        const Json claims = document["entities"][qid]["claims"][property];
         std::vector<std::string> ids;
         if (claims.isArray()) {
             for (const Json &claim : claims.items()) {
                 if (claim["rank"].string() == "deprecated") continue;
                 const std::string value = jsString(
                     claim["mainsnak"]["datavalue"]["value"]);
-                if (!netflixId(value) ||
+                if (!valid(value) ||
                     std::find(ids.begin(), ids.end(), value) != ids.end())
                     continue;
                 ids.push_back(value);
@@ -524,7 +555,7 @@ Json HomeContent::netflix(const std::string &tmdbKey, bool netflixEnabled,
         Json result = Json::object();
         result.set("ok", Json::flag(true));
         result.set("enabled", Json::flag(true));
-        result.set("netflixId", Json::text(ids.size() == 1 ? ids[0] : ""));
+        result.set(field, Json::text(ids.size() == 1 ? ids[0] : ""));
         return result;
     });
 }

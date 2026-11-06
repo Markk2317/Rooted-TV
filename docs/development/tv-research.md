@@ -1766,3 +1766,19 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   ribbon, and the app beneath gets its focus back; `KEY_BACK` written to the IR
   remote's input device (`LGE RCU`, event1) does not, while `KEY_LEFTMETA`
   written there opens the ribbon.
+- `com.webos.service.tv.capture/executeOneShot` with `"method":"DISPLAY"` writes
+  the whole screen, video and graphics, to a JPEG or PNG (960 × 540 asked for),
+  any app in front.
+- Streaming apps declare how they take a title in `deeplinkingParams`:
+  Prime Video 3.12 (`amazon.global`, native) `{"contentTarget":"$CONTENTID"}`,
+  Disney+ 24.5.8 (`com.disney.disneyplus-prod`, web)
+  `{"handledBy":"app","contentTarget":"$CONTENTID"}`. LG's Search & Discovery
+  app passes its content ID through as `contentTarget` for every app but
+  Netflix. Launched with a GTI alone (`amzn1.dv.gti.<uuid>`), Prime Video asks
+  for the profile and then shows that title's page; a relaunch while running
+  does the same. Disney+ reloads, asks for the profile and shows its own Home
+  for `https://www.disneyplus.com/browse/entity-<uuid>`, for `entity-<uuid>`
+  and for the older `/movies/<slug>/<id>` URL. Both apps ask whose profile it
+  is on every launch with a title.
+- LG's own suggestions, `com.webos.service.discovery` (Digitalsmiths),
+  answer `getSupportedCategories` with no categories in Italy.

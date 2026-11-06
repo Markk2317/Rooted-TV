@@ -86,6 +86,11 @@ void Application::key(Key key) {
                 if (card.kind == "title") {
                     if (key == Key::Ok)
                         openDetails(card.data);
+                    else if (card.data["service"].isString()) // Red: straight to its service's app
+                        execute(post(Operation::OpenHomeItem, fields({{"kind", Json::text("service")},
+                                                                      {"service", card.data["service"]},
+                                                                      {"type", card.data["type"]},
+                                                                      {"id", card.data["id"]}})));
                     else // Red: straight to Netflix, without the details
                         execute(post(Operation::OpenHomeItem, fields({{"kind", Json::text("netflix")},
                                                                       {"type", card.data["type"]},

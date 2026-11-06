@@ -2,6 +2,7 @@
 
 #include "core/json.hpp"
 #include <string>
+#include <vector>
 
 namespace nativetv {
 namespace names {
@@ -49,5 +50,18 @@ Json compensationStatus(bool running);
 Json emmcEolStates();
 Json emmcEol(unsigned code);
 Json vrrType(const Json &raw);
+
+// A streaming service Native Tv Home has a row for: its name, TMDB's watch-provider IDs for it
+// ("9|119": either), and the webOS apps that are it, in the order they are looked for.
+struct StreamingService {
+    std::string key;
+    std::string name;
+    std::string providers;
+    std::vector<std::string> apps;
+};
+const std::vector<StreamingService> &streamingServices();
+const StreamingService *streamingService(const std::string &key);
+// The service's app among the installed ones (a list of {"id": ...}), or "" when none is.
+std::string streamingApp(const StreamingService &service, const Json &apps);
 } // namespace names
 } // namespace nativetv

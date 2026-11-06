@@ -267,6 +267,29 @@ std::string shortAppId(const std::string &appId, const Json &aliases) {
 
 std::string inputAppId(const std::string &key) { return "com.webos.app." + key; }
 
+const std::vector<StreamingService> &streamingServices() {
+    // Prime Video is amazon.global on webOS 3.4 and amazon later; TMDB lists it as 9 in some
+    // countries and 119 in others.
+    static const std::vector<StreamingService> services = {
+        {"netflix", "Netflix", "8", {"netflix"}},
+        {"prime", "Prime Video", "9|119", {"amazon", "amazon.global"}},
+        {"disney", "Disney+", "337", {"com.disney.disneyplus-prod"}}};
+    return services;
+}
+
+const StreamingService *streamingService(const std::string &key) {
+    for (const StreamingService &service : streamingServices())
+        if (service.key == key) return &service;
+    return nullptr;
+}
+
+std::string streamingApp(const StreamingService &service, const Json &apps) {
+    for (const std::string &app : service.apps)
+        for (const Json &item : apps.items())
+            if (item.isObject() && item["id"].string() == app) return app;
+    return "";
+}
+
 Json input(const std::string &id) {
     Json result = Json::object();
     const Json table = inputs();

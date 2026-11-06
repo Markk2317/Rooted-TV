@@ -23,7 +23,10 @@ class HomeDiscover {
     HomeDiscover(const HomeDiscover &) = delete;
     HomeDiscover &operator=(const HomeDiscover &) = delete;
 
-    Json feed(const std::string &tmdbKey, const std::string &youtubeKey);
+    // `region` is the TV's country as two capitals ("IT"): with it, the feed adds a row of what is
+    // popular on each streaming service there, and YouTube's trending row is that country's.
+    Json feed(const std::string &tmdbKey, const std::string &youtubeKey,
+              const std::string &region = "");
 
     // Whether a title can be opened somewhere: as a YouTube trailer or a Netflix title. With one set,
     // the feed lists only the titles it says yes to; without, it lists what TMDB returns.
@@ -35,11 +38,13 @@ class HomeDiscover {
 
   private:
     void workerLoop();
-    void refresh(const std::string &tmdbKey, const std::string &youtubeKey);
+    void refresh(const std::string &tmdbKey, const std::string &youtubeKey,
+                 const std::string &region);
     bool fetch(const std::string &url, Json &document, std::string &error);
     void loadCacheLocked();
     void saveCacheLocked();
-    bool dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked) const;
+    bool dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked,
+                   const std::string &region) const;
     std::string cachePath_;
     Fetcher fetcher_;
     Clock clock_;
@@ -56,6 +61,7 @@ class HomeDiscover {
     int64_t failedAtMs_ = 0;
     std::string requestedTmdbKey_;
     std::string requestedYoutubeKey_;
+    std::string requestedRegion_;
     Json cache_;
 };
 

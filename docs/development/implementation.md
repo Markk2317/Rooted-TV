@@ -1803,7 +1803,18 @@ feed. Its rows are the three TMDB trending lists of the week (`trending/all/week
 `trending/movie/week`, `trending/tv/week`) and, with Netflix links on, a
 `netflix` row: the titles of those lists that have a Netflix link, in their
 order, at most 16, asked once each (the lookup is the one details uses, and is
-kept for then).
+kept for then). Once the TV's country is known (`country` in the data
+directory, which the ad blocker saves from LG's `smartServiceCountryCode2`),
+the feed is that country's: an `on:netflix`, `on:prime` and `on:disney` row
+each lists what TMDB's `discover/movie` and `discover/tv` return for the
+service's watch providers (8; 9 or 119; 337) in that region with a
+subscription, by popularity, films and series in turn, at most 16, each item
+marked with `service`; these titles are not filtered by trailer or link. The
+YouTube row asks for `regionCode` as well. A cache made for another country,
+or none, is replaced at once. The TV client shows a service's row after Top
+picks for you, in the order its app has in the profile's Your apps row, and
+not where the app is missing or hidden from that row; with an `on:netflix`
+row, the `netflix` row is left out.
 
 `GET /api/home/details?type=movie|tv&id=…` and
 `GET /api/home/search?q=…` delegate through `home.js` to `home-content.js`.
@@ -1827,4 +1838,14 @@ checks the installed app, resolves the mapping on the server, and launches
 `netflix` with `params.contentTarget` equal to
 `m=https://www.netflix.com/title/<id>&source_type=4`. The metadata view loads
 this optional mapping after displaying TMDB details, so Wikidata does not
-hold up the details page. No general watch-provider lookup is included.
+hold up the details page.
+
+`POST /api/home/open` with `kind: 'service'`, the service's key, type and
+TMDB ID opens the service's installed app (`netflix`; `amazon` or
+`amazon.global`; `com.disney.disneyplus-prod`), refused when none is
+installed. Netflix gets the title's `contentTarget` as above when
+`netflixDeepLinks` is on and the mapping exists; Prime Video gets the title's
+GTI (Wikidata `P14462`, `amzn1.dv.gti.` and a UUID, unambiguous) as
+`contentTarget` when `primeDeepLinks: true`, cached apart from the Netflix ID
+for seven days. Otherwise, and always for Disney+, the app opens on its own
+Home.

@@ -112,6 +112,10 @@ int main() {
             document = titleReply(11);
         } else if (url.find("trending/tv/week") != std::string::npos) {
             document = titleReply(21, "tv");
+        } else if (url.find("discover/movie") != std::string::npos) {
+            document = titleReply(41);
+        } else if (url.find("discover/tv") != std::string::npos) {
+            document = titleReply(51, "tv");
         } else {
             document = titleReply(31, "tv");
         }
@@ -321,6 +325,71 @@ int main() {
         assert(refreshed.feed("tmdb", "")["rows"].size() == 3);
     }
     assert(asked.size() == 7);
+    // With the TV's country, each streaming service has a row of what is popular on it there: its
+    // films and series in turn, each marked with the service, whether or not it has a trailer; and
+    // YouTube's trending is that country's.
+    const std::string regionDir = directory.path() + "/region";
+    assert(mkdir(regionDir.c_str(), 0700) == 0);
+    asked.clear();
+    {
+        HomeDiscover regional(regionDir, fetcher, [&clock] { return clock; });
+        regional.setLinkCheck([](const std::string &, const std::string &id) { return id == "1"; });
+        (void)regional.feed("tmdb", "youtube-key", "IT");
+        assert(waitForAsked(10)); // three trending rows, two lists for each of three services, YouTube
+    }
+    {
+        bool askedPrime = false;
+        for (const std::string &url : asked) {
+            if (url.find("with_watch_providers=9%7C119") != std::string::npos) {
+                askedPrime = true;
+                assert(url.find("watch_region=IT") != std::string::npos);
+                assert(url.find("with_watch_monetization_types=flatrate") != std::string::npos);
+            }
+            if (url.find("googleapis.com") != std::string::npos)
+                assert(url.find("&regionCode=IT") != std::string::npos);
+        }
+        assert(askedPrime);
+    }
+    {
+        HomeDiscover regionalCache(regionDir, fetcher, [&clock] { return clock; });
+        const Json feed = regionalCache.feed("tmdb", "youtube-key", "IT");
+        assert(feed["rows"].size() == 5); // Top picks, the three services, YouTube
+        assert(feed["rows"][0]["key"].string() == "trending" && feed["rows"][0]["items"].size() == 1);
+        assert(feed["rows"][1]["key"].string() == "on:netflix");
+        const Json prime = feed["rows"][2];
+        assert(prime["key"].string() == "on:prime" && prime["items"].size() == 6);
+        const int order[] = {41, 51, 42, 52, 43, 53};
+        for (size_t index = 0; index < 6; ++index) {
+            assert(prime["items"][index]["id"].number() == order[index]);
+            assert(prime["items"][index]["service"].string() == "prime");
+        }
+        assert(prime["items"][1]["type"].string() == "tv");
+        assert(feed["rows"][3]["key"].string() == "on:disney");
+    }
+    assert(asked.size() == 10);
+    {
+        // Another country's rows are not this TV's: they are asked for again at once.
+        HomeDiscover moved(regionDir, fetcher, [&clock] { return clock; });
+        (void)moved.feed("tmdb", "youtube-key", "FR");
+        assert(waitForAsked(20));
+    }
+    {
+        // Without a country there are no service rows, and the cache made with one is replaced.
+        HomeDiscover nowhere(regionDir, fetcher, [&clock] { return clock; });
+        (void)nowhere.feed("tmdb", "youtube-key", "Italy");
+        assert(waitForAsked(24));
+    }
+    {
+        HomeDiscover nowhereCache(regionDir, fetcher, [&clock] { return clock; });
+        const Json feed = nowhereCache.feed("tmdb", "youtube-key", "");
+        for (const Json &row : feed["rows"].items())
+            assert(row["key"].string().compare(0, 3, "on:") != 0);
+    }
+    assert(asked.size() == 24 && asked[23].find("regionCode") == std::string::npos);
+    (void)unlink((regionDir + "/home-discover.json").c_str());
+    (void)unlink((regionDir + "/home-discover.json.tmp").c_str());
+    (void)rmdir(regionDir.c_str());
+
     (void)unlink((addedDir + "/home-discover.json").c_str());
     (void)unlink((addedDir + "/home-discover.json.tmp").c_str());
     (void)rmdir(addedDir.c_str());

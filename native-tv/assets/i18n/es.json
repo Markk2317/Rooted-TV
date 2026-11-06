@@ -1226,6 +1226,7 @@
 "srv.home.noNetflix": {"text": "Netflix no está instalado en esta TV", "from": "Netflix is not installed on this TV"},
 "srv.home.noNetflixLink": {"text": "No hay ningún enlace de Netflix disponible para este título", "from": "No Netflix link is available for this title"},
 "srv.home.noProfile": {"text": "no existe ese perfil", "from": "no such profile"},
+"srv.home.noServiceApp": {"text": "{service} no está instalado en esta TV", "from": "{service} is not installed on this TV"},
 "srv.home.noTiles": {"text": "No se pudieron leer los iconos de la pantalla de inicio del TV. Inténtalo de nuevo en un momento.", "from": "Could not read the TV's Home screen tiles. Try again in a moment."},
 "srv.home.noYoutube": {"text": "YouTube no está instalado en esta TV", "from": "YouTube is not installed on this TV"},
 "srv.home.notAllowed": {"text": "Activa primero el diseño de la pantalla de inicio. Es experimental en este TV.", "from": "Switch on Home screen layout first. It is experimental on this TV."},

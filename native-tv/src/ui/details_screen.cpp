@@ -4,6 +4,7 @@
 #include "ui/details_screen.hpp"
 #include "ui/application.hpp"
 #include "domain/models.hpp"
+#include "domain/names.hpp"
 #include "domain/say.hpp"
 #include "ui/home_layout.hpp"
 #include "ui/kit/overlay.hpp"
@@ -102,6 +103,13 @@ void DetailsScreen::rebuildActions(Title &title) {
     title.actions.clear();
     if (!item["netflixId"].string().empty())
         title.actions.push_back({Action::Kind::Netflix, msg("tv.details.netflix", "Open on Netflix")});
+    // A title from a streaming service's row opens in that service's app; on Netflix, the Netflix
+    // link above does that already.
+    const names::StreamingService *service = names::streamingService(item["service"].string());
+    if (service && !(service->key == "netflix" && !item["netflixId"].string().empty()))
+        title.actions.push_back({Action::Kind::Service,
+                                 msg("tv.details.service", "Open on {service}",
+                                     fields({{"service", Json::text(service->name)}}))});
     if (!item["trailer"].string().empty())
         title.actions.push_back({Action::Kind::Trailer, msg("tv.details.trailer", "Trailer")});
     if (!item["overview"].string().empty())
@@ -169,9 +177,13 @@ void DetailsScreen::response(ScreenHost &host, const Response &response) {
                 msg("tv.details.unavailable", "Details are unavailable. Retry."));
         } else {
             std::string netflixId = title.item["netflixId"].string();
+            const Json service = title.item["service"];
             title.item = data["item"];
             if (!netflixId.empty() && title.item["netflixId"].string().empty())
                 title.item.set("netflixId", Json::text(netflixId));
+            // The service's row the title came from, which the details do not say.
+            if (service.isString())
+                title.item.set("service", service);
             title.error = false;
             title.stale = data["stale"].boolean();
             title.status = title.stale ? msg("tv.details.cached", "Saved details · offline") : "";
@@ -259,6 +271,11 @@ void DetailsScreen::activate(ScreenHost &host) {
     if (kind == Action::Kind::Trailer) {
         body.set("kind", Json::text("youtube"));
         body.set("id", title.item["trailer"]);
+    } else if (kind == Action::Kind::Service) {
+        body.set("kind", Json::text("service"));
+        body.set("service", title.item["service"]);
+        body.set("type", title.item["type"]);
+        body.set("id", title.item["id"]);
     } else {
         body.set("kind", Json::text("netflix"));
         body.set("type", title.item["type"]);
@@ -522,6 +539,7 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
         button.rest = {x, y, width, kActionH};
         button.id = "details:action:" + std::to_string(i);
         button.primary = i == 0 && (title.actions[i].kind == Action::Kind::Netflix ||
+                                    title.actions[i].kind == Action::Kind::Service ||
                                     title.actions[i].kind == Action::Kind::Trailer);
         button.focus = static_cast<float>(motion.value("details:a:" + std::to_string(i)));
         kit::pillButton(paint, button);

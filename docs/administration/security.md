@@ -301,12 +301,15 @@ metadata.
 
 The daily Home feed refresh asks TMDB for the details of each title it would list, the
 same request a title opens with, and keeps only titles with a YouTube trailer or, when
-`netflixDeepLinks` is on, a Netflix link.
+`netflixDeepLinks` is on, a Netflix link. Once the TV's country is known, the same refresh
+asks TMDB's `discover` for what is popular on Netflix, Prime Video and Disney+ there, which
+sends TMDB the country's two-letter code and the services' provider numbers.
 
 A configured YouTube key (set in the dashboard's Native Tv Home tab or as `youtubeKey` in
 `config.json`; the dashboard never shows it again) makes the same refresh ask
 `www.googleapis.com`, over HTTPS, for the most popular videos, with the key. The key is saved
-as 20 to 100 letters, digits, `-` and `_`, and nothing else is sent with it.
+as 20 to 100 letters, digits, `-` and `_`, and nothing else is sent with it but the TV's
+country, once known, for that country's list.
 
 `netflixDeepLinks: true` separately enables requests to `www.wikidata.org`
 for the selected title's exact Wikidata QID, obtained from TMDB. Wikidata
@@ -314,4 +317,7 @@ receives that QID and the TV's public IP, without the TMDB key, profile name
 or search query. The server accepts only an unambiguous numeric `P1874`
 Netflix ID and constructs the native Netflix launch target itself; the page
 cannot supply an arbitrary deep-link URL. Saved mappings can be used offline.
-The option defaults off; other watch-provider services are not queried.
+The option defaults off. `primeDeepLinks: true` does the same for Prime Video,
+when a title from its row is opened: the server accepts only one `P14462` GTI
+(`amzn1.dv.gti.` and a UUID) and passes it to the installed app as it is. It
+also defaults off; Disney+ is never looked up.

@@ -37,6 +37,21 @@ bool validNetflixId(const std::string &id) {
     return true;
 }
 
+bool validPrimeGti(const std::string &id) {
+    const std::string prefix = "amzn1.dv.gti.";
+    if (id.size() != prefix.size() + 36 || id.compare(0, prefix.size(), prefix) != 0)
+        return false;
+    for (size_t index = 0; index < 36; ++index) {
+        const char character = id[prefix.size() + index];
+        const bool dash = index == 8 || index == 13 || index == 18 || index == 23;
+        if (dash ? character != '-'
+                 : !((character >= '0' && character <= '9') ||
+                     (character >= 'a' && character <= 'f')))
+            return false;
+    }
+    return true;
+}
+
 void setLaunch(HomeOpenPlan &plan, const std::string &appId) {
     plan.ok = true;
     plan.error.clear();
@@ -137,6 +152,44 @@ void resolveHomeNetflixOpen(HomeOpenPlan &plan, const Json &lookup) {
         "contentTarget",
         Json::text("m=https://www.netflix.com/title/" + netflixId +
                    "&source_type=4"));
+}
+
+HomeOpenPlan planHomeServiceOpen(const std::string &service, const Json &apps) {
+    HomeOpenPlan plan;
+    plan.handled = true;
+    const names::StreamingService *streaming = names::streamingService(service);
+    if (!streaming) {
+        plan.error = say::msg("srv.home.unknownTile", "that is not on Native Tv Home");
+        return plan;
+    }
+    const std::string app = names::streamingApp(*streaming, apps);
+    if (app.empty()) {
+        Json variables = Json::object();
+        variables.set("service", Json::text(streaming->name));
+        plan.error = say::msg("srv.home.noServiceApp", "{service} is not installed on this TV",
+                              variables);
+        return plan;
+    }
+    setLaunch(plan, app);
+    plan.service = streaming->key;
+    return plan;
+}
+
+void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup) {
+    if (!plan.handled || !plan.ok || plan.service.empty() || !lookup["ok"].boolean() ||
+        !lookup["enabled"].boolean())
+        return;
+    std::string target;
+    if (plan.service == "netflix" && validNetflixId(lookup["netflixId"].string()))
+        target = "m=https://www.netflix.com/title/" + lookup["netflixId"].string() +
+                 "&source_type=4";
+    // Tried on webOS 3.4's Prime Video 3.12: the GTI alone opens the title's page once a
+    // profile is chosen.
+    if (plan.service == "prime" && validPrimeGti(lookup["gti"].string()))
+        target = lookup["gti"].string();
+    if (target.empty()) return;
+    plan.launchParams = Json::object();
+    plan.launchParams.set("contentTarget", Json::text(target));
 }
 
 bool homeOpenStampWanted(const Json &document, const std::string &row) {

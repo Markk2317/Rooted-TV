@@ -61,6 +61,11 @@ nativetv::Json responseFor(const std::string &url) {
         Json entity = Json::object();
         entity.set("claims", Json::object());
         entity["claims"].set("P1874", claims);
+        Json gtis = Json::array();
+        gtis.add(Json::parse("{\"mainsnak\":{\"datavalue\":{\"value\":\"B00ABCDEFG\"}}}"));
+        gtis.add(Json::parse("{\"mainsnak\":{\"datavalue\":{\"value\":"
+                             "\"amzn1.dv.gti.afd5bf09-38ee-44f6-b4c0-78d991a104fd\"}}}"));
+        entity["claims"].set("P14462", gtis);
         Json entities = Json::object();
         entities.set("Q42", entity);
         Json result = Json::object();
@@ -181,6 +186,17 @@ int main() {
     assert(netflix["ok"].boolean() && netflix["netflixId"].string() == "80057281");
     assert(asked.size() == beforeNetflix + 1);
     assert(asked.back() == "https://www.wikidata.org/wiki/Special:EntityData/Q42.json");
+
+    // Prime Video's GTI comes from the same entity, kept apart from the Netflix ID; an ID that is
+    // not a GTI is passed over.
+    assert(!content.prime("private-test-key", false, "movie", "7")["enabled"].boolean());
+    const Json prime = content.prime("private-test-key", true, "movie", "7");
+    assert(prime["ok"].boolean() &&
+           prime["gti"].string() == "amzn1.dv.gti.afd5bf09-38ee-44f6-b4c0-78d991a104fd");
+    assert(asked.size() == beforeNetflix + 2);
+    assert(asked.back() == "https://www.wikidata.org/wiki/Special:EntityData/Q42.json");
+    assert(content.netflix("private-test-key", true, "movie", "7")["netflixId"].string() == "80057281");
+    assert(asked.size() == beforeNetflix + 2);
 
     const size_t beforeRestart = asked.size();
     HomeContent restarted(directory.path(), fetcher, [&clock] { return clock; });

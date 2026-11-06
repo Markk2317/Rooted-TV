@@ -1,4 +1,5 @@
 #include "service/home_discover.hpp"
+#include "domain/names.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -228,6 +229,22 @@ Json responseRows(const Json &rows, const std::string &tmdbKey,
     return visible;
 }
 
+bool validRegion(const std::string &region) {
+    return region.size() == 2 && std::all_of(region.begin(), region.end(),
+        [](unsigned char value) { return value >= 'A' && value <= 'Z'; });
+}
+
+// Films and series in turn, each list in TMDB's order.
+std::vector<Json> alternate(const std::vector<Json> &films, const std::vector<Json> &series) {
+    std::vector<Json> items;
+    for (size_t index = 0; items.size() < kPerRow &&
+                           (index < films.size() || index < series.size()); ++index) {
+        if (index < films.size()) items.push_back(films[index]);
+        if (items.size() < kPerRow && index < series.size()) items.push_back(series[index]);
+    }
+    return items;
+}
+
 int64_t systemNow() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
@@ -243,7 +260,11 @@ HomeDiscover::HomeDiscover(std::string dataRoot, Fetcher fetcher, Clock clock)
 }
 
 HomeDiscover::~HomeDiscover() {
-    stopping_.store(true);
+    {
+        // Under the lock, or the worker can test the flag, miss the wake-up and wait for ever.
+        std::lock_guard<std::mutex> lock(mutex_);
+        stopping_.store(true);
+    }
     changed_.notify_all();
     if (worker_.joinable()) worker_.join();
 }
@@ -258,7 +279,8 @@ void HomeDiscover::setNetflixCheck(LinkCheck check) {
     netflixCheck_ = std::move(check);
 }
 
-Json HomeDiscover::feed(const std::string &tmdbKey, const std::string &youtubeKey) {
+Json HomeDiscover::feed(const std::string &tmdbKey, const std::string &youtubeKey,
+                        const std::string &region) {
     Json response = Json::object();
     response.set("ok", Json::flag(true));
     if (tmdbKey.empty() && youtubeKey.empty()) {
@@ -272,10 +294,12 @@ Json HomeDiscover::feed(const std::string &tmdbKey, const std::string &youtubeKe
         std::lock_guard<std::mutex> lock(mutex_);
         if (!cacheLoaded_) loadCacheLocked();
         const int64_t nowMs = clock_();
-        if (dueLocked(nowMs, !tmdbKey.empty(), !youtubeKey.empty()) && !refreshing_ &&
+        const std::string country = validRegion(region) ? region : "";
+        if (dueLocked(nowMs, !tmdbKey.empty(), !youtubeKey.empty(), country) && !refreshing_ &&
             (!hasFailed_ || nowMs - failedAtMs_ >= kRetryMs)) {
             requestedTmdbKey_ = tmdbKey;
             requestedYoutubeKey_ = youtubeKey;
+            requestedRegion_ = country;
             refreshRequested_ = true;
             refreshing_ = true;
             changed_.notify_one();
@@ -293,20 +317,22 @@ void HomeDiscover::workerLoop() {
     for (;;) {
         std::string tmdbKey;
         std::string youtubeKey;
+        std::string region;
         {
             std::unique_lock<std::mutex> lock(mutex_);
             changed_.wait(lock, [this]() { return stopping_.load() || refreshRequested_; });
             if (stopping_.load()) return;
             tmdbKey = requestedTmdbKey_;
             youtubeKey = requestedYoutubeKey_;
+            region = requestedRegion_;
             refreshRequested_ = false;
         }
-        refresh(tmdbKey, youtubeKey);
+        refresh(tmdbKey, youtubeKey, region);
     }
 }
 
 void HomeDiscover::refresh(const std::string &tmdbKey,
-                           const std::string &youtubeKey) {
+                           const std::string &youtubeKey, const std::string &region) {
     Json previous;
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -331,7 +357,9 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
         return answer;
     };
     std::vector<Json> rows;
-    const size_t asked = (tmdbKey.empty() ? 0 : 3) + (youtubeKey.empty() ? 0 : 1);
+    const bool services = !tmdbKey.empty() && !region.empty();
+    const size_t asked = (tmdbKey.empty() ? 0 : 3) + (youtubeKey.empty() ? 0 : 1) +
+                         (services ? names::streamingServices().size() : 0);
     size_t missed = asked;
     for (const RowSpec &row : kRows) {
         if (tmdbKey.empty()) break;
@@ -360,12 +388,46 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
         }
     }
 
+    // What is popular on each streaming service in the TV's country, from TMDB's watch providers
+    // (JustWatch's data): films and series in turn, to be opened in the service's app. A title is
+    // listed whether or not it has a trailer, since the app is where it plays.
+    for (const names::StreamingService &service : names::streamingServices()) {
+        if (!services) break;
+        std::vector<Json> lists[2];
+        const char *const types[2] = {"movie", "tv"};
+        for (int which = 0; which < 2; ++which) {
+            const std::string url = "https://api.themoviedb.org/3/discover/" +
+                std::string(types[which]) + "?api_key=" + urlEncode(tmdbKey) +
+                "&language=en-US&sort_by=popularity.desc&include_adult=false" +
+                "&watch_region=" + region + "&with_watch_monetization_types=flatrate" +
+                "&with_watch_providers=" + urlEncode(service.providers);
+            Json document;
+            std::string error;
+            bool fetched = false;
+            try { fetched = fetch(url, document, error); } catch (...) { fetched = false; }
+            if (!fetched || !document["results"].isArray()) continue;
+            std::set<std::string> seen;
+            for (const Json &raw : document["results"].items()) {
+                Json item = trimmedTitle(raw, types[which]);
+                if (!item.valid() || !seen.insert(idString(item["id"])).second) continue;
+                item.set("service", Json::text(service.key));
+                lists[which].push_back(item);
+            }
+        }
+        const std::vector<Json> items = alternate(lists[0], lists[1]);
+        if (!items.empty()) {
+            rows.push_back(makeRow("on:" + service.key, items));
+            --missed;
+        }
+    }
+
     // The titles above that open on Netflix, in the order of the rows they came from.
     if (netflixCheck) {
         std::vector<Json> onNetflix;
         std::set<std::string> seenOnNetflix;
         for (const Json &row : rows)
             for (const Json &item : row["items"].items()) {
+                if (item.has("service")) continue;
                 const std::string key = item["type"].string() + ":" + idString(item["id"]);
                 if (onNetflix.size() == kPerRow || !seenOnNetflix.insert(key).second) continue;
                 bool answer = false;
@@ -377,7 +439,8 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
 
     if (!youtubeKey.empty()) {
         const std::string url = "https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&maxResults=16&key=" +
-                                urlEncode(youtubeKey);
+                                urlEncode(youtubeKey) +
+                                (region.empty() ? "" : "&regionCode=" + region);
         Json document;
         std::string error;
         bool fetched = false;
@@ -418,6 +481,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     updated.set("partial", Json::flag(missed > 0));
     updated.set("tmdbAsked", Json::flag(!tmdbKey.empty()));
     updated.set("youtubeAsked", Json::flag(!youtubeKey.empty()));
+    updated.set("region", Json::text(region));
     {
         std::lock_guard<std::mutex> lock(mutex_);
         cache_ = updated;
@@ -524,8 +588,11 @@ void HomeDiscover::saveCacheLocked() {
     }
 }
 
-bool HomeDiscover::dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked) const {
+bool HomeDiscover::dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked,
+                             const std::string &region) const {
     if (!cache_.isObject()) return true;
+    // The rows of another country, or of none, are not this TV's.
+    if (cache_["region"].string() != region) return true;
     // A key saved after the cache was made has no rows in it, so it must not wait for tomorrow. A cache
     // from before the keys were recorded is read from its rows.
     bool youtubeRows = false, titleRows = false;

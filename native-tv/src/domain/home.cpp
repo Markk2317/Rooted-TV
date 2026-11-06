@@ -1,4 +1,5 @@
 #include "domain/models.hpp"
+#include "domain/names.hpp"
 #include <algorithm>
 #include <map>
 
@@ -255,7 +256,25 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     CardRow apps = appsRow(catalogue, guide, false);
     if (!apps.cards.empty())
         result.push_back(apps);
-    for (const auto &key : {"trending", "movies", "series", "netflix", "youtube"}) {
+    // A streaming service's row follows the top picks, as on Google TV, in the order its app has
+    // in Your apps: a service whose app is not there (not installed, or hidden from the row by
+    // this profile) has no row. Its Netflix row stands in for Available on Netflix.
+    std::vector<std::string> keys = {"trending"};
+    std::map<std::string, std::string> serviceNames;
+    for (const Card &card : apps.cards)
+        for (const auto &service : nativetv::names::streamingServices()) {
+            const std::string key = "on:" + service.key;
+            if (feedRows.count(key) && !serviceNames.count(key) &&
+                std::find(service.apps.begin(), service.apps.end(), card.id) != service.apps.end()) {
+                keys.push_back(key);
+                serviceNames[key] = "Popular on " + service.name;
+            }
+        }
+    keys.insert(keys.end(), {"movies", "series"});
+    if (!serviceNames.count("on:netflix"))
+        keys.push_back("netflix");
+    keys.push_back("youtube");
+    for (const auto &key : keys) {
         if (!feedRows.count(key))
             continue;
         Json source = feedRows[key];
@@ -263,7 +282,10 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         row.key = source["key"].string();
         row.posters = row.key != "trending" && row.key != "youtube";
         auto name = names.find(row.key);
-        row.title = name == names.end() ? source["title"].string(row.key) : name->second;
+        auto serviceName = serviceNames.find(row.key);
+        row.title = serviceName != serviceNames.end() ? serviceName->second
+                    : name == names.end()            ? source["title"].string(row.key)
+                                                     : name->second;
         for (const auto &item : source["items"].items()) {
             Card card;
             card.id = item["id"].string();

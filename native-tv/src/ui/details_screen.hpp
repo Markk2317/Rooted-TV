@@ -36,7 +36,7 @@ class DetailsScreen final : public ScreenView {
 
   private:
     struct Action {
-        enum class Kind { Netflix, Trailer, Overview, Retry } kind;
+        enum class Kind { Netflix, Service, Trailer, Overview, Retry } kind;
         std::string label;
     };
     struct Title {

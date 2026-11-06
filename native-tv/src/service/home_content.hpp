@@ -26,6 +26,10 @@ class HomeContent {
                 bool queryPresent = true);
     Json netflix(const std::string &tmdbKey, bool netflixEnabled,
                  const std::string &type, const std::string &id);
+    // {"ok", "enabled", "gti"}: the title's Prime Video GTI (Wikidata's P14462), "" when Wikidata
+    // has none or several.
+    Json prime(const std::string &tmdbKey, bool primeEnabled,
+               const std::string &type, const std::string &id);
 
   private:
     struct Entry {
@@ -39,6 +43,11 @@ class HomeContent {
         std::condition_variable changed;
     };
     using Converter = std::function<Json(const Json &)>;
+    using IdCheck = std::function<bool(const std::string &)>;
+
+    Json wikidataLookup(const std::string &tmdbKey, const std::string &type,
+                        const std::string &id, const std::string &property,
+                        const IdCheck &valid, const std::string &field);
 
     Json request(const std::string &apiKey, const std::string &resource,
                  const std::string &query, int64_t lifetimeMs,
