@@ -1782,3 +1782,18 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   is on every launch with a title.
 - LG's own suggestions, `com.webos.service.discovery` (Digitalsmiths),
   answer `getSupportedCategories` with no categories in Italy.
+- Video decoding for apps: `/usr/lib/libavcodec.so.55.69.100` and
+  `libavutil.so.52.92.100` are FFmpeg 2.3, with its software H.264 decoder;
+  there is no libswscale. GStreamer 1.2.4's libav plugin exposes only
+  `avdec_mp3`, and its video decoder, `lxvideodec`, draws to the hardware
+  video plane rather than to memory. A native app in the jailer can `dlopen`
+  libavcodec: on the C6's Cortex-A53 a 640 × 458 Constrained Baseline picture
+  (Apple's movie previews) takes 18.4 ms to decode on one thread, and its
+  conversion to RGBA 8.4 ms in C, 2.2 ms with NEON, so 24 fps plays at about
+  half of one of the four cores.
+- Apple's iTunes Search API finds no films (`media=movie` answers no results);
+  a lookup by id does, with a `previewUrl` on `video-ssl.itunes.apple.com`
+  (H.264 640 × 458 at a 4:3 pixel aspect, AAC, the index before the media),
+  and the legacy RSS charts (`itunes.apple.com/<cc>/rss/topmovies/limit=100/json`)
+  list each film's preview. Wikidata's `P6398` holds the US store's iTunes
+  movie id for about 53,000 films, seldom for a new one.

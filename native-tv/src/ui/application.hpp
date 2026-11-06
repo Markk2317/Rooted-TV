@@ -41,6 +41,10 @@ struct HeroArt {
     std::string shownId;  // card the layers are showing
     HeroText text;        // the lines on screen; changes after the old ones have left
     Color wallTint = {0.07f, 0.19f, 0.24f, 1}; // what pages without art wash in
+    // The film's trailer ("trailer:movie:<id>"), wanted from trailerAt on; trailerShown is the clip
+    // drawn over the art, kept until it has faded out after the hero moved on.
+    std::string trailer, trailerShown;
+    uint32_t trailerAt = 0;
 };
 struct HomeState {
     size_t tab = 0, row = 0, column = 0, nav = 0;
@@ -190,6 +194,7 @@ class Application : private ScreenHost {
     void homePlayEntrance(size_t firstRow = 0, size_t endRow = static_cast<size_t>(-1));
     void homeRetargetPill(bool jump);
     void homeRetargetHero(const Card &card, bool instant);
+    void homeTrailer(bool visible);
     void homeSwapText();
     // Idle dimming, for every screen but the splash (application.cpp).
     void idleUpdate();

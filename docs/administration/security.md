@@ -336,6 +336,16 @@ three decimals, go to `api.open-meteo.com` at most every half hour while the scr
 asks for the weather; Open-Meteo takes no key. The screen saver reads its photos and the
 weather from the server on the TV itself, with the token in `k`.
 
+With a TMDB key and `homeTrailers` on (the default), the films among the top picks, and a
+film that stays in Home's carousel, are looked up for a trailer: the film's exact Wikidata
+QID (from TMDB) goes to `www.wikidata.org` for its `P6398` iTunes movie ID, which goes to
+`itunes.apple.com/lookup` with the TV's country (then `us`); a film without one is matched
+by title and year in `itunes.apple.com/<country>/rss/topmovies`, fetched at most every six
+hours per country. The preview's URL is accepted only over https on an `apple.com` host, and
+its first 6 MB are fetched from there (`video-ssl.itunes.apple.com`). Apple and Wikidata
+receive those ids and the TV's public IP, never the TMDB key or a profile. The TV app reads
+the clip from the server on the TV itself (`/api/home/trailer`).
+
 `netflixDeepLinks: true` separately enables requests to `www.wikidata.org`
 for the selected title's exact Wikidata QID, obtained from TMDB. Wikidata
 receives that QID and the TV's public IP, without the TMDB key, profile name

@@ -1,0 +1,71 @@
+#pragma once
+
+#include <atomic>
+#include <condition_variable>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <functional>
+#include <map>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+namespace nativetv {
+namespace service {
+
+// Trailers for Native Tv Home's banner, from Apple's movie previews: the start of a film's preview
+// (about 20 s of it) is kept on the TV under home-trailers/, so the banner plays it from the TV.
+// Finding the preview (Wikidata, then the iTunes lookup) is the caller's; this keeps the files,
+// fetches them one at a time in the background and drops the least recently played.
+class HomeTrailers {
+  public:
+    // The preview's https URL for a film's TMDB id; "" when it has none.
+    using Resolve = std::function<std::string(const std::string &id)>;
+    // Saves the first `bytes` of `url` at `path`; false, with the reason, when it could not.
+    using Download = std::function<bool(const std::string &url, const std::string &path,
+                                        size_t bytes, std::string &error)>;
+    using Clock = std::function<int64_t()>;
+    enum class State { Ready, Pending, None };
+
+    static const size_t kClipBytes = 6u << 20;
+    static const size_t kFilesMax = 6;
+
+    HomeTrailers(std::string dataRoot, Resolve resolve, Download download = Download(),
+                 Clock clock = Clock());
+    ~HomeTrailers();
+    HomeTrailers(const HomeTrailers &) = delete;
+    HomeTrailers &operator=(const HomeTrailers &) = delete;
+
+    // A film's trailer: Ready with the file's path, Pending while it is being fetched (the first
+    // call starts that), or None when the film has none or the id is not one.
+    State request(const std::string &id, std::string &path);
+    // A clip's bytes, at most kClipBytes; false when the file is gone.
+    static bool read(const std::string &path, std::string &bytes);
+    // Starts fetching these films' trailers, the first ones first, without waiting.
+    void prewarm(const std::vector<std::string> &ids);
+    // Waits until nothing is queued or being fetched (tests).
+    void settle();
+
+  private:
+    void work();
+    bool enqueueLocked(const std::string &id);
+    void evict(const std::string &keep);
+    std::string pathFor(const std::string &id) const;
+
+    std::string directory_;
+    Resolve resolve_;
+    Download download_;
+    Clock clock_;
+    std::mutex mutex_;
+    std::condition_variable changed_;
+    std::deque<std::string> queue_;
+    std::string working_;
+    std::map<std::string, int64_t> missing_; // id -> when it was found to have none
+    std::atomic<bool> stopping_{false};
+    std::thread worker_;
+};
+
+} // namespace service
+} // namespace nativetv

@@ -352,6 +352,11 @@ void heroWall(Paint paint, const Hero &hero) {
                     gradient(55, {{faded(slot.tint, 1), 0}, {faded(slot.tint, 0), .7f}});
                 scene.popOpacity();
             }
+            if (!hero.trailer.empty() && hero.trailerAlpha > .002f) {
+                scene.pushOpacity(hero.trailerAlpha);
+                scene.picture(screen, 0).value = hero.trailer;
+                scene.popOpacity();
+            }
             scene.popClip();
             scene.popTransform();
         }

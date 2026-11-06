@@ -266,7 +266,9 @@ captures the handoff page and compares every module of the code on it with qrcod
 (no QR decoder is installed, so the pixels are read instead); it skips with no GL context.
 `native-atlas` covers glyph packing, text measuring, ellipsis and wrapping,
 `native-image-loader` the off-thread decode, the cache limit and the upload
-budget, and `native-woff-to-ttf` that a WOFF packed from each bundled Google Sans Flex TTF unpacks
+budget, `native-video` the trailers' MP4 reading (a clip cut short included), the 16:9 crop,
+the colour conversion and the loader's fetch, retry and drop (a host without libavcodec 55 to
+58 checks that a clip that cannot be decoded draws nothing), and `native-woff-to-ttf` that a WOFF packed from each bundled Google Sans Flex TTF unpacks
 to the same bytes.
 
 The daemon's answers were held to the Node release's by `parity.js`, which ran both on one fixture TV and

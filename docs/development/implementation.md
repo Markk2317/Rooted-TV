@@ -1870,6 +1870,24 @@ chosen for the reply, and opens and controls as loopback requests to `/api/home/
 `/api/control`. The reply is `{ok, answer, titles}`; the feed carries `assistant: true` while
 a key is saved, and the TV's bar then shows the ✦ (`tool:3`, stop `tabs + 3`).
 
+Trailers: `HomeContent::trailer` finds a film's preview (Wikidata `P6398` and the iTunes
+lookup in the TV's country, then `us`; else Apple's top-movies RSS chart matched by title
+key and a year within one), and `service::HomeTrailers` keeps the first 6 MB of each in
+`home-trailers/`, one download at a time, six files, least recently served first out. The
+feed carries `trailers: true` (TMDB key set, `homeTrailers` not false) and prewarms the
+films among the first six top picks. `GET /api/home/trailer?type=movie&id=N` answers the
+clip, 202 while it downloads, or 404. In the client the id `trailer:movie:<id>` goes to
+`VideoLoader` (`graphics/video_player`) instead of the image loader: `parseMp4Video`
+(`graphics/mp4`) reads the H.264 track's sample table and keeps the samples the bytes hold,
+`H264Decoder` opens the system's libavcodec 55 to 58 with `dlopen` (AVPacket and AVFrame
+reached through their leading fields), and a thread decodes from the first key frame 2 s in,
+skips dark pictures for up to 4 s, crops to 16:9 (letterbox bars and the pixel aspect
+applied) and converts to RGBA with NEON, three pictures ahead. The render thread uploads the
+newest one due into a texture. The hero asks for the clip `trailerDelay` (3.5 s) after it
+retargets to a film, fades it in over the art (`hv`), replays the slideshow's progress over
+the clip's length, and fades back when it ends or the hero leaves the screen; while a clip
+plays the loop draws at the display's rate instead of the ambient 30 fps.
+
 `POST /api/home/open` with `kind: 'service'`, the service's key, type and
 TMDB ID opens the service's installed app (`netflix`; `amazon` or
 `amazon.global`; `com.disney.disneyplus-prod`), refused when none is

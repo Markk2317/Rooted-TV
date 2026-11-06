@@ -29,6 +29,9 @@ std::string legacyAssetRoute(const std::string &asset) {
         return "/api/home/recents/image?id=" + encode(asset.substr(split + 1)) +
                "&v=" + encode(asset.substr(7, split - 7));
     }
+    // "trailer:movie:<TMDB id>": the start of the film's preview, kept on the TV.
+    if (asset.compare(0, 14, "trailer:movie:") == 0)
+        return "/api/home/trailer?type=movie&id=" + encode(asset.substr(14));
     if (asset.compare(0, 10, "wallpaper:") == 0) {
         size_t revision = asset.find('@', 10);
         std::string slot =

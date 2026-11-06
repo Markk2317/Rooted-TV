@@ -73,6 +73,7 @@ let homeButtonOn = null;
 let googleAccount = null;
 let googleWatch = null;
 let geminiKeySet = false;
+let homeTrailersOn = true;
 async function loadHomeKeys() {
   try {
     const status = await (await fetch(api('/api/update'), { cache: 'no-store' })).json();
@@ -81,12 +82,14 @@ async function loadHomeKeys() {
     homeButtonOn = typeof status.homeButton === 'boolean' ? status.homeButton : null;
     googleAccount = status.youtubeAccount || null;
     geminiKeySet = status.geminiKeySet === true;
+    homeTrailersOn = status.homeTrailers !== false;
   } catch (e) { return; }
   renderHomeButton();
   renderTmdb();
   renderYoutube();
   renderGoogle();
   renderGemini();
+  renderTrailers();
 }
 function renderHomeButton() {
   const row = q('home-button-row'), btn = q('home-button');
@@ -186,6 +189,17 @@ async function homeGoogleSignOut() {
   if (r && r.ok) { googleAccount = r.youtubeAccount || null; renderGoogle(); }
 }
 
+// Trailers need films, so the switch shows once a TMDB key is saved.
+function renderTrailers() {
+  const row = q('home-trailers-row'), btn = q('home-trailers');
+  if (!row || !btn) return;
+  row.hidden = !tmdbKeySet;
+  updateToggle(btn, { cls: homeTrailersOn ? 'good' : 'idle', label: homeTrailersOn ? t('home.trailersOn', 'On') : t('home.trailersOff', 'Off'), on: homeTrailersOn });
+}
+async function homeTrailersToggle() {
+  const r = await sendCommand('setHomeTrailers', !homeTrailersOn);
+  if (r && r.ok) { homeTrailersOn = r.homeTrailers !== false; renderTrailers(); }
+}
 function renderGemini() {
   const row = q('home-gemini-row');
   if (!row) return;

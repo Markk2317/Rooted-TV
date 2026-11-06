@@ -621,6 +621,15 @@
       "notes": "Native owns on-demand title details and search with the bounded persistent cache and stale fallback. Netflix lookup uses the exact Wikidata entity and P1874 and never sends the TMDB key to Wikidata. Node keeps standalone fallback."
     },
     {
+      "paths": ["/api/home/trailer"],
+      "methods": ["GET"],
+      "auth": "token",
+      "csrf": "not applicable",
+      "bodyLimit": {"max": 0, "unit": "bytes"},
+      "owner": "native",
+      "notes": "The banner's trailer for a film (type=movie, a TMDB id): the first 6 MB of Apple's preview, found through Wikidata's iTunes movie ID (P6398) and the iTunes lookup in the TV's country, then the US store, kept under home-trailers/ (six clips at most, the least recently played dropped). Answers video/mp4, 202 while the clip is being fetched, 404 when there is none or trailers are off (homeTrailers false, or no TMDB key)."
+    },
+    {
       "paths": ["/api/home/recents", "/api/home/recents/image"],
       "methods": ["GET"],
       "auth": "token",

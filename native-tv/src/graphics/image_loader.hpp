@@ -31,6 +31,7 @@ struct ImageView {
     float fade = 0;            // 0 to 1 over kFadeMs from the frame the picture arrived
     bool failed = false;       // the server has none (or the decode failed): nothing more to wait for
     bool opaque = false;       // see DecodedImage; only meaningful once the texture is
+    double remainingMs = -1;   // a trailer (graphics/video_player.hpp): until its last picture
 };
 // Pictures keyed by (id, size) under a texture byte budget. Decoding runs on worker threads;
 // the render thread only copies finished rows into textures, as many bytes per frame as

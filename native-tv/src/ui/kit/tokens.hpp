@@ -218,6 +218,7 @@ constexpr int kenburns = 14000;
 constexpr int idleDim = 2400;
 constexpr int idleWake = 220;
 constexpr int heroAdvance = 9000;
+constexpr int trailerDelay = 3500;
 constexpr int boot = 520;
 constexpr int bars = 900;
 constexpr int idleAfter = 30000;

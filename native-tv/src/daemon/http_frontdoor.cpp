@@ -1794,6 +1794,11 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       systemRoot_(std::move(systemRoot)), cpuWindowMs_(cpuWindowMs) {
     if (!appPackageFetcher_)
         appPackageFetcher_ = service::AppPackageFetcher::download;
+    // The store's country is the one the routes that queue trailers last set (sendHomeDiscover,
+    // sendHomeTrailer).
+    homeTrailers_.reset(new service::HomeTrailers(dataRoot_, [this](const std::string &id) {
+        return homeContent_.trailer(currentConfigDocument()["tmdbKey"].string(), id)["url"].string();
+    }));
     // The feed lists only titles that open somewhere: as a YouTube trailer, or on Netflix. Asking is
     // the details lookup the screen uses later, so it is kept for then.
     homeDiscover_.setLinkCheck([this](const std::string &type, const std::string &id) {
@@ -2524,6 +2529,7 @@ Json HttpFrontDoor::serverStatus() const {
     status.set("tmdbKeySet", Json::flag(!trimmedText(document["tmdbKey"].string()).empty()));
     status.set("youtubeKeySet", Json::flag(!trimmedText(document["youtubeKey"].string()).empty()));
     status.set("geminiKeySet", Json::flag(!trimmedText(document["geminiKey"].string()).empty()));
+    status.set("homeTrailers", Json::flag(document["homeTrailers"].boolean(true)));
     // The Google account of the Home profile in use; the client secret and tokens are never sent.
     {
         Json account = youtubeAccounts_.status(activeHomeProfile(dataRoot_));
@@ -2757,6 +2763,17 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         if (!key.empty() && !valid) return fail(badKey);
         Json change = Json::object();
         change.set("geminiKey", Json::text(key));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
+        return answer();
+    }
+    if (action == "setHomeTrailers") {
+        // The film trailers in Native Tv Home's banner; on unless switched off.
+        if (!value.isBoolean()) return fail("setHomeTrailers takes true or false");
+        Json change = Json::object();
+        change.set("homeTrailers", Json::flag(value.boolean()));
         std::string error;
         if (!ConfigStore(configPath_).setTopLevel(change, &error))
             return fail("could not save setting: " + error);
@@ -16650,6 +16667,19 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     // The bar offers the assistant where a Gemini key is saved.
     if (!document["geminiKey"].string().empty())
         result.set("assistant", Json::flag(true));
+    // Trailers in the banner: the top picks' films are fetched ahead, so they start on time.
+    if (!document["tmdbKey"].string().empty() && document["homeTrailers"].boolean(true)) {
+        result.set("trailers", Json::flag(true));
+        std::vector<std::string> films;
+        for (const Json &row : result["rows"].items()) {
+            if (row["key"].string() != "trending") continue;
+            for (const Json &item : row["items"].items()) {
+                if (films.size() == 6) break;
+                if (item["type"].string() == "movie") films.push_back(item["id"].string());
+            }
+        }
+        homeTrailers_->prewarm(films);
+    }
     if (result["enabled"].boolean() && result["rows"].isArray() &&
         result["rows"].size())
         homeImageProxy_.retainAndWarm(result["rows"]);
@@ -16658,6 +16688,48 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
                             {"Cache-Control", "no-store"},
                             {"X-Content-Type-Options", "nosniff"}},
                            result.dump());
+}
+
+void HttpFrontDoor::sendHomeTrailer(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    auto answer = [&exchange](int status, bool pending) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               pending ? "{\"ok\":true,\"pending\":true}"
+                                       : "{\"ok\":false,\"error\":\"no trailer\"}");
+    };
+    const Json document = currentConfigDocument();
+    std::string type, id;
+    if (document["tmdbKey"].string().empty() || !document["homeTrailers"].boolean(true) ||
+        !uniqueQueryParameter(request.query, "type", type) || type != "movie" ||
+        !uniqueQueryParameter(request.query, "id", id)) {
+        answer(404, false);
+        return;
+    }
+    homeContent_.setRegion(tvRegion(dataRoot_));
+    std::string path;
+    const service::HomeTrailers::State state = homeTrailers_->request(id, path);
+    if (state != service::HomeTrailers::State::Ready) {
+        answer(state == service::HomeTrailers::State::Pending ? 202 : 404,
+               state == service::HomeTrailers::State::Pending);
+        return;
+    }
+    std::string bytes;
+    // A clip dropped to make room between the check and the read is fetched again.
+    if (!service::HomeTrailers::read(path, bytes)) {
+        answer(202, true);
+        return;
+    }
+    const std::vector<HttpHeader> headers = {
+        {"Content-Type", "video/mp4"}, {"Cache-Control", "no-store"},
+        {"X-Content-Type-Options", "nosniff"}
+    };
+    if (!exchange.beginResponse(200, headers, static_cast<long long>(bytes.size())))
+        return;
+    (void)exchange.writeBody(bytes.data(), bytes.size());
+    (void)exchange.finishResponse();
 }
 
 void HttpFrontDoor::sendHomeImage(HttpExchange &exchange) const {
@@ -18550,6 +18622,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/image" && request.method == "GET") {
         sendHomeImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/home/trailer" && request.method == "GET") {
+        sendHomeTrailer(exchange);
         return;
     }
     if (request.method == "GET" &&

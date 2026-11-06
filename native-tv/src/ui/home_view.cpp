@@ -90,6 +90,8 @@ kit::Hero heroOf(const Frame &frame) {
     }
     hero.wallAlpha = static_cast<float>(motion.value("wall"));
     hero.stackY = static_cast<float>(motion.value("sy"));
+    hero.trailer = home.art.trailerShown;
+    hero.trailerAlpha = static_cast<float>(motion.value("hv"));
     hero.source = home.art.text.source;
     hero.title = home.art.text.title;
     hero.facts = home.art.text.facts;

@@ -1841,6 +1841,32 @@
               <button type="button" class="pill bad" id="home-google-remove" onclick="homeGoogleRemove()" data-t="home.googleRemove" hidden>Remove client</button>
             </div>
           </div>
+          <div class="prot-row" id="home-trailers-row" hidden>
+            <div class="prot-main">
+              <div class="prot-title" id="home-trailers-title" data-t="home.trailers">
+                Trailers in the banner
+              </div>
+              <div class="prot-desc" id="home-trailers-desc" data-t="home.trailersDesc">
+                As on Google TV, a film in the banner at the top of Native Tv
+                Home plays its trailer, without sound, after a few seconds.
+                The trailers are Apple's movie previews: the first 20 seconds or
+                so of each are kept on the TV, six at most.
+              </div>
+            </div>
+            <div class="prot-status">
+              <button
+                type="button"
+                class="pill good"
+                id="home-trailers"
+                onclick="homeTrailersToggle()"
+                aria-labelledby="home-trailers-title"
+                aria-describedby="home-trailers-desc"
+                aria-pressed="true"
+              >
+                &mdash;
+              </button>
+            </div>
+          </div>
           <div class="prot-row" id="home-gemini-row" hidden>
             <div class="prot-main">
               <div class="prot-title" data-t="home.gemini">

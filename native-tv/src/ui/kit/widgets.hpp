@@ -108,6 +108,8 @@ struct Hero {
     HeroSlot slot[2];    // outgoing and incoming art
     float wallAlpha = 1; // 0 off the Home page
     float stackY = 0;    // the rows' vertical offset (<= 0) that drives the parallax
+    std::string trailer; // a film's clip, drawn over the art
+    float trailerAlpha = 0;
     // A title: source row, title, facts and a two-line description. An app: its icon beside
     // the lines, and the key hint in place of the description.
     std::string source, title, facts, description, image, hint;

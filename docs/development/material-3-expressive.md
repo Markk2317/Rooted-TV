@@ -80,7 +80,7 @@ Expressive replaces easing and duration with springs. A spatial spring (position
 | `spring::list` | 1.0 / 210 | Settings and drawer lists |
 | `spring::pillLead`, `pillTrail` | 0.9 / 460, 0.9 / 250 | The tab pill's two edges |
 
-Focus, entrances and the hero are tweens (`ms::focus` 170, `ms::base` 320, `ms::hero` 900), not springs. The springs are at or near critical damping, so a position never overshoots. The client has no reduced-motion setting; Material asks for fades instead of slides and scaling, and no parallax or shape morphing, when the platform sets one.
+Focus, entrances and the hero are tweens (`ms::focus` 170, `ms::base` 320, `ms::hero` 900), not springs. A film's trailer fades in over the hero's art over `ms::hero` once the hero has rested on it for `ms::trailerDelay` (3500), the pause Google TV leaves before its previews start. The springs are at or near critical damping, so a position never overshoots. The client has no reduced-motion setting; Material asks for fades instead of slides and scaling, and no parallax or shape morphing, when the platform sets one.
 
 A row's items enter one after another, `stagger::homeCell` 26 ms apart (the tenth and later together), the first `stagger::homeBase` 80 ms after the row starts. The values were 38 and 120 ms: the apps row, 14 circles wide, took 0.78 s from the start of its entrance to the end of its last circle's, which read as slow; it takes 0.63 s now. Home draws nothing until the apps' icons are in (300 ms at most), so a circle never enters as a colour and changes to its art.
 

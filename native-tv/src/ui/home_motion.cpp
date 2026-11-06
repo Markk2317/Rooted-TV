@@ -35,6 +35,13 @@ bool isTitle(const Card &card) {
 std::string artOf(const Card &card) {
     return isTitle(card) ? (card.backdrop.empty() ? card.image : card.backdrop) : "";
 }
+// A film's trailer, where the server offers them (Apple's previews are of films only).
+std::string trailerOf(const ViewState &state, const Card &card) {
+    if (!state.discover["trailers"].boolean() || card.data["type"].string() != "movie" ||
+        (card.kind != "title" && card.kind != "netflix" && card.kind != "continue"))
+        return "";
+    return "trailer:movie:" + card.id;
+}
 // A deep, quiet colour per card: the prototype tints the wall with the artwork's darkest tone,
 // and the server sends no palette, so the tone comes from the app's colour or the title. An app
 // has no picture of its own behind its lines, so its tint is stronger.
@@ -152,7 +159,7 @@ void Application::homeStart() {
     if (!flow_.beatAt)
         flow_.beatAt = now_ + kBeatMs;
     for (const char *prefix :
-         {"f:", "rx", "rd", "E", "ha", "hx", "dot", "pgx", "dim", "gy", "sy", "lift"})
+         {"f:", "rx", "rd", "E", "ha", "hx", "hv", "dot", "pgx", "dim", "gy", "sy", "lift"})
         motion_.erasePrefix(prefix);
     home.art = HeroArt();
     home.hero = Card();
@@ -552,6 +559,9 @@ void Application::homeUpdate() {
             motion_.play("hp", Tween(0, 1, ms::heroAdvance, Easing::linear()));
         }
     }
+    // The trailer plays while the hero is on screen: Home's page, rows not scrolled past it.
+    homeTrailer(heroTab && flow_.entered && !screen_ && state_.screen == Screen::Home &&
+                motion_.value("wall") > .5 && motion_.value("sy") > -150);
     if (flow_.textPending && due(now_, flow_.textSwapAt))
         homeSwapText();
     // The Ken Burns of a layer that has been replaced stops once it is invisible.
@@ -561,6 +571,51 @@ void Application::homeUpdate() {
 }
 
 // ---- Hero -------------------------------------------------------------------------------------
+
+// Google TV's trailers in the hero: after the hero has rested on a film for trailerDelay its clip
+// fades in over the picture and holds the slideshow until it ends, then fades back. Off screen it
+// fades out and is not played again for that card.
+void Application::homeTrailer(bool visible) {
+    auto &art = state_.home.art;
+    if (!art.trailerShown.empty() && art.trailerShown != art.trailer && !motion_.moving("hv") &&
+        motion_.value("hv") <= .002)
+        art.trailerShown.clear();
+    if (art.trailer.empty() || !pictures_)
+        return;
+    if (!visible) {
+        if (art.trailerShown == art.trailer) {
+            motion_.tween("hv", 0, ms::fast, easing(ease::out));
+            art.trailer.clear();
+        } else
+            art.trailerAt = now_ + static_cast<uint32_t>(ms::trailerDelay);
+        return;
+    }
+    // The clip of the card before is still fading out.
+    if (!due(now_, art.trailerAt) || (!art.trailerShown.empty() && art.trailerShown != art.trailer))
+        return;
+    const ImageView view = pictures_->view(art.trailer, kHeroWidth, kHeroHeight, ImageFit::Cover, now_);
+    if (art.trailerShown.empty()) {
+        if (view.failed) {
+            art.trailer.clear(); // no trailer: the picture stays
+            return;
+        }
+        if (!view.texture)
+            return;
+        art.trailerShown = art.trailer;
+        motion_.play("hv", Tween(0, 1, ms::hero, easing(ease::inOut)));
+        // The slideshow waits for the clip.
+        if (view.remainingMs > 0)
+            motion_.play("hp", Tween(static_cast<float>(motion_.value("hp")), 1,
+                                     static_cast<float>(view.remainingMs), Easing::linear()));
+    } else if (!view.texture) {
+        // Asked again after a spell away (another screen), the clip starts over and fades in anew.
+        art.trailerShown.clear();
+        motion_.set("hv", 0);
+    } else if (view.failed) {
+        motion_.tween("hv", 0, ms::hero, easing(ease::inOut));
+        art.trailer.clear();
+    }
+}
 
 void Application::homeRetargetHero(const Card &card, bool instant) {
     auto &home = state_.home;
@@ -574,6 +629,12 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
     }
     art.shownId = card.kind + ":" + card.id;
     home.hero = card;
+    // A film's trailer takes over from its picture once the hero has rested on it a while; the
+    // clip of the card before fades out as the new picture fades in.
+    art.trailer = trailerOf(state_, card);
+    art.trailerAt = now_ + static_cast<uint32_t>(ms::trailerDelay);
+    if (!art.trailerShown.empty())
+        motion_.tween("hv", 0, ms::hero, easing(ease::inOut));
     // The slideshow resumes from whichever card the hero now shows.
     for (size_t i = 0; i < home.spotlight.size(); ++i)
         if (home.spotlight[i].id == card.id && home.spotlight[i].kind == card.kind)

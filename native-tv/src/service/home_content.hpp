@@ -33,6 +33,11 @@ class HomeContent {
     // has none or several.
     Json prime(const std::string &tmdbKey, bool primeEnabled,
                const std::string &type, const std::string &id);
+    // {"ok", "enabled", "url"}: a film's preview on Apple's store, the banner's trailer. Wikidata
+    // gives its iTunes movie id (P6398), which the iTunes lookup answers in the TV's country, or
+    // else in the US store; failing that, the film is looked for by title and year in Apple's
+    // charts of the films bought and rented now, which list their previews. "" when none has one.
+    Json trailer(const std::string &tmdbKey, const std::string &id);
 
   private:
     struct Entry {

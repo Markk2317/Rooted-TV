@@ -44,8 +44,26 @@ nativetv::Json rawTitle(int id, const std::string &type = "movie") {
     return raw;
 }
 
+bool lookupHasPreviews = true;
+
 nativetv::Json responseFor(const std::string &url) {
     using nativetv::Json;
+    // Apple's chart: the film by its title and a year off by one, a namesake from another decade,
+    // and an entry with no preview.
+    if (url.find("/rss/topmovies/") != std::string::npos) {
+        const std::string preview = url.find("itunes.apple.com/it/") != std::string::npos
+                                        ? "https://video-ssl.itunes.apple.com/it.m4v"
+                                        : "https://video-ssl.itunes.apple.com/us.m4v";
+        return Json::parse(
+            "{\"feed\":{\"entry\":["
+            "{\"im:name\":{\"label\":\"Film 52\"},\"im:releaseDate\":{\"label\":\"1990-01-01\"},"
+            "\"link\":[{\"attributes\":{\"im:assetType\":\"preview\",\"href\":\"https://video-ssl.itunes.apple.com/old.m4v\"}}]},"
+            "{\"im:name\":{\"label\":\"Film 51\"},\"im:releaseDate\":{\"label\":\"2026-02-01\"},"
+            "\"link\":{\"attributes\":{\"rel\":\"alternate\",\"href\":\"https://itunes.apple.com/x\"}}},"
+            "{\"im:name\":{\"label\":\"FILM 52 (2027)\"},\"im:releaseDate\":{\"label\":\"2027-03-01\"},"
+            "\"link\":[{\"attributes\":{\"rel\":\"alternate\"}},{\"attributes\":{\"im:assetType\":"
+            "\"preview\",\"href\":\"" + preview + "\"}}]}]}}");
+    }
     if (url.find("wikidata.org") != std::string::npos) {
         Json claims = Json::array();
         claims.add(Json::parse("null"));
@@ -66,11 +84,24 @@ nativetv::Json responseFor(const std::string &url) {
         gtis.add(Json::parse("{\"mainsnak\":{\"datavalue\":{\"value\":"
                              "\"amzn1.dv.gti.afd5bf09-38ee-44f6-b4c0-78d991a104fd\"}}}"));
         entity["claims"].set("P14462", gtis);
+        entity["claims"].set("P6398", Json::parse(
+            "[{\"mainsnak\":{\"datavalue\":{\"value\":\"219214592\"}}}]"));
         Json entities = Json::object();
         entities.set("Q42", entity);
         Json result = Json::object();
         result.set("entities", entities);
         return result;
+    }
+    // Apple's store: the Italian one has no preview of the film, the US one has, and a page
+    // elsewhere is not taken.
+    if (url.find("itunes.apple.com/lookup") != std::string::npos) {
+        if (!lookupHasPreviews) return Json::parse("{\"resultCount\":0,\"results\":[]}");
+        if (url.find("country=it") != std::string::npos)
+            return Json::parse("{\"resultCount\":1,\"results\":[{\"previewUrl\":"
+                               "\"https://example.com/preview.m4v\"}]}");
+        return Json::parse("{\"resultCount\":1,\"results\":[{\"kind\":\"feature-movie\","
+                           "\"previewUrl\":\"https://video-ssl.itunes.apple.com/itunes-assets/"
+                           "Video128/clip.640x458.h264lc.U.p.m4v\"}]}");
     }
     if (url.find("search/multi") != std::string::npos) {
         Json results = Json::array();
@@ -243,6 +274,34 @@ int main() {
                "disney");
         regional.setRegion("italy");
         assert(regional.details("private-test-key", false, "movie", "31")["item"]["services"].size() == 0);
+    }
+    // A film's trailer: the iTunes id from Wikidata, looked up in the TV's country and then in the
+    // US store; Apple's servers only.
+    {
+        // Newer than the entries above, so the full cache drops those first.
+        clock += 1000;
+        HomeContent trailers(directory.path(), fetcher, [&clock] { return clock; });
+        assert(!trailers.trailer("", "41")["enabled"].boolean());
+        trailers.setRegion("IT");
+        const Json found = trailers.trailer("private-test-key", "41");
+        assert(found["ok"].boolean() &&
+               found["url"].string() == "https://video-ssl.itunes.apple.com/itunes-assets/"
+                                        "Video128/clip.640x458.h264lc.U.p.m4v");
+        assert(asked.back() == "https://itunes.apple.com/lookup?id=219214592&country=us");
+        assert(asked[asked.size() - 2] == "https://itunes.apple.com/lookup?id=219214592&country=it");
+        const size_t before = asked.size();
+        assert(trailers.trailer("private-test-key", "41")["url"].string() == found["url"].string());
+        assert(asked.size() == before);
+        assert(trailers.trailer("private-test-key", "abc")["url"].string().empty());
+        // With no preview through Wikidata, the TV's country's chart has the film by title and
+        // year; a film it does not list has none.
+        lookupHasPreviews = false;
+        clock += 4LL * 24 * 60 * 60 * 1000; // past the lookups' three days
+        assert(trailers.trailer("private-test-key", "52")["url"].string() ==
+               "https://video-ssl.itunes.apple.com/it.m4v");
+        assert(asked.back() == "https://itunes.apple.com/it/rss/topmovies/limit=100/json");
+        assert(trailers.trailer("private-test-key", "51")["url"].string().empty());
+        assert(asked.back() == "https://itunes.apple.com/us/rss/topmovies/limit=100/json");
     }
     return 0;
 }

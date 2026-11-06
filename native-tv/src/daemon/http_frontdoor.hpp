@@ -17,6 +17,7 @@
 #include "service/home_discover.hpp"
 #include "service/youtube_accounts.hpp"
 #include "service/home_titles.hpp"
+#include "service/home_trailers.hpp"
 #include "service/home_watching.hpp"
 #include "service/weather.hpp"
 #include "service/assistant.hpp"
@@ -334,6 +335,7 @@ class HttpFrontDoor {
     void sendHomePicture(HttpExchange &exchange) const;
     void ensureHomePictureTracking() const;
     void sendHomeContent(HttpExchange &exchange, const std::string &kind) const;
+    void sendHomeTrailer(HttpExchange &exchange) const;
     void sendHomeDiscover(HttpExchange &exchange) const;
     void sendHomeImage(HttpExchange &exchange) const;
     void sendHomeWallpaper(HttpExchange &exchange) const;
@@ -599,6 +601,9 @@ class HttpFrontDoor {
     mutable std::string handoffCode_;
     mutable std::string retiredHandoffCode_;
     mutable std::chrono::steady_clock::time_point handoffExpires_;
+    // Next to last for the same reason as the watcher: its worker looks trailers up through the
+    // front door.
+    std::unique_ptr<service::HomeTrailers> homeTrailers_;
     // Last, so its thread, which calls into the front door, stops before anything else goes.
     std::unique_ptr<HomeKeyWatcher> homeKeyWatcher_;
 };

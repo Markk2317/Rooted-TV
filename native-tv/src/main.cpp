@@ -5,6 +5,7 @@
 #include "graphics/image_loader.hpp"
 #include "graphics/renderer.hpp"
 #include "graphics/text.hpp"
+#include "graphics/video_player.hpp"
 #include "platform/client_config.hpp"
 #include "platform/app_clock.hpp"
 #include "platform/client_launch.hpp"
@@ -199,17 +200,21 @@ bool endsPause(const SDL_Event &event) {
 }
 
 // The application asks for pictures at the size it draws them; the loader decodes them off the
-// render thread and uploads a megabyte a frame.
+// render thread and uploads a megabyte a frame. Trailers ("trailer:...") play from the video
+// loader, a picture each frame.
 class LoaderPictures final : public Pictures {
   public:
-    explicit LoaderPictures(ImageLoader &loader) : loader_(loader) {}
+    LoaderPictures(ImageLoader &loader, VideoLoader &videos) : loader_(loader), videos_(videos) {}
     ImageView view(const std::string &id, int width, int height, ImageFit fit,
                    double nowMs) override {
+        if (id.compare(0, 8, "trailer:") == 0)
+            return videos_.get(id, nowMs);
         return loader_.get(id, width, height, fit, nowMs);
     }
 
   private:
     ImageLoader &loader_;
+    VideoLoader &videos_;
 };
 
 // Compiles nothing new but makes the first visible frame cheap: the glyphs of every style the
@@ -362,7 +367,9 @@ int main(int argc, char **argv) {
             kit::RunGlyphs glyphs(runs, glyphAtlas, iconAtlas);
             ImageLoader loader(renderer,
                                [&http](const std::string &id) { return http.image(id) != 0; });
-            LoaderPictures pictures(loader);
+            VideoLoader videos(renderer,
+                               [&http](const std::string &id) { return http.image(id) != 0; });
+            LoaderPictures pictures(loader, videos);
             app.attach(glyphs, pictures);
             app.holdForSetupCheck();
             markStartup("atlasesMs");
@@ -384,6 +391,7 @@ int main(int argc, char **argv) {
             Uint32 okAt = 0, backAt = 0;
             bool okDown = false, held = false, backDown = false, backHeld = false, draw = true,
                  quit = false, active = true, animating = true;
+            bool drewLast = false; // the last turn built a frame: the trailers it asked for are known
             unsigned frames = 0;
             Json screens = Json::array();
             Json checkpoints = Json::array();
@@ -401,7 +409,13 @@ int main(int argc, char **argv) {
                 for (Response &response : replies) {
                     if (response.channel.compare(0, 6, "image:") != 0)
                         app.response(response);
-                    else if (!response.ok()) {
+                    else if (response.path.compare(0, 8, "trailer:") == 0) {
+                        if (response.ok())
+                            videos.provide(response.path, response.status,
+                                           std::move(response.bytes), stamp);
+                        else
+                            videos.fail(response.path, stamp);
+                    } else if (!response.ok()) {
                         loader.fail(response.path, stamp);
                         app.imageFailed(response.path);
                     } else
@@ -498,6 +512,7 @@ int main(int argc, char **argv) {
                             okDown = backDown = false;
                             clock.pause(SDL_GetTicks());
                             app.active(false);
+                            videos.stopAll();
                         }
                         if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED ||
                             event.window.event == SDL_WINDOWEVENT_SHOWN) {
@@ -662,8 +677,12 @@ int main(int argc, char **argv) {
                 const size_t uploaded = loader.pump(renderer.uploadBudget(), now);
                 const bool loading =
                     uploaded > 0 || loader.pendingDecodes() > 0 || loader.fading(now);
-                animating = app.update(now) || loading;
-                const bool ambient = animating && !loading && ambientOnly(app);
+                // A trailer runs at the display's pace rather than the ambient 30 fps, which
+                // would show its 24 fps unevenly.
+                const bool playing = videos.pump(drewLast, now);
+                drewLast = false;
+                animating = app.update(now) || loading || playing;
+                const bool ambient = animating && !loading && !playing && ambientOnly(app);
                 draw = animating || draw || fixed;
                 // The last frame of a bounded run is always drawn, so it can be captured.
                 // A run that was only waiting for its sweep ends a moment after it, with the last frame captured.
@@ -676,6 +695,7 @@ int main(int argc, char **argv) {
                     }
                     runs.beginFrame();
                     const Scene &scene = app.frame();
+                    drewLast = true;
                     if (benchAt >= 0 && !benched && now >= static_cast<Uint32>(benchAt)) {
                         benched = true;
                         benchmark(renderer, scene);

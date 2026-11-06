@@ -238,6 +238,11 @@ days.
 
 A saved Gemini API key is kept in `config.json` as `geminiKey`.
 
+Trailers for Native Tv Home's carousel are kept in `home-trailers/` in the data directory,
+mode 0700: the first 6 MB of up to six films' previews (`movie-<TMDB id>.m4v`, about 36 MB),
+the one played longest ago deleted to make room. `"homeTrailers": false` in `config.json`
+(the dashboard's **Trailers in the banner**) stops new ones; the folder can be deleted.
+
 The Photos screen saver's pictures are kept in `screensaver-photos/` in the data directory
 (at most 60 and 60 MB), and the town its weather is for in `config.json` as `saverWeather`
 (name and coordinates).

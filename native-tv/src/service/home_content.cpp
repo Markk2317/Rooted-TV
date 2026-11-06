@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <iomanip>
@@ -222,6 +223,93 @@ bool primeGti(const std::string &id) {
     return true;
 }
 
+// The digits of an Apple store id (Wikidata's iTunes movie ID).
+bool itunesId(const std::string &id) {
+    return !id.empty() && id.size() <= 12 && id[0] >= '1' && id[0] <= '9' &&
+        std::all_of(id.begin() + 1, id.end(), [](unsigned char c) {
+            return c >= '0' && c <= '9';
+        });
+}
+
+// A preview on Apple's servers (video-ssl.itunes.apple.com), over https.
+bool applePreview(const std::string &url) {
+    const std::string scheme = "https://";
+    if (url.compare(0, scheme.size(), scheme) != 0 || url.size() > 512) return false;
+    const size_t slash = url.find('/', scheme.size());
+    if (slash == std::string::npos) return false;
+    const std::string host = url.substr(scheme.size(), slash - scheme.size());
+    const std::string domain = ".apple.com";
+    return host.size() > domain.size() &&
+        host.compare(host.size() - domain.size(), domain.size(), domain) == 0 &&
+        host.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789.-") == std::string::npos &&
+        url.find_first_of(" \"\\<>\r\n") == std::string::npos;
+}
+
+// A title as Apple's charts and TMDB both write it: lower case, letters and digits, single spaces,
+// "&" as "and", without a trailing "(2026)".
+std::string titleKey(const std::string &title) {
+    std::string text = title;
+    const size_t open = text.rfind(" (");
+    if (open != std::string::npos && text.size() == open + 7 && text.back() == ')' &&
+        std::all_of(text.begin() + open + 2, text.end() - 1,
+                    [](unsigned char c) { return c >= '0' && c <= '9'; }))
+        text.erase(open);
+    std::string key;
+    for (size_t index = 0; index < text.size(); ++index) {
+        const unsigned char c = static_cast<unsigned char>(text[index]);
+        std::string piece;
+        if (c >= 'A' && c <= 'Z') piece = static_cast<char>(c - 'A' + 'a');
+        else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c >= 0x80) piece = static_cast<char>(c);
+        else if (c == '&') piece = " and ";
+        else if (c == '\'') continue;
+        else piece = " ";
+        for (char out : piece) {
+            if (out == ' ' && (key.empty() || key.back() == ' ')) continue;
+            key += out;
+        }
+    }
+    while (!key.empty() && key.back() == ' ') key.pop_back();
+    return key;
+}
+
+// Apple's chart of the films bought and rented now (the iTunes RSS feed): each one's title key,
+// year and preview, where it has one.
+Json chartValue(const Json &document) {
+    Json entries = document["feed"]["entry"];
+    if (entries.isObject()) {
+        Json one = Json::array();
+        one.add(entries);
+        entries = one;
+    }
+    if (!entries.isArray()) return Json();
+    Json films = Json::array();
+    for (const Json &entry : entries.items()) {
+        Json links = entry["link"];
+        if (links.isObject()) {
+            Json one = Json::array();
+            one.add(links);
+            links = one;
+        }
+        std::string url;
+        for (const Json &link : links.items())
+            if (link["attributes"]["im:assetType"].string() == "preview" &&
+                applePreview(link["attributes"]["href"].string()))
+                url = link["attributes"]["href"].string();
+        const std::string name = titleKey(entry["im:name"]["label"].string());
+        if (url.empty() || name.empty()) continue;
+        Json film = Json::object();
+        film.set("name", Json::text(name));
+        film.set("year", Json::text(entry["im:releaseDate"]["label"].string().substr(0, 4)));
+        film.set("url", Json::text(url));
+        films.add(film);
+    }
+    Json result = Json::object();
+    result.set("ok", Json::flag(true));
+    result.set("enabled", Json::flag(true));
+    result.set("films", films);
+    return result;
+}
+
 std::string titleType(const Json &raw, const std::string &fallback) {
     const Json media = raw["media_type"];
     const std::string type = truthy(media) ? jsString(media) : fallback;
@@ -314,6 +402,9 @@ Json detailsValue(const Json &document, const std::string &type,
     Json item = trimTitle(document, type);
     if (!item.valid()) return Json();
     item.set("overview", Json::text(utf16Prefix(jsString(document["overview"]), 2400)));
+    // For matching the title in Apple's charts, whose names are the store's own.
+    item.set("originalTitle", Json::text(jsString(type == "movie" ? document["original_title"]
+                                                                  : document["original_name"])));
     Json runtime = Json::parse("null");
     if (type == "movie") {
         const Json minutes = document["runtime"];
@@ -559,6 +650,69 @@ Json HomeContent::prime(const std::string &tmdbKey, bool primeEnabled,
     return wikidataLookup(tmdbKey, type, id, "P14462", primeGti, "gti");
 }
 
+Json HomeContent::trailer(const std::string &tmdbKey, const std::string &id) {
+    if (tmdbKey.empty()) return disabled();
+    Json none = Json::object();
+    none.set("ok", Json::flag(true));
+    none.set("enabled", Json::flag(true));
+    none.set("url", Json::text(""));
+    const Json film = details(tmdbKey, false, "movie", id);
+    if (!film["ok"].boolean()) {
+        none.set("ok", Json::flag(false));
+        return none;
+    }
+    std::string region;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        region = region_;
+    }
+    std::vector<std::string> countries;
+    if (!region.empty() && region != "US")
+        countries.push_back({static_cast<char>(region[0] - 'A' + 'a'),
+                             static_cast<char>(region[1] - 'A' + 'a')});
+    countries.push_back("us");
+    const std::string itunes =
+        wikidataLookup(tmdbKey, "movie", id, "P6398", itunesId, "itunesId")["itunesId"].string();
+    if (!itunes.empty())
+        for (const std::string &country : countries) {
+            const Json found = request(tmdbKey, "itunes/" + itunes, "&country=" + country,
+                                       3 * kDayMs, [](const Json &document) {
+                if (!document["results"].isArray()) return Json();
+                std::string url;
+                for (const Json &item : document["results"].items())
+                    if (applePreview(item["previewUrl"].string())) {
+                        url = item["previewUrl"].string();
+                        break;
+                    }
+                Json result = Json::object();
+                result.set("ok", Json::flag(true));
+                result.set("enabled", Json::flag(true));
+                result.set("url", Json::text(url));
+                return result;
+            });
+            if (!found["url"].string().empty()) return found;
+        }
+    // New films seldom have an iTunes id on Wikidata yet, and Apple's search finds no films:
+    // the charts of what is bought and rented now carry the previews, matched by title and year.
+    const std::string title = titleKey(film["item"]["title"].string());
+    const std::string original = titleKey(film["item"]["originalTitle"].string());
+    const int year = std::atoi(film["item"]["year"].string().c_str());
+    for (const std::string &country : countries) {
+        const Json chart = request(tmdbKey, "itunes-chart/" + country, "", kDayMs / 4, chartValue);
+        for (const Json &entry : chart["films"].items()) {
+            const std::string name = entry["name"].string();
+            const int released = std::atoi(entry["year"].string().c_str());
+            if ((name == title || (!original.empty() && name == original)) && year &&
+                std::abs(released - year) <= 1) {
+                Json result = Json::parse(none.dump());
+                result.set("url", entry["url"]);
+                return result;
+            }
+        }
+    }
+    return none;
+}
+
 Json HomeContent::wikidataLookup(const std::string &tmdbKey, const std::string &type,
                                  const std::string &id, const std::string &property,
                                  const IdCheck &valid, const std::string &field) {
@@ -728,6 +882,11 @@ std::string HomeContent::urlFor(const std::string &apiKey,
     if (resource.compare(0, 9, "wikidata/") == 0)
         return "https://www.wikidata.org/wiki/Special:EntityData/" +
                resource.substr(9) + ".json";
+    // Apple's lookup and charts take no key; `query` names the lookup's store.
+    if (resource.compare(0, 7, "itunes/") == 0)
+        return "https://itunes.apple.com/lookup?id=" + resource.substr(7) + query;
+    if (resource.compare(0, 13, "itunes-chart/") == 0)
+        return "https://itunes.apple.com/" + resource.substr(13) + "/rss/topmovies/limit=100/json";
     return std::string(kTmdbApi) + resource + "?api_key=" +
            urlEncode(apiKey) + "&language=en-US" + query;
 }
