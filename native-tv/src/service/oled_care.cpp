@@ -111,6 +111,18 @@ void setUnavailableFields(Json &response) {
     response.set("refresherCycles", Json());
     response.set("failureAlerts", Json());
 }
+
+// pnwash's state starting with 2, or a jobScope of 1, marks a compensation run. A C6 on webOS 3.4
+// keeps jobScope at 1 (state "0 2") for hours while it is on and LG's getClearPanelNoiseStatus
+// answers "schedule": the run is due, not under way. LG runs it only once the TV is switched off,
+// so a TV that reports its screen on is never compensating.
+bool compensationRunning(const std::string &root, const Json &powerState) {
+    if (powerState["screenOn"].isBoolean() && powerState["screenOn"].boolean())
+        return false;
+    const std::string state = readTrimmed(root, "/mnt/lg/cmn_data/pnwash/state");
+    const std::string jobScope = readTrimmed(root, "/mnt/lg/cmn_data/pnwash/jobScope");
+    return (!state.empty() && state[0] == '2') || jobScope == "1";
+}
 } // namespace
 
 bool oledModel(const std::string &model) {
@@ -256,10 +268,7 @@ Json oledCareResponse(const OledCareSources &sources) {
     const bool hasGsrStatus = hasTpcMonitoring;
     const bool gsrActive = !gsrOff;
 
-    const std::string state = readTrimmed(root, "/mnt/lg/cmn_data/pnwash/state");
-    const std::string jobScope = readTrimmed(root, "/mnt/lg/cmn_data/pnwash/jobScope");
-    const bool running = (!state.empty() && state[0] == '2') || jobScope == "1";
-    const Json comp = names::compensationStatus(running);
+    const Json comp = names::compensationStatus(compensationRunning(root, sources.powerState));
     const std::string displayStatus = sources.displayStatus["status"].isString()
         ? sources.displayStatus["status"].string() : "schedule";
     const Json live = sources.liveProtections;
@@ -273,8 +282,8 @@ Json oledCareResponse(const OledCareSources &sources) {
     const Json logoDimming = sources.pictureSettings["logoLuminanceAdjust"];
     response.set("screenShift", screenShift.isString() && !screenShift.string().empty()
         ? screenShift : Json::text("off"));
-    response.set("logoDimming", logoDimming.isString() && !logoDimming.string().empty()
-        ? logoDimming : Json::text("off"));
+    response.set("logoDimming", !sources.logoDimming ? Json()
+        : logoDimming.isString() && !logoDimming.string().empty() ? logoDimming : Json::text("off"));
     response.set("panelHours", Json::numeric(panelHours));
     response.set("hoursUntilComp", Json::numeric(hoursUntilComp));
     response.set("compInterval", Json::numeric(compInterval));
@@ -391,10 +400,7 @@ Json oledStatsObject(const OledCareSources &sources) {
                                   exists(rootedPath(root, "/mnt/lg/cmn_data/pnwash/autoOffRsInterval"));
     const Json asbl = hasTpcMonitoring ? Json::text(tpcOff ? "Disabled" : "Active") : Json();
     const Json gsr = hasTpcMonitoring ? Json::text(gsrOff ? "Disabled" : "Active") : Json();
-    const std::string state = readTrimmed(root, "/mnt/lg/cmn_data/pnwash/state");
-    const std::string jobScope = readTrimmed(root, "/mnt/lg/cmn_data/pnwash/jobScope");
-    const bool running = (!state.empty() && state[0] == '2') || jobScope == "1";
-    const Json comp = names::compensationStatus(running);
+    const Json comp = names::compensationStatus(compensationRunning(root, sources.powerState));
     const std::string rawStatus = sources.displayStatus["status"].isString() &&
                                   !sources.displayStatus["status"].string().empty()
         ? sources.displayStatus["status"].string() : "schedule";

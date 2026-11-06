@@ -241,6 +241,32 @@ void testOledStatsProtections() {
               "the refresher figures and the picture settings");
         removeTree(root);
     }
+    {
+        // A C6 on webOS 3.4 keeps jobScope at 1 while it is on: the run waits for the TV to go off.
+        const std::string root = makeRoot();
+        write(root, pnwash + "state", "0 2");
+        write(root, pnwash + "jobScope", "1");
+        OledCareSources sources;
+        sources.systemRoot = root;
+        sources.isOled = true;
+        sources.powerState = Json::parse(R"({"raw":"Active","systemOn":true,"screenOn":true})");
+        check(oledStatsObject(sources)["comp_status"].string() == "Idle" &&
+                  oledCareResponse(sources)["compStatus"].string() == "Idle",
+              "a TV with its screen on is not compensating");
+        sources.powerState = Json::parse(R"({"raw":"Active Standby","systemOn":false,"screenOn":false})");
+        check(oledStatsObject(sources)["comp_status"].string() == "Running" &&
+                  oledCareResponse(sources)["compStatus"].string() == "Running",
+              "in Active Standby jobScope 1 is a run");
+        sources.powerState = Json();
+        check(oledStatsObject(sources)["comp_status"].string() == "Running",
+              "without a power reading the pnwash files decide");
+        check(oledCareResponse(sources)["logoDimming"].string() == "off",
+              "an unread logo dimming setting is off");
+        sources.logoDimming = false;
+        check(!oledCareResponse(sources)["logoDimming"].valid(),
+              "a TV without logo dimming leaves it out");
+        removeTree(root);
+    }
 }
 } // namespace
 

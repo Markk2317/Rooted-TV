@@ -1694,3 +1694,36 @@ match what it first read, which turned the real setting off. The server now asks
 1.5 s apart, when a reading differs from the last one, and keeps the change only if it lasts. The
 `com.webos.service.tv.systemproperty/getProperties` call for `OledGSR` that the older fallback uses
 answers `ERROR_06 Invalid argument` on this TV.
+
+## The native server on a 2016 C6 (webOS 3.4.3)
+
+Checked on 6 November 2026 on an OLED55C6V, firmware 05.70.45 (`/etc/issue`:
+webOS TV 3.4.3; kernel 3.16.7; BusyBox 1.22.1; glibc 2.19), rooted with
+mvpd-autoroot and the Homebrew Channel 0.7.3.
+
+- The SDK's binaries run unchanged: they need glibc 2.12 at most, and the TV app
+  needs nothing LG's SDL 2.0.2 port (`libsdl2-webos` 2.0.0-78), SDL2_image,
+  SDL2_ttf and FreeType 2.5 on this firmware do not export. The GL calls resolve
+  in `libmali.so` behind the 5 KB `libGLESv2.so.2`. The client's `--probe` reports
+  Mali-T760, OpenGL ES 3.1, 1920x1080.
+- The SDL port registers the app with sam (`SDL_HINT_WEBOS_REGISTER_APP` and
+  `registerNativeApp` are in the library). Launched from LG's launcher, the tile
+  stays in front; the remote's arrows arrive as `SDLK_UP`/`SDLK_DOWN` and Back as
+  scancode 482.
+- `com.webos.service.settings` does not exist; `com.webos.settingsservice`
+  answers, which the Luna client's alias already covers.
+- The picture category has no `logoLuminanceAdjust`: `getSystemSettings` answers
+  `returnValue: false` with the key in `errorKey`, and the other keys in
+  `settings`.
+- With the TV on and four hours of use since the last short cycle,
+  `/mnt/lg/cmn_data/pnwash/jobScope` holds `1` and `state` holds `0 2` for hours,
+  while `com.webos.service.tv.display/getClearPanelNoiseStatus` answers
+  `"schedule"`: the run is due at the next switch-off, not under way.
+- `com.webos.service.tvpower/power/turnOffScreen` and `turnOnScreen` work;
+  `turnOnScreen` is refused when the screen is already on.
+- There is no `com.webos.service.capture`, so a screenshot of the TV comes only
+  from the TV app's own `--capture`.
+- BusyBox 1.22's `timeout` takes the limit as `-t SECONDS` and fails on a bare
+  number. `date +%N` prints `%N`.
+- `luna-send` started over SSH prints nothing unless its standard input is closed
+  (`< /dev/null`).

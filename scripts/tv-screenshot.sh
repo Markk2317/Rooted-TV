@@ -45,7 +45,9 @@ A=/media/developer/apps/usr/palm/applications/com.tvweb.dashboard
 if ps | grep -q "[n]ativetv-tv"; then echo "a client is running: stop it first" >&2; exit 3; fi
 cd $A
 S=""; [ "$HAVE_SCRIPT" = 1 ] && S="--script /tmp/nr-script.json"
-env XDG_RUNTIME_DIR=/tmp/xdg timeout 60 /usr/bin/jailer -t native_devmode -i com.tvweb.dashboard -p $A \
+# BusyBox 1.22 (webOS 3.4) takes the limit as -t SECONDS and refuses it bare; later BusyBox the reverse.
+T="timeout 60"; timeout -t 1 true 2>/dev/null && T="timeout -t 60"
+env XDG_RUNTIME_DIR=/tmp/xdg $T /usr/bin/jailer -t native_devmode -i com.tvweb.dashboard -p $A \
   $A/nativetv-tv '{"@system_native_app":true,"nid":"com.tvweb.dashboard"}' \
   --server http://127.0.0.1:8080 --screen "$SCREEN" --duration-ms "$MS" $S --capture /tmp/nr-cap.ppm > /tmp/nr-out 2>&1
 echo "client exit $?" >&2

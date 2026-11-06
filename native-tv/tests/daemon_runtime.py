@@ -2028,7 +2028,8 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "com.webos.service.tv.display/getClearPanelNoiseStatus",
                     "com.webos.service.oledepl/getGlobalStressReduction",
                     "com.webos.service.oledepl/getTemporalPeakControl",
-                    "com.webos.service.settings/getSystemSettings"])
+                    "com.webos.service.settings/getSystemSettings",
+                    "com.webos.service.tvpower/power/getPowerState"])
                 self.assertEqual(nodeRequests, [],
                                  "available native panel data must not be proxied")
 
@@ -2036,7 +2037,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(body, b"")
                 recorded = [json.loads(line) for line in details.read_text().splitlines()]
-                self.assertEqual(len(without_country_learning(recorded)), 6,
+                self.assertEqual(len(without_country_learning(recorded)), 7,
                                  "GET and HEAD share the 30-second panel cache")
 
                 status, body = request("/api/control", "POST", {
@@ -2046,7 +2047,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, body = request("/api/oledcare")
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 recorded = [json.loads(line) for line in details.read_text().splitlines()]
-                self.assertEqual(len(without_country_learning(recorded)), 13,
+                self.assertEqual(len(without_country_learning(recorded)), 15,
                                  "refresher writes invalidate the OLED care cache")
             finally:
                 if process.poll() is None:

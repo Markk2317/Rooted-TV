@@ -16,6 +16,11 @@ struct OledCareSources {
     Json displayStatus;
     Json liveProtections;
     Json pictureSettings;
+    // /api/stats' powerState, or names::powerState's mapping: with the screen on, no compensation runs.
+    Json powerState;
+    // False where the settings service names logoLuminanceAdjust in its errorKey: webOS 3.4 has no
+    // logo dimming, and the setting is then left out rather than shown as off.
+    bool logoDimming = true;
 };
 
 bool oledModel(const std::string &model);

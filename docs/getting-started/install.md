@@ -90,9 +90,9 @@ leaves out the TV app, which `deploy.sh` packages too, so the deploy would stop.
 The default output is `native-tv/build-webos`. A different build directory can
 be selected with `--native-build=DIR` during deployment. Missing or invalid ARM
 builds fail locally before connecting to the TV. The server is the native
-`nativetv-daemon`; no Node runs on the TV. webOS 4 is the oldest supported
-version (webOS 2.2 and 3.x are not supported). Hardware acceptance currently
-covers a B3 on webOS 10.3.2.
+`nativetv-daemon`; no Node runs on the TV. webOS 3.4 is the oldest supported
+version (webOS 2.2 and older webOS 3 releases are untried). Hardware acceptance currently
+covers a B3 on webOS 10.3.2 and a 2016 C6 on webOS 3.4.3.
 
 Then, from the repository root in a terminal:
 

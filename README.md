@@ -8,7 +8,7 @@
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/ihtisham1211/native-tv?color=1fb653"></a>
   <a href="https://github.com/ihtisham1211/native-tv/actions/workflows/checks.yml"><img alt="Checks" src="https://github.com/ihtisham1211/native-tv/actions/workflows/checks.yml/badge.svg"></a>
   <a href="https://ihtisham1211.github.io/native-tv/"><img alt="Documentation" src="https://img.shields.io/badge/docs-ihtisham1211.github.io%2Fnative--tv-1fb653"></a>
-  <img alt="LG webOS 4 and later" src="https://img.shields.io/badge/LG%20webOS-4%20and%20later-a50034">
+  <img alt="LG webOS 3.4 and later" src="https://img.shields.io/badge/LG%20webOS-3.4%20and%20later-a50034">
   <img alt="Home Assistant over MQTT Discovery" src="https://img.shields.io/badge/Home%20Assistant-MQTT%20Discovery-41bdf5?logo=homeassistant&logoColor=white">
 </p>
 
@@ -24,7 +24,7 @@
 
 Use it to control an LG OLED or LCD TV without the cloud, see and switch off what LG's ACR (Live Plus), ad tracking and data agreements collect, block LG's ad and telemetry servers, debloat apps and background services, remap the remote's buttons, protect an OLED panel from burn-in, and read the TV's hardware telemetry.
 
-Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshouse) by Rory Gallagher and is now its own project: the server is a C++ daemon with no Node on the TV, and the TV has a native app in Google TV's design. It supports webOS 4 and later; Glasshouse covers webOS 2 and 3.
+Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshouse) by Rory Gallagher and is now its own project: the server is a C++ daemon with no Node on the TV, and the TV has a native app in Google TV's design. It supports webOS 3.4 and later; Glasshouse covers webOS 2 and the first webOS 3 releases.
 
 <p align="center">
   <img src="docs/screenshots/dashboard.png" alt="Native Tv dashboard in the dark theme: what the TV is showing, quick controls, processor, temperature, memory and network readings" width="49%">
@@ -84,8 +84,8 @@ Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshou
 
 | | |
 | :-- | :-- |
-| **webOS** | 4 and later. webOS 2.2 and 3.x ran the earlier Node release and are not supported by the native server |
-| **Verified with this server** | LG B3 (OLED65B3PUA), webOS 10.3.2. Other models and versions are untried |
+| **webOS** | 3.4 and later. webOS 2.2 and the webOS 3 releases before 3.4 ran the earlier Node release and are untried with the native server |
+| **Verified with this server** | LG B3 (OLED65B3PUA), webOS 10.3.2; LG C6 from 2016 (OLED55C6V), webOS 3.4.3. Other models and versions are untried |
 | **Reports from the earlier release** | 48 TVs across 33 series, 2015 to 2026 models, webOS 2.2 to 11 ([the table](https://ihtisham1211.github.io/native-tv/getting-started/tested-tvs/)) |
 | **Panels** | OLED (panel wear telemetry and burn-in controls) and LCD (the OLED Care tab hides itself) |
 | **Access** | Rooted, with the Homebrew Channel; SSH or telnet |

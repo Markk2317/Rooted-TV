@@ -6,7 +6,7 @@
 phone/browser dashboard's source (under `web/`), the TV pages' assets (under
 `assets/`), the lifecycle scripts (under `lifecycle/`) and all tests. The
 server was a Node program until October 2026 and is one C++14 daemon, with a
-metrics worker beside it, now; no Node runs on the TV. webOS 4 is the oldest
+metrics worker beside it, now; no Node runs on the TV. webOS 3.4 is the oldest
 firmware the native server supports.
 
 ```mermaid
@@ -198,7 +198,8 @@ Frame submission timing is distinct from GPU execution and display latency.
 
 ## Decisions
 
-- webOS 4 is the oldest firmware the native server supports.
+- webOS 3.4 is the oldest firmware the native server supports. The SDK links against
+  glibc 2.12 and the TV app uses only what LG's SDL 2.0.2 port on webOS 3.4 exports.
 - CivetWeb serves HTTP, and libcurl with the SDK's OpenSSL does MQTT TLS.
 - The shell watchdog (`tvwebctl`) stays; the daemon writes the heartbeat it
   watches.

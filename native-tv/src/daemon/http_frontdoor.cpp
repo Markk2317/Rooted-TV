@@ -2827,12 +2827,15 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
     if (action == "reboot") {
         if (!config_.allowPower)
             return fail(say::msg("srv.powerOff", "power actions disabled (set allowPower)"));
-        // Answer first; the shell then syncs and reboots.
+        // Answer first; the shell then syncs and reboots. reboot is found under the system root
+        // like every other system tool, so a daemon given a stand-in root (the runtime tests)
+        // cannot restart the computer it runs on: a desktop's polkit lets its user reboot.
         ChildProcessRunner *const children = &children_;
-        std::thread([children]() {
+        const std::string reboot = (systemRoot_ == "/" ? std::string() : systemRoot_) + "/sbin/reboot";
+        std::thread([children, reboot]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(400));
             ChildOptions options;
-            options.arguments = {"/bin/sh", "-c", "sync; /sbin/reboot"};
+            options.arguments = {"/bin/sh", "-c", "sync; exec \"$0\"", reboot};
             options.timeout = std::chrono::milliseconds(30000);
             (void)children->run(options);
         }).detach();
@@ -3097,7 +3100,7 @@ StatsCollector *HttpFrontDoor::statsCollector() const {
             }
             return oledState->panel == 1;
         };
-        deps.oledStats = [this, oledState](const Json &pictureSettings, const Json &) {
+        deps.oledStats = [this, oledState](const Json &pictureSettings, const Json &powerState) {
             std::lock_guard<std::mutex> lock(oledState->mutex);
             const auto now = std::chrono::steady_clock::now();
             const bool fresh = oledState->cached.valid() && now - oledState->cachedAt < std::chrono::seconds(30);
@@ -3111,7 +3114,9 @@ StatsCollector *HttpFrontDoor::statsCollector() const {
                     out.set("screen_shift", pictureSettings["screenShift"]);
                 if (service::javascriptTruthy(pictureSettings["logoLuminanceAdjust"]))
                     out.set("logo_dimming", pictureSettings["logoLuminanceAdjust"]);
-                const Json now = service::oledStatsObject(oledState->cachedSources);
+                service::OledCareSources current = oledState->cachedSources;
+                current.powerState = powerState;
+                const Json now = service::oledStatsObject(current);
                 out.set("comp_status", now["comp_status"]);
                 out.set("comp_status_label", now["comp_status_label"]);
                 oledState->cached = Json::parse(out.dump());
@@ -3121,6 +3126,7 @@ StatsCollector *HttpFrontDoor::statsCollector() const {
             sources.systemRoot = systemRoot_;
             sources.isOled = true;
             sources.pictureSettings = pictureSettings;
+            sources.powerState = powerState;
             Json propertiesRequest = Json::object();
             Json propertyKeys = Json::array();
             propertyKeys.add(Json::text("panelUsageTime"));
@@ -4723,6 +4729,14 @@ void HttpFrontDoor::sendOledCare(HttpExchange &exchange) const {
                 luna_, "com.webos.service.settings/getSystemSettings",
                 pictureRequest, pictureReply))
             sources.pictureSettings = pictureReply.response["settings"];
+        for (const Json &missing : pictureReply.response["errorKey"].items())
+            if (missing.string() == "logoLuminanceAdjust")
+                sources.logoDimming = false;
+        LunaReply powerReply;
+        if (waitForLuna(luna_, "com.webos.service.tvpower/power/getPowerState",
+                        Json::object(), powerReply) &&
+            powerReply.response["state"].isString())
+            sources.powerState = names::powerState(powerReply.response["state"]);
     }
 
     Json response = service::oledCareResponse(sources);

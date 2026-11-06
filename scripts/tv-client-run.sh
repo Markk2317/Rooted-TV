@@ -38,7 +38,9 @@ A=/media/developer/apps/usr/palm/applications/com.tvweb.dashboard
 R=/tmp/nr
 for f in $A/*; do b=$(basename $f); [ "$b" = nativetv-tv ] || ln -sf $f $R/$b; done
 cd $A
-env XDG_RUNTIME_DIR=/tmp/xdg $EXTRAENV timeout 60 /usr/bin/jailer -t native_devmode -i com.tvweb.dashboard -p $A $R/nativetv-tv '{"@system_native_app":true,"nid":"com.tvweb.dashboard"}' --server http://127.0.0.1:8080 --screen $SCREEN --duration-ms $MS --report /tmp/nr-rep.json --perf /tmp/nr-perf.jsonl > $R/out 2>&1
+# BusyBox 1.22 (webOS 3.4) takes the limit as -t SECONDS and refuses it bare; later BusyBox the reverse.
+T="timeout 60"; timeout -t 1 true 2>/dev/null && T="timeout -t 60"
+env XDG_RUNTIME_DIR=/tmp/xdg $EXTRAENV $T /usr/bin/jailer -t native_devmode -i com.tvweb.dashboard -p $A $R/nativetv-tv '{"@system_native_app":true,"nid":"com.tvweb.dashboard"}' --server http://127.0.0.1:8080 --screen $SCREEN --duration-ms $MS --report /tmp/nr-rep.json --perf /tmp/nr-perf.jsonl > $R/out 2>&1
 echo "exit=$?"
 grep '^perf:' $R/out
 cat /tmp/nr-rep.json

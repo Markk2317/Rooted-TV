@@ -9,9 +9,9 @@ The **OLED care** tab of the **Display** section, `/?tab=oledcare`, brings toget
 
 The aim is not to encourage disabling OLED protections blindly. Instead, the dashboard shows what each control does and exposes the controls that the particular panel makes available.
 
-* Cumulative panel hours, panel maintenance and Pixel Refresher countdowns, completed cycle counters and refresher failure alerts. A refresher is scheduled from the TV app's OLED Care page or from Home Assistant, not from this tab.
+* Cumulative panel hours, panel maintenance and Pixel Refresher countdowns, completed cycle counters and refresher failure alerts. A refresher is scheduled from the TV app's OLED Care page or from Home Assistant, not from this tab. Maintenance never reads as running while the TV is on with its screen lit, since LG runs it only once the TV is switched off.
 * GSR stress events on supported panels — counts how many static image stress intervals (such as logos, HUDs, or news tickers) the panel has detected, even if active dimming is switched off.
-* Screen shift and logo dimming on any OLED.
+* Screen shift on any OLED, and logo dimming where the TV has it: webOS 3.4 has none, and the row is left out there.
 * Temporal peak control (ASBL) and global stress reduction on supported models (the two normally reachable only from the TV's service menu, with a service remote and a PIN).
 
 ![OLED care tab: panel life and the burn-in protections, each with a switch](../screenshots/oledcare.png)

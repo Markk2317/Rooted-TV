@@ -27,7 +27,8 @@ async function loadOledCare() {
 
   const state = v => v === null || v === undefined ? null : !!v;
   const onOff = on => on ? t('common.on', 'On') : t('common.off', 'Off');
-  const html = OLED_ROWS.map(r => {
+  // A TV without logo dimming (webOS 3.4) reports null for it, and the row is left out.
+  const html = OLED_ROWS.filter(r => r.kind !== 'logo' || d.logoDimming !== null).map(r => {
     // Marked apart only when they can actually be changed here - the warning
     // that explains the colour is hidden otherwise.
     let pill, cls = (r.guarded && d.serviceControls) ? ' guarded' : '';
