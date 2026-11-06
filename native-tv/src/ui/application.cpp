@@ -149,7 +149,7 @@ bool Application::update(uint32_t now) {
     // The wallpaper is shown once its picture has arrived.
     std::string pending = wallpaperPending();
     if (!pending.empty() && pictures_ &&
-        pictures_->view(pending, 1600, 900, ImageFit::Cover, now_).texture != 0)
+        pictures_->view(pending, 1920, 1080, ImageFit::Cover, now_).texture != 0)
         imageReady(pending);
     bool draw = dirty_ || moved || state_.home.wallpaperTransition || screenBusy;
     ambientOnly_ = moved && motion_.ambientOnly() && !dirty_ && !state_.home.wallpaperTransition &&
@@ -301,9 +301,10 @@ void Application::resolvePictures() {
         if (node.kind != Node::Kind::Image || node.texture || node.value.empty() ||
             node.value.compare(0, 6, "local:") == 0 || node.value.compare(0, 3, "qr:") == 0)
             continue;
+        // A full-width picture (the hero's art, a wallpaper) is decoded at the screen's size.
         bool wide = node.rect.w >= 1800;
-        int width = wide ? 1600 : pictureTexels(node.rect.w),
-            height = wide ? 900 : pictureTexels(node.rect.h);
+        int width = wide ? 1920 : pictureTexels(node.rect.w),
+            height = wide ? 1080 : pictureTexels(node.rect.h);
         ImageView view = pictures_->view(node.value, width, height,
                                          node.contain ? ImageFit::Contain : ImageFit::Cover, now);
         node.value.clear();
@@ -426,6 +427,7 @@ Json Application::snapshot() const {
         const auto &home = state_.home;
         value.set("tab", Json::text(home.tabs.empty() ? "" : home.tabs[home.tab].key));
         value.set("navigation", Json::flag(home.navigation));
+        value.set("heroFocus", Json::flag(home.heroFocus));
         value.set("nav", Json::numeric(home.nav));
         value.set("arranging", Json::flag(home.arranging));
         value.set("editing", Json::flag(home.editing));

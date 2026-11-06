@@ -2475,6 +2475,52 @@ std::string activeHomeProfile(const std::string &dataRoot) {
     JsonFile homeFile(dataFilePath(dataRoot, "home.json"));
     return service::normalizeHomeDocument(homeFile.load().value)["profile"].string("main");
 }
+
+// Google TV's banner has titles of its own, apart from Top picks for you: the first six of the
+// week's trending films and series with art lead it (each with the service that has it here, where
+// a Popular on row lists it), as a "featured" row before the others, and the top picks keep the
+// rest. A short trending list gives the banner half of it.
+Json withFeatured(const Json &rows) {
+    std::map<std::string, std::string> services;
+    for (const Json &row : rows.items()) {
+        const std::string key = row["key"].string();
+        if (key.compare(0, 3, "on:") != 0) continue;
+        for (const Json &item : row["items"].items())
+            services.emplace(item["type"].string() + ":" + item["id"].string(), key.substr(3));
+    }
+    Json featured = Json::array(), others = Json::array();
+    for (const Json &row : rows.items()) {
+        if (row["key"].string() != "trending") {
+            others.add(row);
+            continue;
+        }
+        const size_t items = row["items"].size();
+        const size_t wanted = std::min<size_t>(6, items / 2);
+        Json rest = Json::array();
+        for (const Json &item : row["items"].items()) {
+            if (featured.size() >= wanted || item["backdrop"].string().empty()) {
+                rest.add(item);
+                continue;
+            }
+            Json copy = Json::parse(item.dump());
+            const auto service = services.find(item["type"].string() + ":" + item["id"].string());
+            if (service != services.end()) copy.set("service", Json::text(service->second));
+            featured.add(copy);
+        }
+        Json kept = Json::parse(row.dump());
+        kept.set("items", rest);
+        others.add(kept);
+    }
+    if (!featured.size()) return rows;
+    Json banner = Json::object();
+    banner.set("key", Json::text("featured"));
+    banner.set("title", Json::text("Trending"));
+    banner.set("items", featured);
+    Json result = Json::array();
+    result.add(banner);
+    for (const Json &row : others.items()) result.add(row);
+    return result;
+}
 } // namespace
 
 // The shared server-status response: the Server tab's switches and the
@@ -16642,6 +16688,7 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     homeContent_.setRegion(tvRegion(dataRoot_));
     Json result = homeDiscover_.feed(document["tmdbKey"].string(),
                                      document["youtubeKey"].string(), tvRegion(dataRoot_));
+    if (result["rows"].isArray()) result.set("rows", withFeatured(result["rows"]));
     // The profile's own YouTube subscriptions, where it has signed in with Google.
     const std::string profile = activeHomeProfile(dataRoot_);
     const Json subscriptions = youtubeAccounts_.row(document["youtubeClientId"].string(),
@@ -16667,12 +16714,12 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     // The bar offers the assistant where a Gemini key is saved.
     if (!document["geminiKey"].string().empty())
         result.set("assistant", Json::flag(true));
-    // Trailers in the banner: the top picks' films are fetched ahead, so they start on time.
+    // Trailers in the banner: its films are fetched ahead, so they start on time.
     if (!document["tmdbKey"].string().empty() && document["homeTrailers"].boolean(true)) {
         result.set("trailers", Json::flag(true));
         std::vector<std::string> films;
         for (const Json &row : result["rows"].items()) {
-            if (row["key"].string() != "trending") continue;
+            if (row["key"].string() != "featured") continue;
             for (const Json &item : row["items"].items()) {
                 if (films.size() == 6) break;
                 if (item["type"].string() == "movie") films.push_back(item["id"].string());

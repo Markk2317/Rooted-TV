@@ -136,8 +136,9 @@ bool HomeImageProxy::allowedUrl(const std::string &url) {
         const size_t slash = url.find('/', tmdb.size());
         if (slash == std::string::npos) return false;
         const std::string width = url.substr(tmdb.size(), slash - tmdb.size());
+        // 1920_and_h1080_bestv2: TMDB's 1920x1080 cut, the hero's art at the screen's size.
         if (width != "185" && width != "342" && width != "500" &&
-            width != "780" && width != "1280") return false;
+            width != "780" && width != "1280" && width != "1920_and_h1080_bestv2") return false;
         const std::string path = url.substr(slash + 1);
         if (path.size() < 14 || path.size() > 44 ||
             path.compare(path.size() - 4, 4, ".jpg") != 0) return false;
@@ -192,11 +193,12 @@ void HomeImageProxy::retainAndWarm(const Json &rows) {
                     warmUrl(url);
                 }
             }
-            if (row["key"].string() == "trending") {
+            // The banner's titles are fetched ahead at the size the hero draws them.
+            if (row["key"].string() == "featured") {
                 const std::string backdrop = item["backdrop"].string();
                 if (!backdrop.empty()) {
                     const std::string url =
-                        "https://image.tmdb.org/t/p/w1280" + backdrop;
+                        "https://image.tmdb.org/t/p/w1920_and_h1080_bestv2" + backdrop;
                     if (allowedUrl(url)) {
                         const std::string filename = cacheFilename(url);
                         if (used.insert(filename).second) {

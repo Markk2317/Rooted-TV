@@ -110,9 +110,10 @@ struct Hero {
     float stackY = 0;    // the rows' vertical offset (<= 0) that drives the parallax
     std::string trailer; // a film's clip, drawn over the art
     float trailerAlpha = 0;
-    // A title: source row, title, facts and a two-line description. An app: its icon beside
-    // the lines, and the key hint in place of the description.
-    std::string source, title, facts, description, image, hint;
+    // A title: source row, title, and one line of facts, or, in the banner's own carousel, why it
+    // is shown and its logline (Google TV's "Trending | ..."). An app: its icon beside the lines,
+    // and the key hint under them. sourceImage: the service's icon on the source row.
+    std::string source, title, facts, description, image, hint, tag, sourceImage;
     // Source row, title and the lines under it enter one after another (spec 5.3).
     Enter text[3];
 };
@@ -133,7 +134,7 @@ constexpr float heroProgress(float elapsedMs) {
 }
 struct Pagination {
     int count = 0;
-    std::vector<float> current; // per slot, 0..1: dot turns into the progress track
+    std::vector<float> current; // per slot, 0..1: the dot of the title on show grows and lights
     float progress = 0;
     float alpha = 1, y = 0; // y: parallax offset
 };

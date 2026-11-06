@@ -16,13 +16,13 @@ constexpr float clamp(float value, float low, float high) {
 
 // Top bar.
 constexpr Rect avatar() {
-    return {canvas::safeX, layout::navTop + (layout::navH - layout::circle) / 2, layout::circle,
-            layout::circle};
+    return {canvas::safeX, layout::navTop + (layout::navH - layout::avatar) / 2, layout::avatar,
+            layout::avatar};
 }
 // As on Google TV since its 2025 redesign, a capsule after the avatar holds search, where it is
 // offered, and the tabs; the gear has a capsule of its own after it.
 constexpr float capsuleLeft() {
-    return canvas::safeX + layout::circle + layout::avatarGap;
+    return canvas::safeX + layout::avatar + layout::avatarGap;
 }
 // A capsule round the bar's items from `left` to `right`, a little taller than the tab pill.
 constexpr Rect capsule(float left, float right) {

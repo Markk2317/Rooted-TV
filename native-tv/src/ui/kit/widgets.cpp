@@ -421,32 +421,45 @@ void heroText(Paint paint, const Hero &hero) {
     if (!invisible(hero.text[0]) && !hero.source.empty()) {
         Group group(scene, hero.text[0]);
         float x = source.x;
-        // The play mark leads a title's source line only.
-        if (hero.image.empty()) {
-            Rect mark = {source.x, source.y + (source.h - layout::heroMark) / 2, layout::heroMark,
-                         layout::heroMark};
+        Rect mark = {source.x, source.y + (source.h - layout::heroMark) / 2, layout::heroMark,
+                     layout::heroMark};
+        // The service's icon leads the banner's source line, as Google TV shows the service's
+        // logo there; another title's source line has the play mark, an app's none.
+        if (!hero.sourceImage.empty()) {
+            scene.picture(mark, 0, layout::heroMark / 2).value = hero.sourceImage;
+            x += layout::heroMark + layout::heroMarkGap;
+        } else if (hero.image.empty()) {
             scene.shape(mark, alpha::accentDim, layout::heroMark / 2);
-            paint.glyphs.icon(scene, centreOf(mark, 18), "play", color::accent);
+            paint.glyphs.icon(scene, centreOf(mark, 22), "play", color::accent);
             x += layout::heroMark + layout::heroMarkGap;
         }
-        text(paint, {x, source.y, source.w - (x - source.x), source.h}, hero.source,
-             type::heroSource, color::onSurface2);
+        text(paint, {x, source.y + (source.h - type::heroSource.line) / 2, source.w - (x - source.x),
+                     type::heroSource.line},
+             hero.source, type::heroSource, color::onSurface);
     }
     if (!invisible(hero.text[1])) {
         Group group(scene, hero.text[1]);
-        text(paint, beside(geometry::heroTitle()), hero.title, type::display, color::onSurface);
+        text(paint, beside(geometry::heroTitle()), hero.title, type::heroTitle, color::onSurface);
     }
     if (!invisible(hero.text[2])) {
         Group group(scene, hero.text[2]);
-        if (!hero.facts.empty())
-            factsText(paint, beside(geometry::heroSubtitle()), hero.facts, type::labelL,
-                      color::onSurface2);
-        Rect body = beside(geometry::heroDescription());
-        if (!hero.description.empty())
-            text(paint, body, hero.description, type::bodyL, color::onSurface2, Node::Align::Left,
-                 2);
-        else if (!hero.hint.empty())
+        Rect line = beside(geometry::heroSubtitle());
+        if (!hero.tag.empty()) {
+            // Google TV's line under the banner's title: why it is shown, a rule, its logline.
+            const float tag = paint.glyphs.measure(hero.tag, type::heroLine);
+            text(paint, {line.x, line.y, tag + 4, line.h}, hero.tag, type::heroLine,
+                 color::onSurface);
+            const float rule = line.x + tag + 18;
+            scene.shape({rule, line.y + 8, 2, line.h - 16}, faded(color::onSurface, .8f), 1);
+            const float x = rule + 2 + 18;
+            text(paint, {x, line.y, line.x + line.w - x, line.h}, hero.description, type::heroLine,
+                 color::onSurface, Node::Align::Left, 1);
+        } else if (!hero.facts.empty())
+            factsText(paint, line, hero.facts, type::heroLine, color::onSurface2);
+        if (!hero.hint.empty()) {
+            Rect body = beside(geometry::heroDescription());
             keyHint(paint, body.x, body.y + 8, "OK", hero.hint);
+        }
     }
 }
 void pagination(Paint paint, const Pagination &dots) {
@@ -454,25 +467,14 @@ void pagination(Paint paint, const Pagination &dots) {
         return;
     Scene &scene = paint.scene;
     Group group(scene, {dots.alpha, dots.y});
-    float progress = focus::clamp01(dots.progress);
+    // Google TV's dots: the title on show has the larger, white one.
     for (int i = 0; i < dots.count; ++i) {
         Rect slot = geometry::dotSlot(i, dots.count);
         float current =
             i < static_cast<int>(dots.current.size()) ? focus::clamp01(dots.current[i]) : 0;
-        float middle = slot.y + (slot.h - layout::dot) / 2;
-        if (current < 1)
-            scene.shape({slot.x + (slot.w - layout::dot) / 2, middle, layout::dot, layout::dot},
-                        faded(color::onSurface, .38f * (1 - current)), layout::dot / 2);
-        if (current > 0) {
-            Rect track = {slot.x, middle, slot.w, layout::dot};
-            scene.shape(track, faded(color::onSurface, .22f * current), layout::dot / 2);
-            if (progress > 0) {
-                Node &fill = scene.shape({slot.x, middle, slot.w * progress, layout::dot},
-                                         faded(color::onSurface, current));
-                float end = progress >= .999f ? layout::dot / 2 : 0;
-                fill.corners = {layout::dot / 2, end, end, layout::dot / 2};
-            }
-        }
+        float side = layout::dot + 4 * current;
+        scene.shape({slot.x + (slot.w - side) / 2, slot.y + (slot.h - side) / 2, side, side},
+                    faded(color::onSurface, .42f + .58f * current), side / 2);
     }
 }
 
@@ -483,7 +485,7 @@ void row(Paint paint, const Row &row) {
     if (invisible(row.enter))
         return;
     Group group(paint.scene, row.enter);
-    text(paint, geometry::rowLabel(row.index), row.label, type::title,
+    text(paint, geometry::rowLabel(row.index), row.label, type::labelL,
          faded(color::onSurface2, focus::dimmedRowAlpha(row.dim)));
 }
 void card(Paint paint, const PosterCard &poster) {
@@ -560,8 +562,8 @@ void appCircle(Paint paint, const AppCircle &circle) {
         float rise = circle.named ? 0 : focus::labelRise(amount);
         Color ink = circle.named ? focus::inkAt(color::onSurface2, color::onSurface, amount)
                                  : faded(color::onSurface, amount);
-        // The gap under the circle is the same at every size: appNameTop is measured for the
-        // 112 px circle, the Apps grid's are 156 px.
+        // The gap under the circle is the same at every size: appNameTop is measured for Home's
+        // circle (appD), the Apps grid's are 156 px.
         float nameTop = circle.rest.h + (layout::appNameTop - layout::appD);
         text(paint, {cx - width / 2, circle.rest.y + nameTop + rise, width, type::labelM.line},
              circle.name, type::labelM, ink, Node::Align::Center);

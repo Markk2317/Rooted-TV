@@ -5,15 +5,17 @@
 # ///
 """Generate native-tv/assets/app-icons/app-icons.pack from design/app-icons.json.
 
-Every icon sits on one dark rounded-square tile, the same size and padding, so
-the apps read as a set on the TV's dark UI. A brand's logo is drawn as its
-owner publishes it, in its own colours, never recoloured: where the plain logo
-is dark (X, Apple TV, Prime Video, TikTok, Peacock) the brand's own variant for
-dark surfaces is used. The logos are Dashboard Icons'. LG's own apps get a
-Material Design glyph (assets/icons/material) in the kit's accent colour on the
-same tile. The squares have square corners: the screens that show them round
-them. The daemon looks an app up by its id, then by its title, and serves the
-app's own icon when the pack has neither (src/service/app_icons.cpp).
+The icons are Google TV's circles (its 2025 home): a brand's logo large on the
+brand's own background ("background", a colour or a top-to-bottom pair; the dark
+tile where none is given), as Netflix's red wordmark on white or Prime Video's on
+blue. A logo keeps its owner's colours unless "color" (or "mask", which keeps
+only its marks, in white) asks for one flat colour. The logos are Dashboard
+Icons', and Netflix's wordmark is Wikimedia Commons' (a "url" source). LG's own
+apps get a Material Symbol (assets/icons/material) in a tonal colour on its
+lighter container ("glyphPalettes", "palettes"), as Google draws its own apps.
+The squares have square corners: the screens that show them round them. The
+daemon looks an app up by its id, then by its title, and serves the app's own
+icon when the pack has neither (src/service/app_icons.cpp).
 
 Pack format: "NTVICONS 1\\n", one "key offset length\\n" line per icon with the
 offset counted from the first data byte, an empty line, then the PNGs.
@@ -40,8 +42,10 @@ RENDER_PX = 512
 def fetch_logo(source, name, cache):
     path = cache / (name + ".svg")
     if not path.exists():
-        url = SOURCE_URL.format(repo=source["repo"], commit=source["commit"], path=source["path"].format(name=name))
-        with urllib.request.urlopen(url, timeout=30) as response:
+        url = source.get("url") or SOURCE_URL.format(repo=source["repo"], commit=source["commit"],
+                                                     path=source["path"].format(name=name))
+        request = urllib.request.Request(url, headers={"User-Agent": "native-tv gen_app_icons.py"})
+        with urllib.request.urlopen(request, timeout=30) as response:
             path.write_bytes(response.read())
     return path.read_text(encoding="utf-8")
 
@@ -63,15 +67,18 @@ def shape(art, mask):
     return alpha
 
 
-def background(spec):
-    """The tile: a dark square, a little lighter at the top."""
+def background(spec, colours=None):
+    """The tile: `colours` (one, or top and bottom), else a dark square a little lighter at the top."""
     size = spec["size"]
+    if isinstance(colours, str):
+        return Image.new("RGBA", (size, size), colours)
+    top, bottom = colours or (spec["top"], spec["bottom"])
     fade = Image.linear_gradient("L").resize((size, size))  # black at the top, white at the bottom
-    return Image.composite(Image.new("RGB", (size, size), spec["bottom"]),
-                           Image.new("RGB", (size, size), spec["top"]), fade).convert("RGBA")
+    return Image.composite(Image.new("RGB", (size, size), bottom),
+                           Image.new("RGB", (size, size), top), fade).convert("RGBA")
 
 
-def tile(art, spec, fill, color=None, mask=None):
+def tile(art, spec, fill, color=None, mask=None, colours=None):
     """The art, fitted to `fill` of the tile and centred. Its colours are kept unless `color`
     (or `mask`, which keeps only a logo's marks, in white) asks for one flat colour."""
     if mask:
@@ -84,7 +91,7 @@ def tile(art, spec, fill, color=None, mask=None):
         art = flat
     box = round(spec["size"] * fill)
     art.thumbnail((box, box), Image.LANCZOS)
-    canvas = background(spec)
+    canvas = background(spec, colours)
     canvas.alpha_composite(art, ((spec["size"] - art.width) // 2, (spec["size"] - art.height) // 2))
     out = io.BytesIO()
     canvas.convert("RGB").save(out, "PNG", optimize=True)
@@ -103,10 +110,12 @@ def main():
         folder = cache / brand["source"]
         folder.mkdir(parents=True, exist_ok=True)
         art = render(fetch_logo(source, brand["name"], folder))
-        blobs[("logo", name)] = tile(art, spec, brand.get("fill", spec["fill"]), brand.get("color"), brand.get("mask"))
+        blobs[("logo", name)] = tile(art, spec, brand.get("fill", spec["fill"]), brand.get("color"),
+                                     brand.get("mask"), brand.get("background"))
     for name in set(config["glyphs"].values()):
         art = render((GLYPHS / (name + ".svg")).read_text())
-        blobs[("glyph", name)] = tile(art, spec, spec["glyphFill"], spec["glyphColor"])
+        container, ink = config["palettes"][config["glyphPalettes"][name]]
+        blobs[("glyph", name)] = tile(art, spec, spec["glyphFill"], ink, colours=container)
 
     keys = {}
     for kind, table in (("logo", config["logos"]), ("glyph", config["glyphs"])):

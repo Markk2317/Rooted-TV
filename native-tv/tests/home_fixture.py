@@ -173,8 +173,10 @@ def catalogue(profiles=1, sort="custom"):
 
 
 def discover(assistant=False):
+    # The banner's own titles (the server's featured row) and the top picks after them.
     return {"ok": True, "enabled": True, "titlesEnabled": True, "assistant": assistant, "rows": [
-        {"key": "trending", "items": [item(n) for n in range(8)]},
+        {"key": "featured", "title": "Trending", "items": [item(n) for n in range(6)]},
+        {"key": "trending", "items": [item(n) for n in range(6, 14)]},
         {"key": "continue", "items": [dict(item(n), service="prime", progress=p)
                                       for n, p in ((8, .35), (3, .7), (9, .12))]},
         {"key": "movies", "items": [item(n) for n in range(2, 10)]},
@@ -235,7 +237,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send(200, icon(110, APPS[index][2], index), "image/png")
         elif url.path == "/api/home/image":
             target = urllib.parse.urlsplit(query.get("u", [""])[0]).path
-            self.picture(os.path.basename(target), "w1280" in target)
+            self.picture(os.path.basename(target), "w1920_and_h1080_bestv2" in target)
         elif url.path == "/api/stats":
             self.json(stats())
         elif url.path == "/api/home/details":

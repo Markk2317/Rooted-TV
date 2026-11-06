@@ -227,7 +227,7 @@ void prewarm(Renderer &renderer, kit::RunGlyphs &glyphs, GlyphAtlas &atlas, Icon
     static const TypeStyle styles[] = {type::display,  type::headline, type::title,   type::body,
                                        type::bodyL,    type::nav,      type::clock,    type::labelL,
                                        type::labelM,   type::labelS,   type::cardTitle, type::inputName,
-                                       type::heroSource};
+                                       type::heroSource, type::heroTitle, type::heroLine};
     for (const TypeStyle &style : styles)
         for (uint32_t c = 32; c < 127; ++c)
             atlas.place(atlas.glyph(static_cast<int>(style.px + .5f), style.weight, c));

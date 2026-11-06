@@ -282,16 +282,18 @@ pack has neither. Every route that serves an icon goes through it: the
 dashboard, Native Tv Home and the shared `/icons/<appId>.png` addresses.
 
 The pack is built by `native-tv/tools/gen_app_icons.py` from
-`native-tv/design/app-icons.json`. Every icon sits on one dark rounded-square
-tile with the same size and padding, so the apps read as a set on the TV's dark
-UI. A brand's logo is drawn as its owner publishes it, in its own colours, and
-is never recoloured: Dashboard Icons (Apache-2.0, pinned commit) supplies it,
-and where the plain logo is dark (X, Apple TV, Prime Video, TikTok, Peacock,
-Tidal, SoundCloud) the file names the brand's own variant for dark surfaces
-(`name` in `brands`). LG's apps, whose glyphs come from `assets/icons/material/`,
-get the glyph in the kit's accent colour on the same tile. The tiles have
-square corners: the dashboard rounds them to 8 px at 38 px, and Native Tv Home
-to 10 px at 44 px.
+`native-tv/design/app-icons.json`. The icons are Google TV's circles (its 2025
+home), 256 px squares the screens round: a brand's logo large on the brand's own
+background (`background` in `brands`, one colour or a top-to-bottom pair, the
+dark tile where none is given), as Netflix's red wordmark on white, YouTube's
+logo on white or Prime Video's wordmark on blue. A logo keeps its owner's colours
+unless `color` (or `mask`) asks for one flat colour. Dashboard Icons
+(Apache-2.0, pinned commit) supplies the logos, and Wikimedia Commons Netflix's
+wordmark (a `url` source, a text logo in the public domain); where the plain
+logo is dark the file names the brand's own variant for dark surfaces (`name`).
+LG's apps get a Material Symbol from `assets/icons/material/` in a tonal colour
+on its lighter container (`glyphPalettes`, `palettes`), as Google draws its own
+apps.
 
 A logo drawn on a tile of its own takes a `mask` (`light` keeps its white marks,
 the brand's reversed logo), and a wordmark a larger `fill`, so it stays readable
@@ -299,7 +301,7 @@ at 44 px. To cover another app, add its id or normalised title to `logos` (and
 its brand to `brands`, if new) or `glyphs`, run
 `uv run native-tv/tools/gen_app_icons.py` and commit the pack. Title keys catch
 store apps whose ids differ between regions; an id key is exact. The pack is
-about 340 KB and installs with the other assets (`deploy.sh` lists it).
+about 480 KB and installs with the other assets (`deploy.sh` lists it).
 
 The themed icons are for the dashboard, Home Assistant and Home's round row. The
 Apps tab on the TV shows each app's own art instead (`/api/home/icon?id=...&own=1`
@@ -1869,6 +1871,20 @@ tools' answers. The front door runs the tools: TMDB search through `HomeContent`
 chosen for the reply, and opens and controls as loopback requests to `/api/home/open` and
 `/api/control`. The reply is `{ok, answer, titles}`; the feed carries `assistant: true` while
 a key is saved, and the TV's bar then shows the ✦ (`tool:3`, stop `tabs + 3`).
+
+Google TV's banner: `sendHomeDiscover` moves the first six of the feed's trending titles
+with a backdrop (half of a shorter list) into a `featured` row ahead of the others, each with
+the `service` of the Popular on row that lists it, and the top picks keep the rest; disliked
+titles leave it as they leave the other rows. The client's spotlight is that row
+(`featuredCards`), or the first top picks from a server without it. `HomeState::heroFocus` is
+the banner's focus: it starts there on Home when the spotlight is the server's own, Up from the
+first row and Down from the bar reach it, Left and Right change `spotIndex`, OK opens the
+details, and Back goes rows, banner, bar. While the first screen (the banner, Top picks for you
+and Your apps) is in view the hero shows the spotlight; further down it follows the focused
+title. The first screen keeps the stack at 0, except that a row whose items and the focused
+app's name would run past the bottom rises just enough; past it the focused row takes the first
+row's place. The hero's art is TMDB's `w1920_and_h1080_bestv2` cut (`kHeroArtSize`), which the
+image proxy allows and warms for the featured row, decoded at 1920 × 1080.
 
 Trailers: `HomeContent::trailer` finds a film's preview (Wikidata `P6398` and the iTunes
 lookup in the TV's country, then `us`; else Apple's top-movies RSS chart matched by title

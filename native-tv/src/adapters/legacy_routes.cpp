@@ -1,4 +1,5 @@
 #include "adapters/legacy_routes.hpp"
+#include "domain/models.hpp"
 #include <stdexcept>
 
 namespace nativetv {
@@ -20,7 +21,7 @@ std::string legacyAssetRoute(const std::string &asset) {
         std::string size = asset.substr(5, split - 5);
         return "/api/home/image?u=" +
                encode("https://image.tmdb.org/t/p/" + size + asset.substr(split + 1)) +
-               (size == "w1280" ? "&priority=hero" : "");
+               (size == kHeroArtSize ? "&priority=hero" : "");
     }
     if (asset.compare(0, 7, "recent:") == 0) {
         size_t split = asset.find(':', 7);

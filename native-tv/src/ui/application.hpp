@@ -27,10 +27,13 @@ enum class Screen {
 struct HeroText {
     // source: the row the card came from; facts: year, rating, length; image and hint: an app's
     // icon and what OK does, in place of a title's description.
-    std::string source, title, facts, description, image, hint;
+    // tag: why the banner shows the title ("Trending"), before its logline; sourceImage: the icon of
+    // the service that has it, beside the source line.
+    std::string source, title, facts, description, image, hint, tag, sourceImage;
     bool operator==(const HeroText &other) const {
         return source == other.source && title == other.title && facts == other.facts &&
-               description == other.description && image == other.image && hint == other.hint;
+               description == other.description && image == other.image && hint == other.hint &&
+               tag == other.tag && sourceImage == other.sourceImage;
     }
 };
 struct HeroArt {
@@ -49,6 +52,9 @@ struct HeroArt {
 struct HomeState {
     size_t tab = 0, row = 0, column = 0, nav = 0;
     bool navigation = false;
+    // The banner itself has the focus, as on Google TV: Left and Right change its title, OK opens
+    // it, Up reaches the bar and Down the rows.
+    bool heroFocus = false;
     bool grid = false; // the Apps tab as one grid; false while its apps are grouped in rows by kind
     bool arranging = false; // a row of apps is lifted to be moved among the kinds
     // Editing the apps (a long press on an app): the arrows swap it with its neighbour, OK or Back
@@ -58,7 +64,8 @@ struct HomeState {
     std::vector<Tab> tabs;
     std::vector<CardRow> rows;
     Card hero;                 // the card the hero is showing or about to show
-    std::vector<Card> spotlight; // the top picks the hero cycles through
+    std::vector<Card> spotlight; // the banner's own titles, which it cycles through
+    bool spotlightOwn = false;   // they came from the feed's featured row, not the top picks
     size_t spotIndex = 0;
     HeroArt art;
     Json picture;
@@ -149,6 +156,7 @@ class Application : private ScreenHost {
                  waitFrom = 0;
         bool idle = false /* dimmed: any screen, see idleUpdate() */, heroWaiting = false, textPending = false, tabPending = false,
              waiting = false;
+        bool heroUntouched = false; // no key since the page opened: the focus starts on the banner
         std::string focusId, wantId;
         Card want;
         std::vector<std::string> tabTitles;
@@ -195,6 +203,8 @@ class Application : private ScreenHost {
     void homeRetargetPill(bool jump);
     void homeRetargetHero(const Card &card, bool instant);
     void homeTrailer(bool visible);
+    void homeHeroKey(Key key);
+    bool homeHeroOffered() const;
     void homeSwapText();
     // Idle dimming, for every screen but the splash (application.cpp).
     void idleUpdate();

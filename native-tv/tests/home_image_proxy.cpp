@@ -1,3 +1,4 @@
+#include "domain/models.hpp"
 #include "adapters/legacy_routes.hpp"
 #include "service/home_image_proxy.hpp"
 #include "core/md5.hpp"
@@ -146,7 +147,7 @@ void testTheClientAsksForPicturesTheServerServes() {
     assert(youtube.compare(0, prefix.size(), prefix) == 0);
     assert(nativetv::service::HomeImageProxy::allowedUrl(
         percentDecoded(youtube.substr(prefix.size()))));
-    for (const char *size : {"w342", "w500", "w1280"}) {
+    for (const char *size : {"w342", "w500", "w1280", nativetv::kHeroArtSize}) {
         const std::string tmdb = nativetv::legacyAssetRoute(std::string("tmdb:") + size + ":/abcdefghij1234567890.jpg");
         assert(nativetv::service::HomeImageProxy::allowedUrl(
             percentDecoded(tmdb.substr(prefix.size(), tmdb.find('&') == std::string::npos ? std::string::npos : tmdb.find('&') - prefix.size()))));
@@ -167,6 +168,10 @@ int main() {
         "https://evil.example/t/p/w342/abcdefghijklmnop.jpg"));
     assert(!HomeImageProxy::allowedUrl(
         "https://image.tmdb.org/t/p/w400/abcdefghijklmnop.jpg"));
+    assert(HomeImageProxy::allowedUrl(
+        "https://image.tmdb.org/t/p/w1920_and_h1080_bestv2/abcdefghij.jpg"));
+    assert(!HomeImageProxy::allowedUrl(
+        "https://image.tmdb.org/t/p/w1920_and_h1080_multi_faces/abcdefghij.jpg"));
     assert(!HomeImageProxy::allowedUrl(
         "https://image.tmdb.org/t/p/w342/../../secret.jpg"));
     assert(!HomeImageProxy::allowedUrl(

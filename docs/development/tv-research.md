@@ -1797,3 +1797,11 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   and the legacy RSS charts (`itunes.apple.com/<cc>/rss/topmovies/limit=100/json`)
   list each film's preview. Wikidata's `P6398` holds the US store's iTunes
   movie id for about 53,000 films, seldom for a new one.
+- The graphics plane is 1920 × 1080 on this 4K panel: `osd0_fb` and `osd1_fb`
+  are 1920 × 1080 (double-buffered to 1920 × 2160), the compositor
+  (`surface-manager-starfish -platform starfish`, `QT_DEVICE_PIXEL_RATIO=auto:1080`)
+  draws there, and the panel scales it; a native app's GL window is 1920 × 1080
+  (Mali-T760, OpenGL ES 3.1). Only video reaches the panel at 4K, through the
+  video plane, so the UI cannot be drawn at 3840 × 2160; what keeps it sharp is
+  drawing every picture at its 1080p size (TMDB's `w1920_and_h1080_bestv2` cut
+  for full-screen art).

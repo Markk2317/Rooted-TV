@@ -170,7 +170,8 @@ void Application::back() {
     } else if (state_.screen == Screen::Home) {
         flow_.tabPending = false;
         // A tap of Back only goes back: out of moving, to the first tab from any other, up the
-        // first tab to its top row and its bar, where it stops. The recent apps are Back held.
+        // first tab to its banner (or its top row) and its bar, where it stops. The recent apps
+        // are Back held.
         if (state_.home.arranging)
             homeArrangeCancel();
         else if (state_.home.editing)
@@ -180,11 +181,16 @@ void Application::back() {
             state_.home.nav = 0;
             homeSelectTab(0);
         } else if (!state_.home.navigation) {
-            if (state_.home.row) {
+            if (!state_.home.heroFocus && homeHeroOffered()) {
+                state_.home.heroFocus = true;
+                state_.home.row = 0;
+            } else if (!state_.home.heroFocus && state_.home.row) {
                 state_.home.row = 0;
                 state_.home.column = clampIndex(state_.home.column, state_.home.rows[0].cards.size());
-            } else
+            } else {
+                state_.home.heroFocus = false;
                 state_.home.navigation = true;
+            }
         }
         if (state_.screen == Screen::Home) {
             state_.home.nav = state_.home.navigation ? state_.home.tab : state_.home.nav;

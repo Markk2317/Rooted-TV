@@ -33,7 +33,9 @@ std::string artwork(const Json &item, bool hero) {
         path = item["backdrop"].string();
     if (path.empty())
         return "";
-    std::string size = hero ? "w1280" : item["backdrop"].string().empty() ? "w342" : "w500";
+    // The hero's art at the screen's size: TMDB answers this size with a 1920x1080 picture (w1280,
+    // the largest of its listed sizes short of the 4K original, is drawn half again as large).
+    std::string size = hero ? kHeroArtSize : item["backdrop"].string().empty() ? "w342" : "w500";
     return "tmdb:" + size + ":" + path;
 }
 // "Film  ·  2026  ·  ★ 6.4": the kit draws the star as an icon (the face has none). The details
@@ -229,6 +231,43 @@ std::vector<std::string> orderAfterMove(const Json &order, const std::vector<std
             result.push_back(shown[next]);
     return result;
 }
+namespace {
+// A title card of the feed's row `rowKey`.
+Card feedCard(const Json &item, const std::string &rowKey) {
+    const bool videos = rowKey == "youtube" || rowKey == "youtube:subscriptions";
+    Card card;
+    card.id = item["id"].string();
+    card.kind = videos                 ? "youtube"
+                : rowKey == "netflix"  ? "netflix"
+                : rowKey == "continue" ? "continue"
+                                       : "title";
+    card.data = item;
+    card.title = item["title"].string();
+    card.subtitle = titleFacts(item);
+    // Every card is landscape, so the backdrop is preferred over the portrait poster.
+    card.image = artwork(item);
+    card.backdrop = artwork(item, true);
+    if (card.kind == "netflix") {
+        // OK opens the title in Netflix itself, as a YouTube card opens YouTube.
+        card.command = post(Operation::OpenHomeItem,
+                            fields({{"kind", Json::text("netflix")}, {"id", item["id"]},
+                                    {"type", item["type"]}}));
+    } else if (card.kind == "continue") {
+        // Back into the service's app on the title, where its own Resume is.
+        card.command = post(Operation::OpenHomeItem,
+                            fields({{"kind", Json::text("service")},
+                                    {"service", item["service"]},
+                                    {"id", item["id"]},
+                                    {"type", item["type"]}}));
+    } else if (card.kind == "youtube") {
+        card.image = "youtube:" + card.id;
+        card.command = post(Operation::OpenHomeItem,
+                            fields({{"kind", Json::text("youtube")}, {"id", item["id"]}}));
+    } else
+        card.command = navigate("details");
+    return card;
+}
+} // namespace
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide) {
     std::vector<CardRow> result;
@@ -299,39 +338,8 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         row.title = serviceName != serviceNames.end() ? serviceName->second
                     : name == names.end()            ? source["title"].string(row.key)
                                                      : name->second;
-        for (const auto &item : source["items"].items()) {
-            Card card;
-            card.id = item["id"].string();
-            card.kind = videos                 ? "youtube"
-                        : row.key == "netflix"  ? "netflix"
-                        : row.key == "continue" ? "continue"
-                                                : "title";
-            card.data = item;
-            card.title = item["title"].string();
-            card.subtitle = titleFacts(item);
-            // Every card is landscape, so the backdrop is preferred over the portrait poster.
-            card.image = artwork(item);
-            card.backdrop = artwork(item, true);
-            if (card.kind == "netflix") {
-                // OK opens the title in Netflix itself, as a YouTube card opens YouTube.
-                card.command = post(Operation::OpenHomeItem,
-                                    fields({{"kind", Json::text("netflix")}, {"id", item["id"]},
-                                            {"type", item["type"]}}));
-            } else if (card.kind == "continue") {
-                // Back into the service's app on the title, where its own Resume is.
-                card.command = post(Operation::OpenHomeItem,
-                                    fields({{"kind", Json::text("service")},
-                                            {"service", item["service"]},
-                                            {"id", item["id"]},
-                                            {"type", item["type"]}}));
-            } else if (card.kind == "youtube") {
-                card.image = "youtube:" + card.id;
-                card.command = post(Operation::OpenHomeItem,
-                                    fields({{"kind", Json::text("youtube")}, {"id", item["id"]}}));
-            } else
-                card.command = navigate("details");
-            row.cards.push_back(card);
-        }
+        for (const auto &item : source["items"].items())
+            row.cards.push_back(feedCard(item, row.key));
         if (!row.cards.empty())
             result.push_back(row);
     }
@@ -339,5 +347,13 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     if (result.size() > 1 && result[0].key == "app" && result[1].key == "trending")
         std::swap(result[0], result[1]);
     return result;
+}
+std::vector<Card> featuredCards(const Json &discover) {
+    std::vector<Card> cards;
+    for (const auto &source : discover["rows"].items())
+        if (source["key"].string() == "featured")
+            for (const auto &item : source["items"].items())
+                cards.push_back(feedCard(item, "featured"));
+    return cards;
 }
 } // namespace nativetv

@@ -1,5 +1,6 @@
 // Home's choreography: what moves when focus, tab, hero or data change. The view (home_view.cpp)
 // only reads the values set here.
+#include "domain/names.hpp"
 #include "ui/application.hpp"
 #include "ui/controller_helpers.hpp"
 #include "ui/home_layout.hpp"
@@ -23,7 +24,8 @@ constexpr uint32_t kTabSettleMs = 190;  // the focus stays on a tab this long be
 constexpr uint32_t kPageSwapMs = 110;   // the old page has all but left
 constexpr uint32_t kHeroWaitMs = 1200;  // longest wait for the incoming art
 constexpr uint32_t kIconWaitMs = 300;   // longest wait for the apps' icons before their row enters
-constexpr int kHeroWidth = 1600, kHeroHeight = 900;
+// The hero's art is asked for at the screen's size (application.cpp asks a full-width picture so).
+constexpr int kHeroWidth = 1920, kHeroHeight = 1080;
 
 bool due(uint32_t now, uint32_t at) {
     return static_cast<int32_t>(now - at) >= 0;
@@ -88,10 +90,51 @@ std::string rowTitleOf(const ViewState &state, const Card &card) {
             return row.title;
     return "";
 }
+// The first sentence of an overview, Google TV's one-line logline; the whole text when the first
+// sentence is very short or runs long (the line ends in an ellipsis anyway).
+std::string loglineOf(const std::string &overview) {
+    for (size_t at = overview.find_first_of(".!?", 24); at != std::string::npos && at < 220;
+         at = overview.find_first_of(".!?", at + 1))
+        if (at + 1 == overview.size() || overview[at + 1] == ' ')
+            return overview.substr(0, at + 1);
+    return overview;
+}
+// The installed app of a streaming service (names::streamingServices), for its icon.
+std::string serviceAppOf(const ViewState &state, const std::string &service) {
+    const names::StreamingService *known = nullptr;
+    for (const auto &candidate : names::streamingServices())
+        if (candidate.key == service)
+            known = &candidate;
+    if (!known)
+        return "";
+    for (const Json &app : state.catalogue["apps"].items())
+        if (std::find(known->apps.begin(), known->apps.end(), app["id"].string()) != known->apps.end())
+            return app["id"].string();
+    return "";
+}
+bool featured(const ViewState &state, const Card &card) {
+    for (const Card &candidate : state.home.spotlight)
+        if (candidate.id == card.id && candidate.kind == card.kind)
+            return true;
+    return false;
+}
 HeroText linesOf(const ViewState &state, const Card &card) {
     HeroText text;
     text.title = card.title;
-    if (isTitle(card)) {
+    if (isTitle(card) && featured(state, card) && card.data["overview"].isString()) {
+        // Google TV's banner: the service that has the title over it, then why it is shown and
+        // its logline on one line.
+        const std::string service = card.data["service"].string();
+        for (const auto &candidate : names::streamingServices())
+            if (candidate.key == service)
+                text.source = candidate.name;
+        const std::string app = serviceAppOf(state, service);
+        if (!text.source.empty() && !app.empty())
+            text.sourceImage = "app:" + app;
+        text.tag = "Trending";
+        text.facts = card.subtitle;
+        text.description = loglineOf(card.data["overview"].string());
+    } else if (isTitle(card)) {
         text.source = rowTitleOf(state, card);
         if (text.source.empty())
             text.source = card.kind == "youtube" ? "YouTube" : "Top picks for you";
@@ -165,7 +208,9 @@ void Application::homeStart() {
     home.hero = Card();
     home.spotlight.clear();
     home.spotIndex = 0;
+    home.heroFocus = false;
     bool hero = !home.tabs.empty() && home.tabs[home.tab].key == "home";
+    flow_.heroUntouched = hero;
     motion_.set("wall", hero ? 1 : 0);
     motion_.set("dots", 1);
     for (const char *name : {"hk:0", "hk:1", "hp"}) {
@@ -180,17 +225,29 @@ void Application::homeData() {
     auto &home = state_.home;
     if (home.tabs.empty())
         return;
-    // The spotlight: the top picks, the pictures the hero cycles through.
+    // The spotlight: the banner's own titles (the feed's featured row), as Google TV's carousel is
+    // apart from Top picks for you. A server without them gives the first top picks.
     home.spotlight.clear();
-    size_t trending = rowIndex(home.rows, "trending");
-    if (trending < home.rows.size() && home.tabs[home.tab].key == "home")
-        for (const Card &card : home.rows[trending].cards) {
-            if (home.spotlight.size() == home::kSpotlightMax)
-                break;
-            if (isTitle(card))
+    home.spotlightOwn = false;
+    if (home.tabs[home.tab].key == "home") {
+        for (const Card &card : featuredCards(state_.discover))
+            if (home.spotlight.size() < home::kSpotlightMax && isTitle(card))
                 home.spotlight.push_back(card);
-        }
+        home.spotlightOwn = !home.spotlight.empty();
+        size_t trending = rowIndex(home.rows, "trending");
+        if (home.spotlight.empty() && trending < home.rows.size())
+            for (const Card &card : home.rows[trending].cards)
+                if (home.spotlight.size() < home::kSpotlightMax && isTitle(card))
+                    home.spotlight.push_back(card);
+    }
     home.spotIndex = home.spotlight.empty() ? 0 : std::min(home.spotIndex, home.spotlight.size() - 1);
+    // The focus starts on the banner once it has titles, unless a key has moved it since.
+    const bool heroFocus = homeHeroOffered() && (home.heroFocus || flow_.heroUntouched) &&
+                           !home.navigation && !home.editing && !home.arranging;
+    if (heroFocus != home.heroFocus) {
+        home.heroFocus = heroFocus;
+        homeFocus(true);
+    }
     std::vector<std::string> titles;
     for (const auto &tab : home.tabs)
         titles.push_back(tab.title);
@@ -309,6 +366,9 @@ void Application::homeFocus(bool jump) {
             motion_.tween(name, to, ms::focus, easing(ease::out));
     };
     std::string now;
+    // The bar, editing or moving take the focus from the banner.
+    if (home.navigation || home.editing || home.arranging)
+        home.heroFocus = false;
     if (home.navigation) {
         if (home.nav == home.tabs.size())
             now = "f:av";
@@ -318,7 +378,9 @@ void Application::homeFocus(bool jump) {
             now = "f:sr";
         else if (home.nav == home.tabs.size() + 3)
             now = "f:as";
-    } else if (home.editing && home.editHide)
+    } else if (home.heroFocus)
+        now = "f:hero";
+    else if (home.editing && home.editHide)
         now = "f:eh"; // the Hide from Home button above the page
     else if (home.row < home.rows.size() && flow_.pendingTab < 0)
         now = home::id("f", home.row, home.column);
@@ -331,8 +393,8 @@ void Application::homeFocus(bool jump) {
     }
     bool grid = home.grid;
     for (size_t r = 0; r < home.rows.size(); ++r)
-        glide(home::id("rd", r), !home.navigation && r != home.row ? 1 : 0);
-    if (!home.navigation && home.row < home.rows.size()) {
+        glide(home::id("rd", r), !home.navigation && !home.heroFocus && r != home.row ? 1 : 0);
+    if (!home.navigation && !home.heroFocus && home.row < home.rows.size()) {
         const CardRow &row = home.rows[home.row];
         if (grid) {
             double target = home::gridScrollTarget(home.column, row.cards.size());
@@ -352,12 +414,27 @@ void Application::homeFocus(bool jump) {
                 motion_.spring(name, target, springParams(kit::motion::spring::row));
         }
     }
-    // The apps row and the top picks share the hero's screen; the stack rises from the picks on.
+    // The banner, the top picks and Your apps share the first screen, as on Google TV; past it the
+    // focused row takes the first row's place, the ones before it above.
     const bool kindRows = home.tabs[home.tab].key == "apps" && !grid;
-    double stack = home.navigation || grid ? 0
+    const int firstScreenRows = home.tabs[home.tab].key == "home" ? 1 : 0;
+    const int contentRow = static_cast<int>(home.row) - static_cast<int>(defaultRow(home));
+    double stack = home.navigation || home.heroFocus || grid ? 0
                    : kindRows ? home::kindStackTarget(home.row, home.rows.size())
-                              : kit::geometry::stackTarget(static_cast<int>(home.row) -
-                                                           static_cast<int>(defaultRow(home)));
+                              : kit::geometry::stackTarget(contentRow <= firstScreenRows ? 0
+                                                                                         : contentRow);
+    // A row of the first screen that reaches past the bottom (Your apps, with the focused app's
+    // name under it) rises just enough to show it whole.
+    if (!home.navigation && !home.heroFocus && !grid && !kindRows && contentRow >= 0 &&
+        contentRow <= firstScreenRows && home.row < home.rows.size()) {
+        const CardRow &row = home.rows[home.row];
+        const float bottom = kit::geometry::rowItemsY(static_cast<int>(home.row)) +
+                             (home::isApps(row) ? kit::layout::appNameTop + kit::type::labelM.line
+                                                : home::item(row, home.row, 0).h) +
+                             kit::layout::rowLabelGap;
+        if (bottom > kit::canvas::height)
+            stack = std::min(stack, static_cast<double>(kit::canvas::height - bottom));
+    }
     if (jump)
         motion_.set("sy", stack);
     else
@@ -367,6 +444,7 @@ void Application::homeFocus(bool jump) {
 
 void Application::homeKeyMoved(Key key) {
     auto &home = state_.home;
+    flow_.heroUntouched = false;
     if (home.navigation && home.nav < home.tabs.size() && home.nav != flow_.shown &&
         (key == Key::Left || key == Key::Right)) {
         flow_.tabPending = true;
@@ -474,6 +552,8 @@ void Application::homeUpdate() {
         flow_.pendingTab = -1;
         flow_.shown = home.tab;
         home.row = home.column = 0;
+        home.heroFocus = false;
+        flow_.heroUntouched = home.tabs[home.tab].key == "home";
         home.hero = Card();
         home.art.shownId.clear();
         flow_.wantId.clear();
@@ -506,17 +586,24 @@ void Application::homeUpdate() {
             motion_.set(name, motion_.value(name));
     if (heroTab && flow_.entered && !home.rows.empty()) {
         const Card *focus = nullptr;
-        if (!home.navigation && home.row < home.rows.size() &&
+        if (!home.navigation && !home.heroFocus && home.row < home.rows.size() &&
             home.column < home.rows[home.row].cards.size())
             focus = &home.rows[home.row].cards[home.column];
-        // The hero follows the focus on titles and inputs; the slideshow runs while focus is on the
-        // bar, the top picks or an app, which has no preview of its own while there are picks.
-        size_t trending = rowIndex(home.rows, "trending");
+        // Google TV's banner keeps its own titles while the first screen is in view (the banner
+        // itself, the bar, the top picks and Your apps) and moves on by itself there; further down,
+        // where the rows have scrolled over it, its art follows the focused title.
+        // Without titles of its own (an older server) the banner shows the top picks and follows
+        // the focused title, as it did.
         const bool picks = !home.spotlight.empty();
+        const size_t firstScreenEnd = defaultRow(home) + 2;
         const bool appFocus = focus && focus->kind == "app" && picks;
-        bool onSpotlight = home.navigation || home.row == trending || appFocus;
+        bool onSpotlight = home.spotlightOwn
+                               ? home.navigation || home.heroFocus || appFocus ||
+                                     home.row < firstScreenEnd || !focus
+                               : home.navigation || home.row == rowIndex(home.rows, "trending") ||
+                                     appFocus;
         Card want;
-        if (focus && !appFocus)
+        if (focus && !(home.spotlightOwn && onSpotlight) && !appFocus)
             want = *focus;
         else if (picks)
             want = home.spotlight[home.spotIndex];
@@ -547,15 +634,8 @@ void Application::homeUpdate() {
         // The slideshow: with nobody pressing keys the hero moves on when its progress is full.
         if (home.spotlight.size() > 1 && onSpotlight && !motion_.moving("hp") &&
             !shownId.empty()) {
-            if (!flow_.idle && due(now_, flow_.lastKeyAt + static_cast<uint32_t>(ms::heroAdvance))) {
+            if (!flow_.idle && due(now_, flow_.lastKeyAt + static_cast<uint32_t>(ms::heroAdvance)))
                 home.spotIndex = (home.spotIndex + 1) % home.spotlight.size();
-                // On the top picks the focus travels with the slideshow.
-                if (!home.navigation && home.row == trending &&
-                    home.spotIndex < home.rows[trending].cards.size()) {
-                    home.column = home.spotIndex;
-                    homeFocus();
-                }
-            }
             motion_.play("hp", Tween(0, 1, ms::heroAdvance, Easing::linear()));
         }
     }
@@ -571,6 +651,40 @@ void Application::homeUpdate() {
 }
 
 // ---- Hero -------------------------------------------------------------------------------------
+
+// Whether the page has a banner to focus: Home's, once it has titles of its own.
+bool Application::homeHeroOffered() const {
+    const auto &home = state_.home;
+    return home.spotlightOwn && !home.spotlight.empty() && !home.tabs.empty() &&
+           home.tabs[home.tab].key == "home" && flow_.pendingTab < 0;
+}
+// The focused banner: Left and Right show the title before or after it, OK opens it, Up reaches the
+// bar and Down the first row.
+void Application::homeHeroKey(Key key) {
+    auto &home = state_.home;
+    const size_t count = home.spotlight.size();
+    if (key == Key::Up) {
+        home.heroFocus = false;
+        home.navigation = true;
+        home.nav = home.tab;
+        return;
+    }
+    if (key == Key::Down || !count) {
+        home.heroFocus = home.rows.empty() && count;
+        home.row = defaultRow(home);
+        return;
+    }
+    const size_t index = std::min(home.spotIndex, count - 1);
+    if (key == Key::Left || key == Key::Right)
+        home.spotIndex = (index + (key == Key::Right ? 1 : count - 1)) % count;
+    if (key == Key::Ok) {
+        const Card &card = home.spotlight[index];
+        if (card.kind == "title")
+            openDetails(card.data);
+        else
+            execute(card.command);
+    }
+}
 
 // Google TV's trailers in the hero: after the hero has rested on a film for trailerDelay its clip
 // fades in over the picture and holds the slideshow until it ends, then fades back. Off screen it

@@ -98,6 +98,8 @@ kit::Hero heroOf(const Frame &frame) {
     hero.description = home.art.text.description;
     hero.image = home.art.text.image;
     hero.hint = home.art.text.hint;
+    hero.tag = home.art.text.tag;
+    hero.sourceImage = home.art.text.sourceImage;
     for (int i = 0; i < 3; ++i)
         hero.text[i] = textEnter(motion, i);
     return hero;

@@ -54,12 +54,17 @@ struct Tab {
     std::string key, title;
     Operation operation = Operation::None;
 };
+// TMDB's size for the hero's art: a 1920x1080 picture, the screen's own size.
+constexpr const char *kHeroArtSize = "w1920_and_h1080_bestv2";
 std::vector<Tab> homeTabs(const Json &catalogue);
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide);
 // The ids hidden from a list of the layout: "app" (Home's apps), "dev", "ch", or "appsTab" (the Apps
 // tab's own apps; a catalogue from before it had a list hides there what Home hides).
 Json hiddenIds(const Json &catalogue, const std::string &list);
+// The banner's own titles, the feed's "featured" row, as cards: Google TV's carousel, apart from
+// Top picks for you.
+std::vector<Card> featuredCards(const Json &discover);
 // The apps as one row, in the kinds' order when they are sorted by kind: Home's "Your apps" (`list`
 // "app", the apps hidden on Home) or the Apps tab's (`list` "appsTab", its own hidden apps). With
 // `withHidden` the apps hidden from that list follow, flagged, so that editing can show them again.

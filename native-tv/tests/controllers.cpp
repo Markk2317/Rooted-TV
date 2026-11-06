@@ -311,7 +311,7 @@ int main() {
             focusedCard = focusedCard || hit.id == "card:0:0";
         check(wallpaper.snapshot()["wallpaper"].string() == "visible" &&
                   wallpaper.snapshot()["row"].number() == 0 && focusedCard && carouselTitle &&
-                  carouselTitle->rect.x == 80 && carouselTitle->rect.w == 1400 &&
+                  carouselTitle->rect.x == 80 && carouselTitle->rect.w == 1500 &&
                   carouselTitle->color.a == 1,
               "The hero title keeps the design's geometry over the wallpaper");
         check(imageNode(focusedWallpaper, "wallpaper:night@r1"),
@@ -433,6 +433,46 @@ int main() {
             R"({"ok":true,"apps":[{"id":"a","title":"Alpha"},{"id":"b","title":"Beta"},{"id":"c","title":"Gamma"},{"id":"d","title":"Delta"},{"id":"e","title":"Epsilon"},{"id":"f","title":"Zeta"},{"id":"g","title":"Eta"},{"id":"h","title":"Theta"}],"devices":[{"id":"hdmi1","name":"Console","port":1},{"id":"hdmi2","name":"Stick","port":2,"unused":true}],"channels":[],"order":{"app":["a","b","c","d","e","f","g","h","lg-home"],"dev":["hdmi1","hdmi2"]},"layout":{"rows":["app","dev"],"hidden":{},"showInputs":true},"profiles":[{"id":"main","name":"Main","active":true}]})";
         const char *fullFeed =
             R"({"ok":true,"enabled":true,"titlesEnabled":true,"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","overview":"First."},{"id":2,"type":"movie","title":"Two","overview":"Second."},{"id":3,"type":"tv","title":"Three","overview":"Third."},{"id":4,"type":"movie","title":"Four"},{"id":5,"type":"movie","title":"Five"},{"id":6,"type":"movie","title":"Six"},{"id":7,"type":"movie","title":"Seven"},{"id":8,"type":"movie","title":"Eight"}]},{"key":"movies","items":[{"id":9,"type":"movie","title":"Nine"}]}]})";
+        // Google TV's banner: titles of its own, apart from the top picks; the focus starts on it,
+        // Left and Right change its title, and the top picks hold still while it moves on.
+        {
+            const char *bannerFeed =
+                R"({"ok":true,"enabled":true,"titlesEnabled":true,"rows":[{"key":"featured","items":[{"id":11,"type":"movie","title":"Banner One","overview":"A first film. And more.","service":"netflix"},{"id":12,"type":"movie","title":"Banner Two","overview":"Second."},{"id":13,"type":"tv","title":"Banner Three","overview":"Third."}]},{"key":"trending","items":[{"id":1,"type":"movie","title":"One"},{"id":2,"type":"movie","title":"Two"},{"id":3,"type":"movie","title":"Three"}]}]})";
+            FakeTransport bannerTransport;
+            Application banner(bannerTransport);
+            banner.update(0);
+            reply(banner, "catalogue", fullCatalogue);
+            reply(banner, "discover", bannerFeed);
+            uint32_t at = run(banner, 16, 1500);
+            check(banner.snapshot()["heroFocus"].boolean() && banner.snapshot()["slides"].number() == 3 &&
+                      banner.snapshot()["heroTitle"].string() == "Banner One",
+                  "The banner has titles of its own and the focus starts on it");
+            banner.key(Key::Right);
+            at = run(banner, at, 1500);
+            check(banner.snapshot()["heroFocus"].boolean() &&
+                      banner.snapshot()["heroTitle"].string() == "Banner Two",
+                  "Right on the banner shows its next title");
+            banner.key(Key::Down);
+            at = run(banner, at, 1500);
+            check(!banner.snapshot()["heroFocus"].boolean() && banner.snapshot()["row"].number() == 0 &&
+                      banner.snapshot()["column"].number() == 0 &&
+                      banner.snapshot()["heroTitle"].string() == "Banner Two",
+                  "Down reaches the top picks, and the banner keeps its own title over them");
+            at = run(banner, at, 2 * kit::motion::ms::heroAdvance + 3000);
+            check(banner.snapshot()["heroTitle"].string() == "Banner Three" &&
+                      banner.snapshot()["column"].number() == 0,
+                  "The banner moves on by itself while the top picks keep their focus");
+            banner.key(Key::Up);
+            check(banner.snapshot()["heroFocus"].boolean() && !banner.snapshot()["navigation"].boolean(),
+                  "Up from the top picks reaches the banner");
+            banner.key(Key::Up);
+            check(!banner.snapshot()["heroFocus"].boolean() && banner.snapshot()["navigation"].boolean(),
+                  "Up from the banner reaches the bar");
+            banner.key(Key::Down);
+            check(banner.snapshot()["heroFocus"].boolean(), "Down from the bar comes back to the banner");
+            banner.key(Key::Ok);
+            check(banner.screenName() == "details", "OK on the banner opens its title");
+        }
         FakeTransport homeTransport;
         Application home(homeTransport);
         home.update(0);
@@ -462,7 +502,7 @@ int main() {
         clockMs = run(home, clockMs, 900);
         check(motion.value("f:0.6") == 1 && motion.value("f:0.0") == 0,
               "Focus moves with the keys and the old card drops its ring");
-        float rowTarget = kit::geometry::rowScrollTarget(6, 8, 300, 24);
+        float rowTarget = kit::geometry::rowScrollTarget(6, 8, kit::layout::cardW, kit::layout::cardGap);
         check(rowTarget < 0 && std::fabs(motion.value("rx:0") - rowTarget) < .5,
               "The row scrolls so the focused card keeps the keyline slot");
         check(home.snapshot()["heroTitle"].string() == "Seven",
@@ -473,11 +513,13 @@ int main() {
               "Down from the top picks reaches the apps row");
         check(!home.snapshot()["heroTitle"].string().empty() && home.snapshot()["heroTitle"].string() != "Alpha",
               "An app has no preview in the hero: it stays on a top pick");
+        check(motion.value("sy") < 0 && motion.value("sy") > -kit::layout::rowPitch / 2,
+              "The apps row, on the first screen, rises only enough to show the focused name");
         home.key(Key::Down);
         clockMs = run(home, clockMs, 900);
-        check(std::fabs(motion.value("sy") + 2 * 252) < .5 && motion.value("rd:1") == 1 &&
+        check(std::fabs(motion.value("sy") + 2 * kit::layout::rowPitch) < .5 && motion.value("rd:1") == 1 &&
                   motion.value("rd:2") == 0,
-              "Each Down snaps the stack one row up and dims the rows left behind");
+              "Past the first screen the focused row takes the first row's place; the rows left behind dim");
         Scene stacked = home.scene();
         check(hasHit(stacked, "card:2:0"), "The rows follow the focus");
         home.key(Key::Up);
@@ -1122,12 +1164,12 @@ int main() {
         check(cardPicture, "A picture that has not arrived draws nothing over its placeholder");
         bool askedCard = false, askedHero = false;
         for (const auto &id : pictures.asked) {
-            askedCard = askedCard || id == "tmdb:w500:/b1.jpg@330x186";
-            askedHero = askedHero || id == "tmdb:w1280:/b1.jpg@1600x900";
+            askedCard = askedCard || id == "tmdb:w500:/b1.jpg@337x189";
+            askedHero = askedHero || id == "tmdb:w1920_and_h1080_bestv2:/b1.jpg@1920x1080";
         }
         check(askedCard && askedHero,
-              "Cards are asked for at their focus-scaled size and the hero at 1600x900");
-        pictures.ready["tmdb:w1280:/b1.jpg"] = 7;
+              "Cards are asked for at their focus-scaled size and the hero at the screen's 1920x1080");
+        pictures.ready["tmdb:w1920_and_h1080_bestv2:/b1.jpg"] = 7;
         pictures.ready["tmdb:w500:/b1.jpg"] = 8;
         pictureClock = run(pictured, pictureClock, 200);
         check(pictured.snapshot()["heroTitle"].string() == "One", "The hero shows once its art is ready");
@@ -1155,7 +1197,7 @@ int main() {
                   "The apps row is not drawn while its icons are on the way");
             bool askedIcon = false;
             for (const auto &id : icons.asked)
-                askedIcon = askedIcon || id == "app:a@123x123";
+                askedIcon = askedIcon || id == "app:a@165x165";
             check(askedIcon, "The icons are asked for as soon as the rows exist, at the circles' size");
             for (const char *app : {"a", "b", "c", "d", "e", "f", "g", "h"})
                 icons.ready[std::string("app:") + app] = 3;

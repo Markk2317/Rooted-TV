@@ -148,7 +148,7 @@ void focusMath() {
 
     Rect card = kit::geometry::card(0, 0);
     Rect lifted = focus::scaledAbout(card, 1.1f);
-    check(near(lifted.w, 300 * 1.1f) && near(lifted.h, 169 * 1.1f) &&
+    check(near(lifted.w, 306 * 1.1f) && near(lifted.h, 172 * 1.1f) &&
               near(lifted.x + lifted.w / 2, card.x + card.w / 2) &&
               near(lifted.y + lifted.h / 2, card.y + card.h / 2),
           "A focused card grows 10% about its centre");
@@ -194,8 +194,8 @@ void geometryAgainstMetrics() {
     check(sameRect(geometry::clock(140), {1920 - 80 - 140 - 2 * 20 - 2 - 100, 72, 100, 48}),
           "The clock ends before the divider and the wordmark at the right margin");
     check(sameRect(geometry::capsule(168, 600), {168, 52, 432, 88}) &&
-              sameRect(geometry::searchButton(), {184, 68, 56, 56}) &&
-              geometry::tabsLeft(true) == 248 && geometry::tabsLeft() == 176,
+              sameRect(geometry::searchButton(), {204, 68, 56, 56}) &&
+              geometry::tabsLeft(true) == 268 && geometry::tabsLeft() == 196,
           "Search leads the tabs' capsule, concentric with its rounded end");
     // The prototype's widths are rounded to 0.1 each, so positions drift by up to 0.1.
     check(sameRect(tabs[0], home::tabHome, .15f) && sameRect(tabs[1], home::tabApps, .15f) &&
@@ -212,19 +212,19 @@ void geometryAgainstMetrics() {
           "The hero text block stacks source, title and subtitle");
     check(sameRect(geometry::dotSlot(0), home::dotSlot1) &&
               near(geometry::dotSlot(5).x + geometry::dotSlot(5).w, 1840) &&
-              sameRect({geometry::dotSlot(0).x, 488, 6 * 28, 20}, home::dots6Slots),
+              sameRect({geometry::dotSlot(0).x, 496, 6 * 32, 20}, home::dots6Slots),
           "Six pagination slots end at the right margin");
     check(sameRect(geometry::rowLabel(0), home::row1Label) &&
               sameRect(geometry::rowLabel(1), home::row2Label) &&
               sameRect(geometry::rowLabel(2), home::row3Label),
-          "Row labels sit 252 px apart");
+          "Row labels sit 277 px apart");
     check(sameRect(geometry::card(0, 0), home::card1) &&
               sameRect(geometry::card(0, 1), home::card2) &&
-              near(geometry::card(0, 1).x - geometry::card(0, 0).x, 324),
-          "Poster cards are 300x169 at a 324 px pitch");
+              near(geometry::card(0, 1).x - geometry::card(0, 0).x, 346),
+          "Poster cards are 306x172 at a 346 px pitch, as Google TV's top picks");
     check(sameRect(geometry::appCircle(1, 0), home::app1) &&
               sameRect(geometry::appCircle(1, 1), home::app2),
-          "App circles are 112 px at a 140 px pitch");
+          "App circles are 150 px at a 192 px pitch, as Google TV's Your apps");
     check(sameRect(geometry::inputTile(2, 0), home::input1), "Input tiles sit in the third row");
 
     namespace apps = kit::metrics::apps;
@@ -269,14 +269,14 @@ void scrolling() {
               geometry::rowScrollTarget(5, 6, 224, 24) == 0,
           "A row stops at its end and a short row never scrolls");
     check(geometry::stackTarget(0) == 0 && geometry::stackTarget(-1) == 0 &&
-              geometry::stackTarget(2) == -504,
+              geometry::stackTarget(2) == -554,
           "The stack snaps one row pitch per content row");
     kit::geometry::HeroParallax none = geometry::heroParallax(0),
-                                gone = geometry::heroParallax(-252),
+                                gone = geometry::heroParallax(-277),
                                 mid = geometry::heroParallax(-126);
-    check(none.textAlpha == 1 && none.scrimOpacity == 0 && near(gone.textY, -126) &&
-              gone.textAlpha == 0 && near(gone.artY, -30.24f) && near(gone.scrimOpacity, .84f) &&
-              near(mid.textAlpha, 1 - 126.0f / 150) && near(mid.scrimOpacity, .42f),
+    check(none.textAlpha == 1 && none.scrimOpacity == 0 && near(gone.textY, -138.5f) &&
+              gone.textAlpha == 0 && near(gone.artY, -33.24f) && near(gone.scrimOpacity, .84f) &&
+              near(mid.textAlpha, 1 - 126.0f / 150) && near(mid.scrimOpacity, 126.0f / 277 * .84f),
           "Hero parallax follows the stack offset");
     check(geometry::settingsScrollTarget(0, 12) == 0 &&
               geometry::settingsScrollTarget(3, 12) == 0 &&
@@ -295,14 +295,14 @@ void cards() {
     poster.image = "image:one";
     kit::card(rest.paint(), poster);
     const Hit *hit = hitFor(rest.scene, "card:0");
-    check(hit && sameRect(hit->rect, {80, 608, 300, 169}), "A card at rest is 300x169 at 1080p");
+    check(hit && sameRect(hit->rect, {80, 639, 306, 172}), "A card at rest is 306x172 at 1080p");
     const Node &base = rest.scene.nodes[0];
     check(base.kind == Node::Kind::Rectangle && base.radius == 12 &&
               sameColor(base.color, kit::color::surface2) && base.ring.outer == 0 &&
               base.shadow.color.a == 0 && base.group.identity(),
           "An unfocused card has no ring, shadow or scale");
     check(textAt(rest.scene, "Glass Season") &&
-              sameRect(textAt(rest.scene, "Glass Season")->rect, {96, 727, 268, 40}),
+              sameRect(textAt(rest.scene, "Glass Season")->rect, {96, 761, 274, 40}),
           "The title sits 16 px in and 10 px above the bottom edge");
 
     Fixture lifted;
@@ -310,11 +310,11 @@ void cards() {
     kit::card(lifted.paint(), poster);
     const Node &focused = lifted.scene.nodes[0];
     check(near(focused.group.sx, 1.1f, 1e-5f) && near(focused.group.sy, 1.1f, 1e-5f) &&
-              sameRect(focused.group.apply(focused.rect), {65, 599.55f, 330, 185.9f}) &&
+              sameRect(focused.group.apply(focused.rect), {64.7f, 630.4f, 336.6f, 189.2f}) &&
               near(focused.ring.outer, 3) && sameColor(focused.ring.color, kit::rgb(0xF1EEF4)) &&
               focused.shadow.dy == 22 && focused.shadow.blur == 56 &&
               near(focused.shadow.color.a, .62f) &&
-              sameRect(hitFor(lifted.scene, "card:0")->rect, {65, 599.55f, 330, 185.9f}),
+              sameRect(hitFor(lifted.scene, "card:0")->rect, {64.7f, 630.4f, 336.6f, 189.2f}),
           "A focused card scales 1.1 about its centre and gains the ring and shadow");
 
     Fixture after;
@@ -346,8 +346,8 @@ void cards() {
         item.id = "card:" + std::to_string(i);
         kit::card(longRow.paint(), item);
     }
-    check(longRow.scene.hits.size() == 7,
-          "Seven 300 px cards fit the 1920 px canvas; the rest are culled");
+    check(longRow.scene.hits.size() == 6,
+          "Six 306 px cards fit the 1920 px canvas; the rest are culled");
 }
 
 void circlesAndTiles() {
@@ -360,27 +360,27 @@ void circlesAndTiles() {
     app.color = kit::rgb(0xE50914);
     kit::appCircle(circle.paint(), app);
     const Node &disc = circle.scene.nodes[0];
-    check(sameRect(disc.rect, {80, 860, 112, 112}) && disc.radius == 56 &&
+    check(sameRect(disc.rect, {80, 916, 150, 150}) && disc.radius == 75 &&
               disc.gradient.stops == 3 && disc.gradient.angle == 145 && disc.gradient.at[2] == 1 &&
               !textAt(circle.scene, "Netflix") && circle.scene.nodes.size() == 2,
-          "An app circle is a 112 px disc with a 145 degree gradient and no name at rest");
+          "An app circle is a 150 px disc with a 145 degree gradient and no name at rest");
     Fixture named;
     app.focus = 1;
     kit::appCircle(named.paint(), app);
     check(near(named.scene.nodes[0].group.sx, 1.1f, 1e-5f) && textAt(named.scene, "Netflix") &&
-              sameRect(textAt(named.scene, "Netflix")->rect, {28, 984, 216, 32}),
-          "A focused app circle grows 10% and shows its name 124 px below its top");
+              sameRect(textAt(named.scene, "Netflix")->rect, {28, 1078, 254, 32}),
+          "A focused app circle grows 10% and shows its name 162 px below its top");
     Fixture half;
     app.focus = .5f;
     kit::appCircle(half.paint(), app);
     check(near(textAt(half.scene, "Netflix")->color.a, .5f) &&
-              near(textAt(half.scene, "Netflix")->rect.y, 984 - 2),
+              near(textAt(half.scene, "Netflix")->rect.y, 1078 - 2),
           "The name fades in while rising 4 px");
     Fixture always;
     app.focus = 0;
     app.named = true;
     kit::appCircle(always.paint(), app);
-    check(textAt(always.scene, "Netflix") && near(textAt(always.scene, "Netflix")->rect.y, 984) &&
+    check(textAt(always.scene, "Netflix") && near(textAt(always.scene, "Netflix")->rect.y, 1078) &&
               sameColor(textAt(always.scene, "Netflix")->color, kit::color::onSurface2),
           "A named circle keeps its name at rest, in the secondary ink");
     // With art, the fill is a backing for the picture that follows: pulled in by 1.5 px so the
@@ -389,16 +389,16 @@ void circlesAndTiles() {
     Fixture art;
     app.image = "app:netflix";
     kit::appCircle(art.paint(), app);
-    check(art.scene.nodes[0].backing && sameRect(art.scene.nodes[0].rect, {81.5f, 861.5f, 109, 109}) &&
-              art.scene.nodes[0].radius == 54.5f && art.scene.nodes[1].kind == Node::Kind::Image &&
+    check(art.scene.nodes[0].backing && sameRect(art.scene.nodes[0].rect, {81.5f, 917.5f, 147, 147}) &&
+              art.scene.nodes[0].radius == 73.5f && art.scene.nodes[1].kind == Node::Kind::Image &&
               art.scene.nodes[1].value == "app:netflix" &&
-              sameRect(art.scene.nodes[1].rect, {80, 860, 112, 112}),
+              sameRect(art.scene.nodes[1].rect, {80, 916, 150, 150}),
           "An app circle's fill is a backing that stops short of its picture's edge");
     Fixture artFocused;
     app.focus = 1;
     kit::appCircle(artFocused.paint(), app);
     check(!artFocused.scene.nodes[0].backing && artFocused.scene.nodes[0].ring.outer > 0 &&
-              sameRect(artFocused.scene.nodes[0].rect, {80, 860, 112, 112}) &&
+              sameRect(artFocused.scene.nodes[0].rect, {80, 916, 150, 150}) &&
               artFocused.scene.nodes[1].backing,
           "The focus ring is on the full circle, under the backing");
     app.focus = 0;
@@ -413,12 +413,12 @@ void circlesAndTiles() {
     tile.live = true;
     tile.unused = true;
     kit::inputTile(input.paint(), tile);
-    check(sameRect(input.scene.nodes[0].rect, {80, 1112, 300, 169}) &&
+    check(sameRect(input.scene.nodes[0].rect, {80, 1193, 306, 172}) &&
               sameColor(input.scene.nodes[0].color, kit::color::surface2) &&
               near(input.scene.nodes[0].ring.inner, 1) &&
               near(input.scene.nodes[0].groupOpacity, .62f) && textAt(input.scene, "HDMI 1") &&
               textAt(input.scene, "Game Console") &&
-              shapeAt(input.scene, {80 + 300 - 26, 1128, 10, 10}),
+              shapeAt(input.scene, {80 + 306 - 26, 1209, 10, 10}),
           "An unused input tile is 62% opaque with its outline, names and a live dot 16 px from "
           "the corner");
 
@@ -467,7 +467,7 @@ void barAndHero() {
           "The top bar offers the avatar, each tab and the settings button");
     // The tabs' capsule, then the gear's, then the pill.
     const Node &tabCapsule = bar.scene.nodes[0], &gearCapsule = bar.scene.nodes[1];
-    check(sameRect(tabCapsule.rect, {168, 52, tabs[2].x + tabs[2].w + 8 - 168, 88}) &&
+    check(sameRect(tabCapsule.rect, {188, 52, tabs[2].x + tabs[2].w + 8 - 188, 88}) &&
               tabCapsule.radius == 44 && sameColor(tabCapsule.color, kit::alpha::capsule) &&
               sameRect(gearCapsule.rect, {tabs[2].x + tabs[2].w + 24, 52, 88, 88}),
           "The tabs and the gear each sit in a capsule, as on Google TV");
@@ -530,19 +530,36 @@ void barAndHero() {
     kit::hero(wall.paint(), hero);
     const Node *title = textAt(wall.scene, "Harbor Lights");
     check(title && sameRect(title->rect, kit::metrics::home::heroTitle) &&
-              sameRect(textAt(wall.scene, "Harbor Originals")->rect, {124, 226, 1356, 40}) &&
+              sameRect(textAt(wall.scene, "Harbor Originals")->rect, {134, 320, 1446, 40}) &&
               textAt(wall.scene, "2021 · 7.2 · 98 min") &&
               near(textAt(wall.scene, "2021 · 7.2 · 98 min")->rect.x, 80) &&
-              near(textAt(wall.scene, "2021 · 7.2 · 98 min")->rect.y, 370) &&
-              near(textAt(wall.scene, "A ferry pilot and a lighthouse keeper")->rect.y, 422) &&
-              shapeAt(wall.scene, {80, 226 + 4, 32, 32}),
-          "The hero text block sits where the design puts it: source, title, facts, description");
+              near(textAt(wall.scene, "2021 · 7.2 · 98 min")->rect.y, 484) &&
+              !textAt(wall.scene, "A ferry pilot and a lighthouse keeper") &&
+              shapeAt(wall.scene, {80, 316 + 4, 40, 40}),
+          "The hero text block sits where the design puts it: source, title and one line of facts");
+    // The banner's own titles have Google TV's line: why it is shown, a rule and the logline.
+    Fixture banner;
+    kit::Hero featured = hero;
+    featured.tag = "Trending";
+    featured.sourceImage = "app:netflix";
+    kit::heroText(banner.paint(), featured);
+    const Node *tag = textAt(banner.scene, "Trending"),
+               *logline = textAt(banner.scene, "A ferry pilot and a lighthouse keeper");
+    const Node *serviceIcon = nullptr;
+    for (const auto &node : banner.scene.nodes)
+        if (node.kind == Node::Kind::Image && node.value == "app:netflix")
+            serviceIcon = &node;
+    check(tag && logline && near(tag->rect.x, 80) && near(tag->rect.y, 484) &&
+              near(logline->rect.y, 484) && logline->rect.x > tag->rect.x + tag->rect.w + 30 &&
+              !textAt(banner.scene, "2021 · 7.2 · 98 min") && serviceIcon &&
+              sameRect(serviceIcon->rect, {80, 320, 40, 40}),
+          "The banner's title has the service's icon over it and \"Trending | logline\" under it");
     namespace home = kit::metrics::home;
     check(near(kit::geometry::heroSubtitle().y + kit::geometry::heroSubtitle().h -
                    kit::geometry::heroSource().y,
                home::heroSubtitle.y + home::heroSubtitle.h - home::heroMeta.y) &&
-              near(home::heroSubtitle.y + home::heroSubtitle.h - home::heroMeta.y, 184),
-          "The hero text block is 184 px tall, from the source row to the facts");
+              near(home::heroSubtitle.y + home::heroSubtitle.h - home::heroMeta.y, 212),
+          "The hero text block is 212 px tall, from the source row to the facts");
     const Node *art = nullptr;
     for (const auto &node : wall.scene.nodes)
         if (node.kind == Node::Kind::Image && node.value == "art:1")
@@ -559,7 +576,7 @@ void barAndHero() {
     check(gradients == 1, "The bottom scrim has four stops (.97, .78, .30, 0)");
 
     Fixture scrolled;
-    hero.stackY = -252;
+    hero.stackY = -277;
     kit::hero(scrolled.paint(), hero);
     check(!textAt(scrolled.scene, "Harbor Lights") &&
               near(scrolled.scene.nodes.back().color.a, .86f * .84f, .001f),
@@ -577,11 +594,11 @@ void barAndHero() {
     pager.current = {1, 0, 0, 0, 0, 0};
     pager.progress = .5f;
     kit::pagination(dots.paint(), pager);
-    check(dots.scene.nodes.size() == 5 + 2 && shapeAt(dots.scene, {1672, 494, 28, 8}) &&
-              shapeAt(dots.scene, {1672, 494, 14, 8}) &&
-              shapeAt(dots.scene, {1700 + 10, 494, 8, 8}) &&
-              near(shapeAt(dots.scene, {1700 + 10, 494, 8, 8})->color.a, .38f),
-          "Pagination draws a 28 px track filled to half and five 8 px dots at 38%");
+    check(dots.scene.nodes.size() == 6 && shapeAt(dots.scene, {1657, 499, 14, 14}) &&
+              near(shapeAt(dots.scene, {1657, 499, 14, 14})->color.a, 1) &&
+              shapeAt(dots.scene, {1691, 501, 10, 10}) &&
+              near(shapeAt(dots.scene, {1691, 501, 10, 10})->color.a, .42f),
+          "Pagination draws Google TV's dots: the title on show's larger and white, the rest at 42%");
     check(kit::heroProgress(0) == 0 && near(kit::heroProgress(4500), .5f) &&
               kit::heroProgress(20000) == 1,
           "Hero progress runs over the 9 s slide");
@@ -596,10 +613,10 @@ void rows() {
     kit::row(dimmed.paint(), row);
     check(sameRect(textAt(dimmed.scene, "Your apps")->rect, kit::metrics::home::row2Label) &&
               near(textAt(dimmed.scene, "Your apps")->color.a, .5f),
-          "A row label sits 252 px per row down and dims to 50% when focus is elsewhere");
+          "A row label sits 277 px per row down and dims to 50% when focus is elsewhere");
     row.scrollX = -324;
     Rect third = kit::rowItem(row, 3, 300, 24);
-    check(near(third.x, 80 + 3 * 324 - 324) && near(third.y, 860),
+    check(near(third.x, 80 + 3 * 324 - 324) && near(third.y, 916),
           "Row items follow the row's scroll offset");
 }
 
@@ -814,7 +831,7 @@ void realGlyphs() {
     for (const auto &node : scene.nodes)
         if (node.kind == Node::Kind::Run)
             run = &node;
-    check(run && run->run != 0 && sameRect(run->rect, {96, 727, 268, 40}),
+    check(run && run->run != 0 && sameRect(run->rect, {96, 761, 274, 40}),
           "A run starts at the text box's top-left");
     float width = glyphs.measure("Glass Season", kit::type::cardTitle);
     check(width > 110 && width < 240, "The poster title measures as a line of 28 px text");

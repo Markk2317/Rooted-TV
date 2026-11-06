@@ -38,9 +38,12 @@ void Application::key(Key key) {
                 ++position;
             home.nav = stops[position];
             if (key == Key::Down) {
-                // Down from a tab opens its page first; the focus lands on the page's first item.
+                // Down from a tab opens its page first; the focus lands on the page's first item,
+                // Home's banner where it has one.
                 if (home.nav < home.tabs.size() && home.nav != flow_.shown)
                     homeSelectTab(home.nav);
+                else
+                    home.heroFocus = homeHeroOffered();
                 home.navigation = false;
             }
             if (key == Key::Ok) {
@@ -54,6 +57,8 @@ void Application::key(Key key) {
                           : home.nav == home.tabs.size() + 3 ? "assistant"
                                                              : "dashboard");
             }
+        } else if (home.heroFocus) {
+            homeHeroKey(key);
         } else if (home.arranging) {
             homeArrange(key);
         } else if (home.editing) {
@@ -68,6 +73,8 @@ void Application::key(Key key) {
                     home.column -= 6;
                 else if (home.row)
                     --home.row;
+                else if (homeHeroOffered())
+                    home.heroFocus = true; // the banner is above the first row, as on Google TV
                 else
                     home.navigation = true;
             }
@@ -201,7 +208,7 @@ void Application::click(float x, float y) {
                 if (state_.home.editing)
                     homeEditDone(true);
             } else if (type == "card") {
-                state_.home.navigation = false;
+                state_.home.navigation = state_.home.heroFocus = false;
                 state_.home.row = index;
                 state_.home.column =
                     static_cast<size_t>(std::atoi(argument.substr(argument.find(':') + 1).c_str()));

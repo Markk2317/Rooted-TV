@@ -49,8 +49,8 @@ The client's radii are px: `sm` 8, `md` 12, `lg` 20, `xl` 28, `key` 18 and `pill
 |---|---|---|
 | Scale | An 8 dp scale with `space100` = 8 dp, and nested 2, 4, 6 and 10 dp. | `space` 4, 8, 12, 16, 24, 32, 48, 64 px, which is 2 to 32 dp. |
 | TV canvas | 960×540 dp, shipped as 1080p. Overscan margin 48 dp at the sides and 27 dp top and bottom (the same page also gives 58 and 28 dp). A 12-column grid of 52 dp columns with 20 dp gutters. | 1920×1080 px. Safe margin 80 px at the sides (40 dp) and 48 px top and bottom (24 dp). Rows run to the right edge of the screen. |
-| Home | Not specified. | Row pitch 252 px; poster card 300×169 px; app circle 112 px; hero text from y 226. The bar follows Google TV's 2025 redesign: the avatar, then a capsule 88 px high from x 168 holding search (a 56 px circle 16 px in, concentric with its end) and the tabs, a second capsule 16 px after it for the gear (and before it, where a Gemini key is saved, the assistant's ✦), and at the right margin the clock, a 2×32 px divider and the wordmark, 20 px apart. Top picks for you is the first row and Your apps the second, as there. A title's details end their actions with Watchlist and the thumbs up and down as round 64 px buttons, as Google TV's details do. |
-| Apps | Not specified. | No page head. Six columns of 156 px circles at a 293×240 px pitch from y 160, or one 252 px row per kind from y 160; three rows fit and a fourth shows its top. |
+| Home | Not specified. | Measured on Google TV's 2025 home at 1080p: row pitch 277 px (a 28 px label, then the items 60 px below it); poster card 306×172 px at a 346 px pitch; app circle 150 px at a 192 px pitch; the banner's source row from y 316, its title in Google Sans Flex 96/112, and one 32/44 line under it ("Trending │ logline"), with the dots on that line (10 px, the current one 14 px and white). The left margin stays at 80 px where Google TV's is about 116, because the other screens set their own columns from it. The bar follows Google TV's 2025 redesign: a 76 px avatar, then a capsule 88 px high from x 188 holding search (a 56 px circle 16 px in, concentric with its end) and the tabs, a second capsule 16 px after it for the gear (and before it, where a Gemini key is saved, the assistant's ✦), and at the right margin the clock, a 2×32 px divider and the wordmark, 20 px apart. Top picks for you is the first row and Your apps the second, as there. A title's details end their actions with Watchlist and the thumbs up and down as round 64 px buttons, as Google TV's details do. |
+| Apps | Not specified. | No page head. Six columns of 156 px circles at a 293×240 px pitch from y 160, or one 277 px row per kind from y 160; three rows fit and a fourth shows its top. |
 | Editing apps | Not specified. | A 380×56 px pill button (Hide from Home) at the top right from y 136, the Apps page 64 px lower while it is shown, the key hints on a band of ink from y 900, and an app hidden from Home dimmed to 40%. |
 | Live | Not specified. | Four columns of 422×292 px stat cards, 24 px apart. |
 
@@ -88,11 +88,11 @@ A row's items enter one after another, `stagger::homeCell` 26 ms apart (the tent
 
 | | Material 3 Expressive | Native Tv |
 |---|---|---|
-| Family | Material Symbols, a variable font: weight 100 to 700, fill 0 to 1, grade, optical size 20 to 48; Outlined, Rounded and Sharp. | 62 Material Design Icons from Pictogrammers (`@mdi/js`, Apache-2.0, paths unchanged) in `native-tv/assets/icons/material`. One weight, no fill axis. |
+| Family | Material Symbols, a variable font: weight 100 to 700, fill 0 to 1, grade, optical size 20 to 48; Outlined, Rounded and Sharp. | Material Symbols Rounded, weight 400, 24 px optical size (Apache-2.0), as SVGs in `native-tv/assets/icons/material`, as Google TV draws its own; play, star and the saved bookmark filled. The Home Assistant mark and the assistant's sparkle stay Material Design Icons. |
 | Size | 24 dp with a 20 dp live area. Icon buttons from 32 dp (20 dp icon) to 136 dp (40 dp icon). | Rasterised from SVG into an alpha atlas at 18, 24, 26, 28, 34, 38, 40 and 52 px (30 and 56 px on demand) and tinted when drawn. |
 | State | A toggle goes from outlined to filled when selected. | A selected item changes colour; the glyph stays. |
 
-App icons are the apps' own artwork in their own colours, set in circles.
+App icons are Google TV's circles: the brand's logo large on the brand's own colour (Netflix's red wordmark on white, Prime Video's on blue), and LG's own apps a Material Symbol in a tonal colour on its lighter container.
 
 ## Not adopted
 
