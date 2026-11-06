@@ -516,6 +516,8 @@
 "home.tmdbRemove": {"text": "Quitar", "from": "Remove"},
 "home.tmdbSave": {"text": "Guardar", "from": "Save"},
 "home.unavailable": {"text": "No disponible en esta TV", "from": "Not available on this TV"},
+"home.inApp": {"text": "En la app Native Tv", "from": "In the Native Tv app"},
+"home.inAppDesc": {"text": "La Home de LG sigue siendo la de la TV: Native Tv Home se abre dentro de la app Native Tv, con Atrás desde sus Ajustes, y muestra las películas y series configuradas abajo.", "from": "LG’s Home stays the TV’s Home: Native Tv Home opens inside the Native Tv app, with Back from its Settings, and shows the films and series set below."},
 "home.wall.afternoon": {"text": "Tarde, de 11:00 a 17:00", "from": "Afternoon, 11:00 to 17:00"},
 "home.wall.black": {"text": "Negro", "from": "Black"},
 "home.wall.chooseFile": {"text": "Elegir una imagen de fondo", "from": "Choose a wallpaper image"},

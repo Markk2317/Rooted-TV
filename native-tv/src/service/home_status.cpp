@@ -46,9 +46,13 @@ Json homeStatusProjection(const Json &rawDocument,
     const Json supported = homeStatusSupported(webosVersion, allowExperimental);
     Json result = Json::object();
     result.set("ok", Json::flag(true));
-    result.set("available", Json::flag(supported["ok"].boolean() ||
-                                         document["enabled"].boolean() ||
-                                         document["restorePending"].boolean()));
+    // The TV app has Native Tv Home inside it on every TV it runs on (Back from its Settings), so
+    // the tab that sets what Home shows is offered where LG's Home cannot be replaced too; the
+    // front door still takes it away where the TV app's probe fails.
+    const bool takesLgsPlace = supported["ok"].boolean() || document["enabled"].boolean() ||
+                               document["restorePending"].boolean();
+    result.set("available", Json::flag(true));
+    result.set("inApp", Json::flag(!takesLgsPlace));
     result.set("supported", supported);
     result.set("enabled", document["enabled"]);
     result.set("openOnPowerOn", document["openOnPowerOn"]);

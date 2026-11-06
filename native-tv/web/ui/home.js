@@ -117,7 +117,7 @@ async function homeYoutubeRemove() {
   if (r && r.ok) { youtubeKeySet = r.youtubeKeySet === true; renderYoutube(); }
 }
 
-function homeWritable() { return !!(!homeSaving && homeStatus && (homeStatus.supported.ok || homeStatus.enabled || homeStatus.restorePending) && homeStatus.writable !== false); }
+function homeWritable() { return !!(!homeSaving && homeStatus && (homeStatus.supported.ok || homeStatus.enabled || homeStatus.restorePending || homeStatus.inApp) && homeStatus.writable !== false); }
 
 function renderHome() {
   const st = homeStatus;
@@ -129,8 +129,9 @@ function renderHome() {
     state.textContent = t('home.restorePending', 'LG Home restoration is incomplete');
     desc.textContent = t('home.restoreRetry', 'Retry restoring LG Home before switching Native Tv Home on again.');
   } else if (!st.supported.ok) {
-    state.textContent = t('home.unavailable', 'Not available on this TV');
-    desc.textContent = st.supported.reason || '';
+    state.textContent = t('home.inApp', 'In the Native Tv app');
+    desc.textContent = (st.supported.reason ? st.supported.reason + ' ' : '') +
+      t('home.inAppDesc', 'LG’s Home stays the TV’s Home: Native Tv Home opens inside the Native Tv app, with Back from its Settings, and shows the films and series set below.');
   } else if (st.enabled) {
     state.textContent = t('home.isOn', 'Native Tv Home is the TV’s Home');
     desc.textContent = st.lgHomeOpen
@@ -142,6 +143,10 @@ function renderHome() {
     state.textContent = t('home.isOff', 'LG’s Home is the TV’s Home');
     desc.textContent = t('home.isOffDesc', 'Nothing of LG’s is changed: Native Tv Home is laid over LG’s Home while on, and switching off takes it away.');
   }
+  // Where LG's Home cannot be replaced, Home is the TV app's own: its layout is set here, the
+  // switch and the warning about replacing LG's Home are left out.
+  const layoutHere = st.supported.ok || st.inApp === true;
+  document.querySelectorAll('#homepane [data-t="home.experimental"]').forEach(note => { note.hidden = st.inApp === true; });
   const more = q('home-more');
   if (more) more.hidden = !st.supported.ok;
   const startupRow = q('home-startup-row');
@@ -154,7 +159,7 @@ function renderHome() {
     startup.disabled = !homeWritable() || !st.enabled;
   }
   const namesRow = q('home-app-names-row');
-  if (namesRow) namesRow.hidden = !st.supported.ok;
+  if (namesRow) namesRow.hidden = !layoutHere;
   const appNames = q('home-app-names');
   if (appNames) {
     const on = !st.layout || st.layout.appNames !== false;
@@ -163,7 +168,7 @@ function renderHome() {
     appNames.disabled = !homeWritable();
   }
   const clockRow = q('home-clock-row'), clock = q('home-clock');
-  if (clockRow) clockRow.hidden = !st.supported.ok;
+  if (clockRow) clockRow.hidden = !layoutHere;
   if (clock) {
     const twelve = !!st.layout && st.layout.clockFormat === '12h';
     updateToggle(clock, { cls: 'idle', label: twelve ? t('home.clock12', '12-hour') : t('home.clock24', '24-hour') });
@@ -171,7 +176,7 @@ function renderHome() {
   }
   [['home-show-inputs', 'showInputs', true], ['home-show-live', 'showLive', false], ['home-show-lg', 'showLgHome', true]].forEach(([id, key, fallback]) => {
     const row = q(id + '-row'), btn = q(id);
-    if (row) row.hidden = !st.supported.ok;
+    if (row) row.hidden = !layoutHere;
     if (!btn) return;
     const on = st.layout && st.layout[key] !== undefined ? st.layout[key] === true : fallback;
     updateToggle(btn, { cls: on ? 'good' : 'idle', label: on ? t('common.on', 'On') : t('common.off', 'Off'), on: on });
@@ -182,7 +187,7 @@ function renderHome() {
   // webOS 9 only: newer TVs have no layout file for LG's Home to start on.
   if (hideRow) hideRow.hidden = !st.supported.ok || st.hideLgHomeAtStartAvailable === false;
   const picRow = q('home-picture-row');
-  if (picRow) picRow.hidden = !st.supported.ok;
+  if (picRow) picRow.hidden = !layoutHere;
   const pic = q('home-picture');
   if (pic) {
     const on = !!st.layout && st.layout.picture === true;
@@ -199,6 +204,7 @@ function renderHome() {
     hide.disabled = !homeWritable();
   }
   if (btn) {
+    btn.hidden = st.inApp === true;
     const wantOn = !(st.enabled || st.restorePending);
     const armed = homeArmed === (wantOn ? 'on' : 'off');
     btn.disabled = !homeWritable();

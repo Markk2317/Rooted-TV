@@ -4,7 +4,7 @@ description: "Native Tv Home, an experimental replacement for LG's home screen o
 
 # Home
 
-**Experimental.** Native Tv Home is a home screen of Native Tv's own, shown in place of LG's when the remote's Home or Back button is pressed and when the TV switches on. The **Native Tv Home** tab, `/?tab=home`, under Apps, switches it on and off and arranges it. It has been tried on webOS 9 and 10. On webOS 11 it is offered once `"allowExperimentalHome": true` is set in `config.json`. Elsewhere neither dashboard shows it, unless it is still switched on or LG's Home has not yet been fully restored.
+**Experimental.** Native Tv Home is a home screen of Native Tv's own, shown in place of LG's when the remote's Home or Back button is pressed and when the TV switches on. The **Native Tv Home** tab, `/?tab=home`, under Apps, switches it on and off and arranges it. It has been tried on webOS 9 and 10. On webOS 11 it is offered once `"allowExperimentalHome": true` is set in `config.json`. Elsewhere LG's Home stays the TV's Home and Native Tv Home is the TV app's own, opened with Back from the app's Settings: the tab is still there for its layout, its profiles and the TMDB and YouTube keys below, without the switch, and without the warning about replacing LG's Home. It is left out only where the TV app's graphics probe fails.
 
 The screen is laid out as Google TV's home, after Google's TV Design Kit: a bar of tabs with the clock and date at the right, a featured carousel across the top (the kit's Immersive layout: its artwork fills the top right and fades into the black, with the text at the left), and rows of cards below it. Until Home has its first content, a boot screen of slowly moving colours shows the Native Tv mark. The tabs are:
 

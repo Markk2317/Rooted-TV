@@ -58,6 +58,7 @@ int main() {
     const Json unavailable = homeStatusProjection(
         Json::object(), "12.0.0", false, false, false, false,
         Json::object());
-    assert(!unavailable["available"].boolean());
+    assert(unavailable["available"].boolean() && unavailable["inApp"].boolean());
+    assert(!status["inApp"].boolean());
     return 0;
 }

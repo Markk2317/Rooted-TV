@@ -184,7 +184,7 @@ Installing and running Native Tv needs no account or key: the dashboard, the TV 
 | TMDB API key | The film and series rows: titles, posters, details and trailers. Without it Home shows only what is on the TV | The browser dashboard: Apps, **Native Tv Home** tab, **Films and series** (or `"tmdbKey"` in `config.json`) |
 | YouTube Data API key | The **Trending on YouTube** row | The same tab, **Trending on YouTube** (or `"youtubeKey"` in `config.json`) |
 
-The TV app has no field for either key. The Native Tv Home tab (`http://<tv-ip>:8080/?tab=home`) appears only on TVs where Native Tv Home is offered: webOS 9 and 10, and webOS 11 once `"allowExperimentalHome": true` is set.
+The TV app has no field for either key. The Native Tv Home tab (`http://<tv-ip>:8080/?tab=home`) is on every TV the TV app runs on; it can switch Native Tv Home on in LG's Home's place on webOS 9 and 10, and on webOS 11 once `"allowExperimentalHome": true` is set. Elsewhere Native Tv Home is the TV app's own, opened with Back from its Settings.
 
 **Get a TMDB key** (free):
 
