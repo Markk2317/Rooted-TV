@@ -1739,3 +1739,13 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   `org.webosbrew.hbchannel.service` with `luna-send-pub`: `exec` runs as root and
   `autostart` runs `startup.sh`. A tile opened after a power-on brought SSH up in
   6 s and the server in 9 s that way.
+- LG's screen saver is `native_builtin`: sam runs
+  `/usr/palm/applications/com.webos.app.screensaver/screensaver` in the app's
+  jail (user 6253, `QT_QPA_PLATFORM=wayland`, `APPID` set). The jailer binds
+  the app's directory into the jail at each launch, so a bind mount over it is
+  seen from the next launch and LG's files come back once it is gone. A
+  `screensaver` script there that runs `qml-runner '{"main":...,"appId":
+  "com.webos.app.screensaver","params":{}}'` draws a `WebOSWindow` of type
+  `_WEBOS_WINDOW_TYPE_SCREENSAVER` (Qt 5.4, `Eos.Window`, QtQuick 2.4 and
+  `QtQuick.Particles` are there), started by tvpower like LG's and closed by any
+  key. `applicationManager/blockSystemApp` is refused.

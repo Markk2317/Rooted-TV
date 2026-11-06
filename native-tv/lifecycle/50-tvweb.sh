@@ -377,7 +377,12 @@ if [ -n "$stock_type" ] && [ "$stock_type" != "qml" ]; then
   luna-send -n 1 luna://com.webos.applicationManager/releaseBlockSystemApp '{"id":"com.webos.app.screensaver"}' >/dev/null 2>&1 || true
 fi
 held=0
-if [ -n "$stock_type" ] && [ "$stock_type" != "qml" ] && [ "$webos_major" != "10" ] && [ "$webos_major" != "11" ]; then
+# webOS 3.4's stock saver is a native program that a launcher of ours stands in
+# for (screensaver_manager.cpp), with LG's manifest kept: nothing to hold back.
+launcher=0
+[ "$stock_type" = "native_builtin" ] && [ -x /usr/bin/qml-runner ] && launcher=1
+if [ -n "$stock_type" ] && [ "$stock_type" != "qml" ] && [ "$launcher" -eq 0 ] &&
+   [ "$webos_major" != "10" ] && [ "$webos_major" != "11" ]; then
   if grep -Eq '"(allowExperimentalScreensavers|allowOnWebos10)"[[:space:]]*:[[:space:]]*true' /var/lib/tvweb/config.json 2>/dev/null; then
     bootlog "allowExperimentalScreensavers set - custom screen saver not held back"
   else

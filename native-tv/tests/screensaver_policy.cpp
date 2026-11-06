@@ -49,6 +49,19 @@ int main() {
         allowed.allowedAnyway = true;
         check(!screensaverHeldBack(allowed), "allowed anyway lifts the hold");
 
+        // webOS 3.4's native stock saver: held back without qml-runner, a fast switch with it.
+        ScreensaverState native;
+        native.stockType = "native_builtin";
+        native.webosMajor = 3;
+        native.assets = {"clock"};
+        check(screensaverHeldBack(native), "a native stock saver without a launcher is held back");
+        native.launcher = true;
+        check(!screensaverSlowSwitch(native) && !screensaverHeldBack(native) &&
+                  !screensaverExperimental(native),
+              "a launcher makes a native stock saver a fast switch");
+        check(modeById(screensaverList(native), "clock")["available"].boolean(),
+              "a launcher offers the custom savers");
+
         // The list projection.
         const Json held = screensaverList(flutterTv(12));
         check(held["held"].boolean() && held["available"].boolean(), "held list");

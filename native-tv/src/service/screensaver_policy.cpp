@@ -59,7 +59,7 @@ bool knownSaver(const std::string &id) {
 } // namespace
 
 bool screensaverSlowSwitch(const ScreensaverState &state) {
-    return !state.stockType.empty() && state.stockType != "qml";
+    return !state.stockType.empty() && state.stockType != "qml" && !state.launcher;
 }
 
 bool screensaverOnByDefault(const ScreensaverState &state) {

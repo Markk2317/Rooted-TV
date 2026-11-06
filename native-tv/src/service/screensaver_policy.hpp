@@ -20,10 +20,14 @@ struct ScreensaverState {
     std::set<std::string> assets; // saver ids whose QML is packaged
     bool externalActive = false;
     bool externalHook = false;
+    // LG's saver is a native program (webOS 3.4's "native_builtin") and qml-runner is there: a
+    // launcher of ours takes the program's name and runs the QML, so the manifest stays LG's.
+    bool launcher = false;
 };
 
 // True where LG's screen saver runs on another runner than ours (Flutter on
-// webOS 10), so switching to or from it needs sam to reread the app.
+// webOS 10), so switching to or from it needs sam to reread the app. Not where a
+// launcher stands in for it.
 bool screensaverSlowSwitch(const ScreensaverState &state);
 // Slow-switch firmware that has been tried and is on by default (webOS 10, 11).
 bool screensaverOnByDefault(const ScreensaverState &state);

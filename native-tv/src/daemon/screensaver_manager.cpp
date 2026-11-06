@@ -199,10 +199,29 @@ bool unmountTree(ChildProcessRunner &children, const std::string &systemRoot,
     return false;
 }
 
+// webOS 3.4's stock saver is "native_builtin": sam runs the app's `screensaver` program in the
+// app's jail. Ours is a launcher under that name that has qml-runner draw the staged QML, so sam
+// keeps the manifest it read at boot and no reread is needed (webOS 3.4's sam refuses the block
+// and release). The jailer binds the app's directory into the jail at each launch, so the mount
+// reaches the next one.
+const char *kLauncher =
+    "#!/bin/sh\n"
+    "# Native Tv's screen saver in the place of LG's native one: qml-runner draws the staged QML.\n"
+    "exec /usr/bin/qml-runner \"{\\\"main\\\":\\\"$(dirname \"$0\")/qml/main.qml\\\","
+    "\\\"appId\\\":\\\"com.webos.app.screensaver\\\",\\\"params\\\":{}}\"\n";
+
+bool launcherStandsIn(const std::string &systemRoot, const std::string &stockType) {
+    struct stat info;
+    return stockType == "native_builtin" &&
+           stat(rooted(systemRoot, "/usr/bin/qml-runner").c_str(), &info) == 0;
+}
+
 void clearStaged(const std::string &stage) {
     (void)unlink((stage + "/.tvweb-screensaver").c_str());
     (void)unlink((stage + "/.tvweb-brightness").c_str());
     (void)unlink((stage + "/appinfo.json").c_str());
+    (void)unlink((stage + "/screensaver").c_str());
+    (void)unlink((stage + "/icon.png").c_str());
     removeTreeContents(stage + "/qml");
     (void)rmdir((stage + "/qml").c_str());
 }
@@ -236,9 +255,19 @@ bool stageFiles(const std::string &systemRoot, const std::string &assetsRoot,
                 (void)writeFile(rooted(systemRoot, "/var/lib/tvweb/screensaver-stock-type"),
                                 stockType + "\n");
             }
-            manifest.set("type", Json::text("qml"));
-            manifest.set("main", Json::text("qml/main.qml"));
-            appInfo = manifest.dump();
+            if (launcherStandsIn(systemRoot, stockType)) {
+                std::string icon;
+                if (!writeFile(stage + "/screensaver", kLauncher) ||
+                    chmod((stage + "/screensaver").c_str(), 0755) != 0 ||
+                    (readFile(app + "/icon.png", icon) && !writeFile(stage + "/icon.png", icon))) {
+                    error = "could not stage the screen saver launcher";
+                    return false;
+                }
+            } else {
+                manifest.set("type", Json::text("qml"));
+                manifest.set("main", Json::text("qml/main.qml"));
+                appInfo = manifest.dump();
+            }
         } catch (...) {
             // Preserve the legacy behavior: a malformed stock manifest is staged
             // unchanged, and the manager reports whether SAM accepted the runner.
@@ -358,6 +387,7 @@ service::ScreensaverState ScreensaverManager::state(bool allowControl,
     const std::string app = rooted(systemRoot_, appDir);
     service::ScreensaverState state;
     state.stockType = readTrimmed(rooted(systemRoot_, "/var/lib/tvweb/screensaver-stock-type"));
+    state.launcher = launcherStandsIn(systemRoot_, state.stockType);
     state.webosMajor = webosMajor(systemRoot_);
     state.allowedAnyway = allowedAnyway;
     state.allowControl = allowControl;
@@ -421,8 +451,8 @@ Json ScreensaverManager::reconcileBoot(SamRescanManager &samRescan,
         (void)samRescan.releaseBlockedApp(appId, maintenanceContext);
 
     const int major = webosMajor(systemRoot_);
-    const bool held = stockType != "qml" && major != 10 && major != 11 &&
-                      !allowExperimental;
+    const bool held = stockType != "qml" && !launcherStandsIn(systemRoot_, stockType) &&
+                      major != 10 && major != 11 && !allowExperimental;
     std::string mode;
     if (!readFile(stage + "/.tvweb-screensaver", mode)) {
         Json response = Json::object();

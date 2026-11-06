@@ -29,6 +29,8 @@ Each mode but the black screen offers dim and bright variants, and visual elemen
 
 A firmware update restores the LG default.
 
+On webOS 3.4 LG's screen saver is a native program rather than QML. There a small launcher takes that program's place and has the TV's own QML runner draw the chosen saver, with LG's manifest left as it is, so they are on by default. As the TV runs no root hook at boot (see [Installing](../getting-started/install.md)), the chosen saver comes back after a power-on once the Native Tv tile has been opened; until then the TV shows LG's.
+
 On webOS 12 and later they are experimental: the tab shows a switch above the list that turns them on, after a warning, and until then only LG's default can be chosen. See [Experimental features](../administration/experimental.md) for why.
 
 **Start screen saver** asks the TV for its screen saver. Some TVs accept the request and then refuse it; a G3 on webOS 9.2.2 refused every one, its own idle screen saver included. There the dashboard opens the screen saver itself, unless something is playing full screen or playback cannot be checked. Any key on the remote, including Home and the coloured buttons, or a second press of the button closes it. A failed close leaves it tracked so another press can retry. The TV does not know about a screen saver opened this way: its power state stays On, in the dashboards and in Home Assistant, and watch time counts the app beneath it. The Screen Saver sensor does show it.
