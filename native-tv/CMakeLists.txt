@@ -145,7 +145,8 @@ add_library(nativetv_tv_services src/service/control_commands.cpp
   src/service/home_open.cpp
   src/service/home_content.cpp src/service/home_discover.cpp
   src/service/home_image_proxy.cpp src/service/youtube_accounts.cpp
-  src/service/home_titles.cpp src/service/home_watching.cpp)
+  src/service/home_titles.cpp src/service/home_watching.cpp
+  src/service/screensaver_photos.cpp src/service/weather.cpp)
 target_link_libraries(nativetv_tv_services PUBLIC nativetv_core nativetv_names
   PkgConfig::CURL ZLIB::ZLIB)
 target_compile_options(nativetv_tv_services PRIVATE -Wall -Wextra -Werror)
@@ -405,6 +406,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-home-discover-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-discover-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
   add_test(NAME native-home-discover COMMAND native-home-discover-tests)
+  add_executable(native-screensaver-photos-tests tests/screensaver_photos.cpp)
+  target_link_libraries(native-screensaver-photos-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-screensaver-photos-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+  add_test(NAME native-screensaver-photos COMMAND native-screensaver-photos-tests)
   add_executable(native-home-watching-tests tests/home_watching.cpp)
   target_link_libraries(native-home-watching-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-watching-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)

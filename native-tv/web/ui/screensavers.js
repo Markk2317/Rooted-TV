@@ -95,6 +95,99 @@ async function loadScreensavers() {
 
   clearTimeout(ssSwitchPoll);
   if (ssSwitching) ssSwitchPoll = setTimeout(() => { if (activeTab === 'screensaver') loadScreensavers(); }, 4000);
+  loadSsPhotos();
+}
+
+/* ---- Your photos: the Photos screen saver's pictures and its weather ----
+   Each photo is fitted to 1920 x 1080 and made a JPEG here, as Home's wallpapers are, so the TV
+   only checks and keeps it. */
+let ssPhotosBusy = false;
+async function loadSsPhotos() {
+  const card = q('ss-photos-card');
+  if (!card) return;
+  let d;
+  try { d = await (await fetch(api('/api/screensaver/photos'), { cache: 'no-store' })).json(); } catch (e) { return; }
+  if (!d || !d.ok) return;
+  card.hidden = false;
+  const count = d.photos ? d.photos.count : 0;
+  q('ss-photos-state').textContent = count
+    ? t('ss.photosCount', '{n} photos on the TV ({mb} MB).', { n: count, mb: (d.photos.bytes / 1048576).toFixed(1) })
+    : t('ss.photosNone', 'No photos yet.');
+  q('ss-photos-clear').hidden = !count;
+  q('ss-photos-add').disabled = ssPhotosBusy || !ssWritable;
+  const city = q('ss-city');
+  if (document.activeElement !== city) city.value = d.city || '';
+}
+async function ssPrepareJpeg(file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 25 * 1024 * 1024)
+    throw new Error(t('ss.photoChoose', 'Choose JPEG, PNG or WebP images up to 25 MB.'));
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error(t('ss.photoUnreadable', 'A photo could not be opened.')));
+      img.src = url;
+    });
+    const scale = Math.min(1, 1920 / img.naturalWidth, 1080 / img.naturalHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.86));
+    if (!blob || blob.size > 5 * 1024 * 1024) throw new Error(t('ss.photoTooLarge', 'A prepared photo is too large.'));
+    return blob;
+  } finally { URL.revokeObjectURL(url); }
+}
+async function ssPhotosUpload() {
+  const input = q('ss-photos-file');
+  const files = Array.from(input.files || []);
+  if (!files.length || ssPhotosBusy) return;
+  ssPhotosBusy = true;
+  const note = q('ss-photos-note');
+  let sent = 0;
+  try {
+    for (const file of files) {
+      note.textContent = t('ss.photosSending', 'Sending photo {i} of {n}…', { i: sent + 1, n: files.length });
+      const blob = await ssPrepareJpeg(file);
+      const res = await fetch(api('/api/screensaver/photos/upload'), {
+        method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob
+      });
+      const r = await res.json();
+      if (!res.ok || !r.ok) throw new Error(r.error || t('ss.photoFailed', 'A photo could not be sent.'));
+      sent++;
+    }
+    note.textContent = t('ss.photosSent', '{n} photos added.', { n: sent });
+  } catch (e) { note.textContent = e.message; }
+  finally {
+    input.value = '';
+    ssPhotosBusy = false;
+    loadSsPhotos();
+  }
+}
+async function ssPhotosClear() {
+  if (ssPhotosBusy) return;
+  try {
+    const res = await fetch(api('/api/screensaver/photos/remove'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 0 })
+    });
+    const r = await res.json();
+    if (!res.ok || !r.ok) throw new Error(r.error || t('ss.photoFailed', 'A photo could not be sent.'));
+    q('ss-photos-note').textContent = '';
+  } catch (e) { q('ss-photos-note').textContent = e.message; }
+  loadSsPhotos();
+}
+async function ssCitySave() {
+  const r = await sendCommand('setSaverCity', q('ss-city').value.trim());
+  if (r && r.ok) {
+    q('ss-city').value = r.city || '';
+    q('ss-photos-note').textContent = r.city
+      ? t('ss.weatherSet', 'The weather is for {city}.', { city: r.city })
+      : t('ss.weatherOff', 'No weather is shown.');
+  }
 }
 
 /*

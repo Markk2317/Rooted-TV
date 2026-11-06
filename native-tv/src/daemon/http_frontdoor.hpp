@@ -18,6 +18,7 @@
 #include "service/youtube_accounts.hpp"
 #include "service/home_titles.hpp"
 #include "service/home_watching.hpp"
+#include "service/weather.hpp"
 #include "service/home_image_proxy.hpp"
 #include "service/home_picture.hpp"
 #include "service/home_open.hpp"
@@ -337,6 +338,9 @@ class HttpFrontDoor {
     void sendHomeWallpaper(HttpExchange &exchange) const;
     void handleHomeWallpaperUpload(HttpExchange &exchange) const;
     void handleHomeWallpapersRemove(HttpExchange &exchange) const;
+    // /api/screensaver/photos, /photo, /photos/upload, /photos/remove and /weather: the Photos
+    // screen saver's pictures and weather. True when the request was one of them.
+    bool handleScreensaverPhotos(HttpExchange &exchange) const;
     void sendHomeRecentApps(HttpExchange &exchange) const;
     void sendHomeRecentAppImage(HttpExchange &exchange) const;
     void handleHomeRecentAppsPost(HttpExchange &exchange) const;
@@ -445,6 +449,8 @@ class HttpFrontDoor {
     mutable service::YoutubeAccounts youtubeAccounts_;
     mutable service::HomeTitles homeTitles_;
     mutable service::HomeWatching homeWatching_;
+    mutable service::Weather weather_;
+    mutable std::atomic<bool> screensaverPhotoUploadActive_{false};
     std::string configPath_;
     std::string hdmiSeenPath_;
     std::string lastAppPath_;

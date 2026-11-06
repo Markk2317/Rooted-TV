@@ -20,7 +20,7 @@ namespace {
 const char *const kModes[] = {
     "clock", "clock-date", "black", "starfield", "fireworks", "bokeh", "harmonograph",
     "filament", "currents", "veils", "incense", "murmuration", "vortex", "neo",
-    "tesseract", "vitals"
+    "tesseract", "vitals", "photos"
 };
 
 std::string rooted(const std::string &root, const std::string &path) {
@@ -284,6 +284,9 @@ bool stageFiles(const std::string &systemRoot, const std::string &assetsRoot,
         return false;
     }
     qml = replaceAll(qml, "__TVWEB_URL__", statsUrl(publicPort, token));
+    // The Photos saver asks the server for its pictures and the weather itself.
+    qml = replaceAll(qml, "__TVWEB_ORIGIN__", "http://127.0.0.1:" + std::to_string(publicPort));
+    qml = replaceAll(qml, "__TVWEB_KEY__", encode(token));
     qml = replaceAll(qml, "__TVWEB_LEVEL__", level == "bright" ? "1" : "0");
     if (!writeFile(qmlDir + "/main.qml", qml) ||
         !copyAssets(assetsRoot + "/screensavers", qmlDir)) {

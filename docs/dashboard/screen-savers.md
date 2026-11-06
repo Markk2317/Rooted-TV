@@ -22,8 +22,11 @@ The **Screen savers** tab of the **Display** section, `/?tab=screensaver`, provi
 * Neo, columns of falling glyphs
 * Tesseract, a four-dimensional cube turning in fine lines of light
 * Panel vitals, showing the TV's own panel hours and refresher countdown
+* Your photos, the owner's own photos with the time, the date and the weather, as Google TV's ambient mode (below)
 
 Each mode but the black screen offers dim and bright variants, and visual elements continuously drift across the screen to prevent OLED burn-in or image retention.
+
+**Your photos** shows the photos added under **Your photos** on this tab, one after another every 20 seconds with a crossfade and a slow push-in, and the time, the date and the weather in a corner that changes every minute, so no text stays on the same pixels; dim keeps the photos a little darker. **Add photos** takes JPEG, PNG or WebP files from the phone or computer, fits each to 1920 × 1080 and sends it as a JPEG; the TV keeps up to 60 photos and 60 MB in `/var/lib/tvweb/screensaver-photos`, and **Remove all** deletes them. **Weather for** takes a town or city, looked up on [Open-Meteo](https://open-meteo.com), which needs no key; the weather there is read at most every half hour while the screen saver runs, and an empty name shows none. Google Photos cannot be read directly: since 2025 Google lets an app see only the photos picked in Google's own picker, which a TV's sign-in cannot open.
 
 **Start after** sets how long the TV sits idle before its screen saver starts: 3, 10, 20 or 30 minutes, the four times LG's own menu offers (any other value stops the screen saver coming at all, so no other is offered). It is LG's `option.screenSaverTimer` setting, shown only on a TV that reports it, and the same row is on the TV app's Screen Saver Options page.
 

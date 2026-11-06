@@ -323,6 +323,12 @@ the account's subscriptions, its channels' latest uploads and those videos' deta
 hourly while Home is shown; the row is kept in `youtube-rows.json`, also 0600. Signing out
 deletes both and asks Google to revoke the token.
 
+A town saved for the Photos screen saver's weather is sent once to
+`geocoding-api.open-meteo.com` to find its coordinates, and those coordinates, rounded to
+three decimals, go to `api.open-meteo.com` at most every half hour while the screen saver
+asks for the weather; Open-Meteo takes no key. The screen saver reads its photos and the
+weather from the server on the TV itself, with the token in `k`.
+
 `netflixDeepLinks: true` separately enables requests to `www.wikidata.org`
 for the selected title's exact Wikidata QID, obtained from TMDB. Wikidata
 receives that QID and the TV's public IP, without the TMDB key, profile name

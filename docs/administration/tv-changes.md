@@ -236,6 +236,10 @@ marked not for it are kept in `home-titles.json` in the data directory, mode 060
 that app then stayed in front, are kept in `home-watching.json`, mode 0600, at most 20 for 30
 days.
 
+The Photos screen saver's pictures are kept in `screensaver-photos/` in the data directory
+(at most 60 and 60 MB), and the town its weather is for in `config.json` as `saverWeather`
+(name and coordinates).
+
 `primeDeepLinks`, off by default, permits the same request for a title opened
 from Popular on Prime Video, for its `P14462` claim, kept apart in the same
 cache; the GTI goes to the installed Prime Video app in `contentTarget`.

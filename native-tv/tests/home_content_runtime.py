@@ -128,6 +128,30 @@ def main():
                                  "value": {"op": "watch", "item": {"id": 7, "type": "person"}}})
             assert json.loads(body)["ok"] is False
 
+            # The Photos screen saver: a JPEG goes up, is listed, read back by number (with the
+            # token in k, as the saver asks) and removed; with no town, there is no weather.
+            jpeg = (b"\xff\xd8\xff\xdb\x00\x43" + b"\0" * 65 + b"\xff\xc4\x00\x14" + b"\0" * 18 +
+                    b"\xff\xc0\x00\x0b\x08\x00\x01\x00\x01\x01\x01\x11\x00" +
+                    b"\xff\xda\x00\x08\x01\x01\x00\x00\x3f\x00\x01\xff\xd9")
+            req = Request("http://127.0.0.1:%d/api/screensaver/photos/upload" % port, data=jpeg,
+                          headers={"Authorization": "Bearer " + token,
+                                   "Content-Type": "image/jpeg"})
+            with urlopen(req, timeout=5) as response:
+                listed = json.loads(response.read())
+            assert listed["ok"] and listed["photos"]["ids"] == [1], listed
+            with urlopen("http://127.0.0.1:%d/api/screensaver/photo?id=1&k=%s" % (port, token),
+                         timeout=5) as response:
+                assert response.read() == jpeg
+                assert response.headers["Content-Type"] == "image/jpeg"
+            status, body = post(port, "/api/screensaver/photos/upload", token, {"id": 1})
+            assert status == 415
+            status, body = get(port, "/api/screensaver/weather", token)
+            assert status == 200 and json.loads(body)["ok"] is False
+            status, body = post(port, "/api/screensaver/photos/remove", token, {"id": 0})
+            assert status == 200 and json.loads(body)["photos"]["count"] == 0
+            status, body = get(port, "/api/screensaver/photo?id=1", token)
+            assert status == 404
+
             status, body = get(
                 port,
                 "/api/home/image?u=https%3A%2F%2Fevil.example%2Fimage.jpg",

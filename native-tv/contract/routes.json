@@ -82,6 +82,33 @@
       "notes": "The daemon builds the list from LG's stock manifest type, the webOS major version, the staged marker files, the packaged QML assets and the config flags (service/screensaver_policy). Other methods get a 405 JSON error; Node answered every method with the list, and no client sends another."
     },
     {
+      "paths": ["/api/screensaver/photos", "/api/screensaver/photo", "/api/screensaver/weather"],
+      "methods": ["GET", "HEAD"],
+      "auth": "token",
+      "csrf": "not applicable",
+      "bodyLimit": {"max": 0, "unit": "bytes"},
+      "owner": "native",
+      "notes": "The Photos screen saver's list of photos (and the weather's town), one photo by number as image/jpeg with an ETag, and the current weather there from Open-Meteo, cached for half an hour. The screen saver asks with the token in `k`."
+    },
+    {
+      "paths": ["/api/screensaver/photos/upload"],
+      "methods": ["POST"],
+      "auth": "token",
+      "csrf": "Exact image/jpeg content type and same-origin Origin/Host comparison when Origin is present; requires allowControl unless from TV loopback",
+      "bodyLimit": {"max": 5242880, "unit": "bytes"},
+      "owner": "native",
+      "notes": "One photo for the Photos screen saver: a JPEG of at most 1920 x 1080 and 5 MiB that states its size, one upload at a time, at most 60 photos and 60 MiB kept, with free space for it twice over."
+    },
+    {
+      "paths": ["/api/screensaver/photos/remove"],
+      "methods": ["POST"],
+      "auth": "token",
+      "csrf": "JSON body guard and same-origin Origin/Host comparison when Origin is present; requires allowControl unless from TV loopback",
+      "bodyLimit": {"max": 8192, "unit": "JS string code units"},
+      "owner": "native",
+      "notes": "Removes the photo `id`, or every photo with 0, and answers the list."
+    },
+    {
       "paths": ["/api/update"],
       "methods": ["GET", "HEAD"],
       "auth": "token",

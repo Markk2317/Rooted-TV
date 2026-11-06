@@ -77,6 +77,7 @@
 #include "service/home_guide.hpp"
 #include "service/home_now.hpp"
 #include "service/home_wallpapers.hpp"
+#include "service/screensaver_photos.hpp"
 #include "service/home_recent_apps.hpp"
 #include "service/home_recent_history.hpp"
 #include "service/home_profiles.hpp"
@@ -2739,6 +2740,29 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
                                                      activeHomeProfile(dataRoot_));
         if (!started["ok"].boolean()) return fail(started["error"].string());
         return answer();
+    }
+    if (action == "setSaverCity") {
+        // The Photos screen saver's weather: a town or city looked up on Open-Meteo, or "" for none.
+        if (!value.isString()) return fail("setSaverCity takes the name of a town or city");
+        Json place = Json::object();
+        if (!trimmedText(value.string()).empty()) {
+            const Json found = weather_.find(value.string());
+            if (!found["ok"].boolean()) return fail(found["error"].string());
+            place.set("city", found["city"]);
+            place.set("latitude", found["latitude"]);
+            place.set("longitude", found["longitude"]);
+        }
+        Json change = Json::object();
+        change.set("saverWeather", place);
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
+        Json done = Json::object();
+        done.set("ok", Json::flag(true));
+        done.set("city", place["city"].isString() ? place["city"] : Json());
+        response = done;
+        return true;
     }
     if (action == "setHomeTitle") {
         // From a title's details on the TV: {"op": watch, unwatch, like, dislike or unrate, "item"}.
@@ -16826,6 +16850,148 @@ void HttpFrontDoor::handleHomeWallpaperUpload(HttpExchange &exchange) const {
                            response.dump());
 }
 
+bool HttpFrontDoor::handleScreensaverPhotos(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const std::string &uri = request.uri;
+    const auto json = [&exchange](int status, const Json &body) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               body.dump());
+    };
+    const auto failure = [&json](int status, const std::string &error) {
+        Json body = Json::object();
+        body.set("ok", Json::flag(false));
+        body.set("error", Json::text(error));
+        json(status, body);
+    };
+    const auto writable = [&]() {
+        if (config_.allowControl || isLoopbackPeer(request.remoteAddress)) return true;
+        failure(403, say::msg("srv.controlsOff", "controls disabled in config"));
+        return false;
+    };
+    const auto listing = [&]() {
+        Json body = Json::object();
+        body.set("ok", Json::flag(true));
+        body.set("photos", service::screensaverPhotoStatus(dataRoot_));
+        const Json place = currentConfigDocument()["saverWeather"];
+        body.set("city", place["city"].isString() ? place["city"] : Json());
+        return body;
+    };
+    if (uri == "/api/screensaver/photos" && (request.method == "GET" || request.method == "HEAD")) {
+        json(200, listing());
+        return true;
+    }
+    if (uri == "/api/screensaver/photo" && (request.method == "GET" || request.method == "HEAD")) {
+        std::string id;
+        (void)uniqueQueryParameter(request.query, "id", id);
+        const bool digits = !id.empty() && id.size() <= 9 &&
+                            std::all_of(id.begin(), id.end(), [](unsigned char c) { return c >= '0' && c <= '9'; });
+        const service::ScreensaverPhoto photo =
+            service::readScreensaverPhoto(dataRoot_, digits ? static_cast<unsigned>(std::stoul(id)) : 0);
+        if (!photo.found) {
+            failure(404, "no such photo");
+            return true;
+        }
+        if (request.header("if-none-match") == photo.etag) {
+            (void)exchange.respond(304, {{"ETag", photo.etag}, {"Cache-Control", "public, max-age=86400"}}, "");
+            return true;
+        }
+        if (!exchange.beginResponse(200, {{"Content-Type", "image/jpeg"},
+                                          {"Cache-Control", "public, max-age=86400"},
+                                          {"ETag", photo.etag}},
+                                    static_cast<long long>(photo.bytes.size())))
+            return true;
+        if (request.method == "GET")
+            (void)exchange.writeBody(photo.bytes.data(), photo.bytes.size());
+        (void)exchange.finishResponse();
+        return true;
+    }
+    if (uri == "/api/screensaver/weather" && (request.method == "GET" || request.method == "HEAD")) {
+        const Json place = currentConfigDocument()["saverWeather"];
+        if (!place["latitude"].isNumber() || !place["longitude"].isNumber()) {
+            Json none = Json::object();
+            none.set("ok", Json::flag(false));
+            json(200, none);
+            return true;
+        }
+        Json now = weather_.current(place["latitude"].number(), place["longitude"].number());
+        now.set("city", place["city"]);
+        json(200, now);
+        return true;
+    }
+    if (uri == "/api/screensaver/photos/upload" && request.method == "POST") {
+        if (!writable()) return true;
+        std::string contentType = request.header("content-type");
+        std::transform(contentType.begin(), contentType.end(), contentType.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (contentType != "image/jpeg") {
+            failure(415, "Content-Type must be image/jpeg");
+            return true;
+        }
+        if (rejectCrossSitePost(exchange))
+            return true;
+        const size_t maximumBytes = 5 * 1024 * 1024;
+        if (!request.header("transfer-encoding").empty() || request.contentLength < 1 ||
+            request.contentLength > static_cast<long long>(maximumBytes) ||
+            !exchange.setBodyLimit(maximumBytes)) {
+            failure(413, say::msg("srv.saver.photoSize",
+                                  "A photo must be a JPEG of at most 5 MB that states its size."));
+            return true;
+        }
+        bool expected = false;
+        if (!screensaverPhotoUploadActive_.compare_exchange_strong(expected, true)) {
+            failure(409, say::msg("srv.saver.photoBusy", "Wait for the photo before it to finish."));
+            return true;
+        }
+        struct Reset {
+            std::atomic<bool> &active;
+            ~Reset() { active.store(false); }
+        } reset{screensaverPhotoUploadActive_};
+        std::string bytes;
+        bytes.reserve(static_cast<size_t>(request.contentLength));
+        char buffer[65536];
+        while (bytes.size() < static_cast<size_t>(request.contentLength)) {
+            const int count = exchange.readBody(
+                buffer, std::min(sizeof(buffer),
+                                 static_cast<size_t>(request.contentLength) - bytes.size()));
+            if (count <= 0) {
+                failure(400, say::msg("srv.saver.photoImage",
+                                      "Choose a valid JPEG up to 1920 × 1080 pixels."));
+                return true;
+            }
+            bytes.append(buffer, static_cast<size_t>(count));
+        }
+        std::string error;
+        if (!service::saveScreensaverPhoto(dataRoot_, bytes, error)) {
+            failure(400, error);
+            return true;
+        }
+        json(200, listing());
+        return true;
+    }
+    if (uri == "/api/screensaver/photos/remove" && request.method == "POST") {
+        if (!writable()) return true;
+        Json payload;
+        if (!readAppInstallJson(exchange, payload, true))
+            return true;
+        const Json id = payload["id"];
+        if (!(id.isNumber() && id.number() >= 0 && id.number() < 1e9)) {
+            failure(400, "id expected (0 removes every photo)");
+            return true;
+        }
+        (void)service::removeScreensaverPhotos(dataRoot_, static_cast<unsigned>(id.number()));
+        json(200, listing());
+        return true;
+    }
+    if (uri.compare(0, 18, "/api/screensaver/p") == 0 || uri == "/api/screensaver/weather") {
+        failure(405, "method not allowed");
+        return true;
+    }
+    return false;
+}
+
 void HttpFrontDoor::handleHomeWallpapersRemove(HttpExchange &exchange) const {
     Json payload;
     if (!readAppInstallJson(exchange, payload, true))
@@ -18426,6 +18592,8 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
         }
         return;
     }
+    if (handleScreensaverPhotos(exchange))
+        return;
     if (request.uri == "/api/screensaver" && screensaverManager_) {
         if (request.method == "GET" || request.method == "HEAD") {
             sendScreensaverList(exchange);

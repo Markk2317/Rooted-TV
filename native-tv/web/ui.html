@@ -2043,6 +2043,34 @@
             </div>
 <div class="pv-note" id="ss-note"></div>
 </article>
+<article class="card" id="ss-photos-card" style="--p:2;--t:4;--d:12" hidden>
+<div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-wallpaper"/></svg></span><h2 data-t="ss.photos">Your photos</h2></div>
+<div class="sub" data-t="ss.photosDesc">The Your photos screen saver shows these one after another, with the time and the weather, as Google TV's ambient mode does. Each is fitted to 1920 × 1080 here before it is sent; the TV keeps up to 60.</div>
+<div class="sub" id="ss-photos-state" aria-live="polite"></div>
+<div class="btns acts">
+              <input type="file" id="ss-photos-file" accept="image/jpeg,image/png,image/webp" multiple hidden onchange="ssPhotosUpload()" />
+              <button type="button" id="ss-photos-add" onclick="q('ss-photos-file').click()" data-t="ss.photosAdd">Add photos</button>
+              <button type="button" id="ss-photos-clear" onclick="ssPhotosClear()" data-t="ss.photosClear" hidden>Remove all</button>
+            </div>
+<div class="ss-level-row">
+              <div class="ss-level-lbl" data-t="ss.weatherCity">Weather for</div>
+              <div class="btns acts">
+                <input
+                  type="text"
+                  id="ss-city"
+                  class="pill-sel"
+                  autocomplete="off"
+                  maxlength="80"
+                  data-t-aria-label="ss.weatherCityLabel"
+                  aria-label="Town or city"
+                  placeholder="Town or city"
+                  data-t-placeholder="ss.weatherCityLabel"
+                />
+                <button type="button" id="ss-city-save" onclick="ssCitySave()" data-t="ss.weatherSave">Save</button>
+              </div>
+            </div>
+<div class="pv-note" id="ss-photos-note" aria-live="polite"></div>
+</article>
 </section>
       <section class="panel grid" id="gamepane" role="tabpanel" hidden>
 <article class="card" style="--p:2;--t:4;--d:5">

@@ -49,6 +49,8 @@ const Saver kSavers[] = {
      "A four-dimensional cube turning through the fourth dimension, in fine lines of light."},
     {"vitals", "srv.saver.vitals", "Panel vitals", "srv.saver.vitals.desc",
      "The TV's own readings - panel hours, pixel refresher countdown, temperature."},
+    {"photos", "srv.saver.photos", "Your photos", "srv.saver.photos.desc",
+     "Your own photos with the time and the weather, as Google TV's ambient mode."},
 };
 
 bool knownSaver(const std::string &id) {

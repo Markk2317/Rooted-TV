@@ -98,7 +98,7 @@ assets/google-tv/pages/dashboard/index.html assets/google-tv/pages/dashboard/das
 assets/google-tv/pages/setup/index.html assets/google-tv/pages/setup/setup.css assets/google-tv/pages/setup/setup.js \
 assets/google-tv/pages/setup-phone/index.html assets/google-tv/pages/setup-phone/setup-phone.css assets/google-tv/pages/setup-phone/setup-phone.js \
 assets/screensavers/clock.qml assets/screensavers/fireworks.qml \
-assets/screensavers/starfield.qml assets/screensavers/vitals.qml assets/screensavers/star.png \
+assets/screensavers/starfield.qml assets/screensavers/vitals.qml assets/screensavers/photos.qml assets/screensavers/star.png \
 assets/screensavers/bokeh.qml assets/screensavers/bokeh.png \
 assets/screensavers/harmonograph.qml assets/screensavers/black.qml \
 assets/screensavers/clock-date.qml assets/screensavers/filament.qml \
