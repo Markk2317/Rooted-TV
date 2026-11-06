@@ -1727,3 +1727,15 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   number. `date +%N` prints `%N`.
 - `luna-send` started over SSH prints nothing unless its standard input is closed
   (`< /dev/null`).
+- Nothing runs as root at boot. `/etc/init/devmode.conf` runs
+  `start-devmode.sh` only with LG's signature beside it, the surface manager has no
+  `keyFilters` config for the early service to hang on, and the Homebrew
+  Channel's boot activity (a `core-boot-done` trigger on
+  `bootManager/getBootStatus`) fires as soon as it is created, the signal being
+  set already, and is gone once it has: none was listed after a reboot. Its
+  `startup.sh` runs only when something calls the service's `autostart`, as its
+  app does when opened.
+- A native app's jail (user `prisoner`) may call
+  `org.webosbrew.hbchannel.service` with `luna-send-pub`: `exec` runs as root and
+  `autostart` runs `startup.sh`. A tile opened after a power-on brought SSH up in
+  6 s and the server in 9 s that way.

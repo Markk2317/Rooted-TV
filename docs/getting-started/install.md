@@ -92,7 +92,9 @@ be selected with `--native-build=DIR` during deployment. Missing or invalid ARM
 builds fail locally before connecting to the TV. The server is the native
 `nativetv-daemon`; no Node runs on the TV. webOS 3.4 is the oldest supported
 version (webOS 2.2 and older webOS 3 releases are untried). Hardware acceptance currently
-covers a B3 on webOS 10.3.2 and a 2016 C6 on webOS 3.4.3.
+covers a B3 on webOS 10.3.2 and a 2016 C6 on webOS 3.4.3. webOS 3.4 runs no root hook at
+boot, so there the server starts once the Native Tv tile or the Homebrew Channel is opened after
+a power-on: the tile asks the Homebrew Channel to run its startup script when no server answers.
 
 Then, from the repository root in a terminal:
 

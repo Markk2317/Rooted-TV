@@ -13,6 +13,7 @@
 #include "platform/paths.hpp"
 #include "platform/probe.hpp"
 #include "platform/row_sweep.hpp"
+#include "platform/server_wake.hpp"
 #include "ui/application.hpp"
 #include "ui/kit/run_glyphs.hpp"
 #include <SDL_image.h>
@@ -320,8 +321,10 @@ int main(int argc, char **argv) {
         // under the jailer, and sam keeps its registration after it exits, so the next launch of
         // the app finds a client that is gone and starts nothing (measured on a B3: the Home
         // key after such a run stayed on the stub for 5 s and more).
-        if (!opts.duration && opts.time < 0)
+        if (!opts.duration && opts.time < 0) {
             SDL_SetHint("SDL_HINT_WEBOS_REGISTER_APP", "true");
+            wakeServerIfDown(opts.server);
+        }
         // Milliseconds from here, written to the --report file, to see where start-up goes.
         const Uint64 startedAt = SDL_GetPerformanceCounter();
         Json startup = Json::object();
