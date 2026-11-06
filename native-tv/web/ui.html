@@ -1767,8 +1767,8 @@
                 Trending on YouTube
               </div>
               <div class="prot-desc" data-t="home.youtubeDesc">
-                Adds a row of the videos trending in the US; OK plays one in
-                YouTube's app. It needs a YouTube Data API key (free, from the
+                Adds a row of the videos trending in the TV's country; OK plays
+                one in YouTube's app. It needs a YouTube Data API key (free, from the
                 Google Cloud console, with the YouTube Data API v3 turned on).
                 The key is kept on the TV and never shown again.
               </div>
@@ -1791,6 +1791,54 @@
             <div class="prot-status">
               <button type="button" class="pill good" id="home-youtube-save" onclick="homeYoutubeSave()" data-t="home.youtubeSave">Save</button>
               <button type="button" class="pill bad" id="home-youtube-remove" onclick="homeYoutubeRemove()" data-t="home.youtubeRemove" hidden>Remove</button>
+            </div>
+          </div>
+          <div class="prot-row" id="home-google-row" hidden>
+            <div class="prot-main">
+              <div class="prot-title" data-t="home.google">
+                Your YouTube subscriptions
+              </div>
+              <div class="prot-desc" data-t="home.googleDesc">
+                Signs the Home profile in use into a Google account, with
+                read-only access to YouTube, and adds a row of the newest videos
+                from its subscriptions. Each profile has its own account. It needs
+                an OAuth client of your own from the Google Cloud console, of the
+                type TVs and Limited Input devices, with the app published so that
+                Google does not sign it out after a week.
+              </div>
+              <div class="prot-desc" id="home-google-state" aria-live="polite"></div>
+              <div class="tmdb-key" id="home-google-client">
+                <input
+                  type="text"
+                  id="home-google-id"
+                  class="pill-sel"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="200"
+                  data-t-aria-label="home.googleIdLabel"
+                  aria-label="Client ID"
+                  placeholder="Client ID"
+                  data-t-placeholder="home.googleIdLabel"
+                />
+                <input
+                  type="password"
+                  id="home-google-secret"
+                  class="pill-sel"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="100"
+                  data-t-aria-label="home.googleSecretLabel"
+                  aria-label="Client secret"
+                  placeholder="Client secret"
+                  data-t-placeholder="home.googleSecretLabel"
+                />
+              </div>
+            </div>
+            <div class="prot-status">
+              <button type="button" class="pill good" id="home-google-save" onclick="homeGoogleSave()" data-t="home.googleSave">Save</button>
+              <button type="button" class="pill good" id="home-google-signin" onclick="homeGoogleSignIn()" data-t="home.googleSignIn" hidden>Sign in with Google</button>
+              <button type="button" class="pill bad" id="home-google-signout" onclick="homeGoogleSignOut()" data-t="home.googleSignOut" hidden>Sign out</button>
+              <button type="button" class="pill bad" id="home-google-remove" onclick="homeGoogleRemove()" data-t="home.googleRemove" hidden>Remove client</button>
             </div>
           </div>
         </div>

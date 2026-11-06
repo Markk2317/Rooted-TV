@@ -263,7 +263,8 @@ void Application::homePlayEntrance(size_t firstRow, size_t endRow) {
 
 void Application::homeRetargetPill(bool jump) {
     auto &home = state_.home;
-    std::vector<Rect> boxes = kit::tabRects(*glyphs_, flow_.tabTitles);
+    std::vector<Rect> boxes =
+        kit::tabRects(*glyphs_, flow_.tabTitles, state_.discover["titlesEnabled"].boolean());
     bool onTab = home.navigation && home.nav < home.tabs.size();
     size_t target = onTab ? home.nav : home.tab;
     // A registered screen keeps the pill under its own tab.

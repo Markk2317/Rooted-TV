@@ -1,6 +1,7 @@
 #include "domain/models.hpp"
 #include "domain/names.hpp"
 #include <algorithm>
+#include <utility>
 #include <map>
 
 namespace nativetv {
@@ -251,8 +252,8 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     std::map<std::string, Json> feedRows;
     for (const auto &source : discover["rows"].items())
         feedRows[source["key"].string()] = source;
-    // The apps lead, as on Google TV, in their kinds' order when sorted by kind; the top picks
-    // follow and the hero is drawn from them.
+    // The apps, in their kinds' order when sorted by kind, and the top picks the hero is drawn
+    // from; the top picks lead once there are any (below).
     CardRow apps = appsRow(catalogue, guide, false);
     if (!apps.cards.empty())
         result.push_back(apps);
@@ -261,7 +262,13 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     // this profile) has no row. Its Netflix row stands in for Available on Netflix.
     std::vector<std::string> keys = {"trending"};
     std::map<std::string, std::string> serviceNames;
-    for (const Card &card : apps.cards)
+    // The videos from the profile's YouTube subscriptions take YouTube's place among them.
+    for (const Card &card : apps.cards) {
+        if (card.id == "youtube.leanback.v4" && feedRows.count("youtube:subscriptions") &&
+            !serviceNames.count("youtube:subscriptions")) {
+            keys.push_back("youtube:subscriptions");
+            serviceNames["youtube:subscriptions"] = "From your YouTube subscriptions";
+        }
         for (const auto &service : nativetv::names::streamingServices()) {
             const std::string key = "on:" + service.key;
             if (feedRows.count(key) && !serviceNames.count(key) &&
@@ -270,6 +277,7 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
                 serviceNames[key] = "Popular on " + service.name;
             }
         }
+    }
     keys.insert(keys.end(), {"movies", "series"});
     if (!serviceNames.count("on:netflix"))
         keys.push_back("netflix");
@@ -280,7 +288,8 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         Json source = feedRows[key];
         CardRow row;
         row.key = source["key"].string();
-        row.posters = row.key != "trending" && row.key != "youtube";
+        const bool videos = row.key == "youtube" || row.key == "youtube:subscriptions";
+        row.posters = row.key != "trending" && !videos;
         auto name = names.find(row.key);
         auto serviceName = serviceNames.find(row.key);
         row.title = serviceName != serviceNames.end() ? serviceName->second
@@ -289,7 +298,7 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         for (const auto &item : source["items"].items()) {
             Card card;
             card.id = item["id"].string();
-            card.kind = row.key == "youtube" ? "youtube" : row.key == "netflix" ? "netflix" : "title";
+            card.kind = videos ? "youtube" : row.key == "netflix" ? "netflix" : "title";
             card.data = item;
             card.title = item["title"].string();
             card.subtitle = titleFacts(item);
@@ -312,6 +321,9 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         if (!row.cards.empty())
             result.push_back(row);
     }
+    // Since Google TV's 2025 redesign the top picks come first and Your apps follows them.
+    if (result.size() > 1 && result[0].key == "app" && result[1].key == "trending")
+        std::swap(result[0], result[1]);
     return result;
 }
 } // namespace nativetv

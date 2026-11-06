@@ -62,14 +62,20 @@ struct TopBar {
     float pillLeft = 0, pillRight = 0;
     float pillHot = 0;   // 0..1: focus is on the bar, so the pill turns from rest to focus fill
     float pillAlpha = 1; // fades out while Settings or Setup is showing
-    float avatarFocus = 0, settingsFocus = 0;
+    float avatarFocus = 0, settingsFocus = 0, searchFocus = 0;
     bool settingsSelected = false;
+    // Search leads the tabs' capsule where titles can be searched.
+    bool search = false;
     std::string clock;
+    // After the clock and a divider, as Google TV ends its bar with its name.
+    std::string wordmark = "Native Tv";
     Enter enter;
 };
-// Tab boxes for the bar's tabs, so the view can aim the pill's springs at them.
-std::vector<Rect> tabRects(const Glyphs &glyphs, const std::vector<std::string> &tabs);
-// Hits are "nav:avatar", "nav:tab:<i>" and "nav:settings".
+// Tab boxes for the bar's tabs, so the view can aim the pill's springs at them; `search` moves
+// them along to make room for it.
+std::vector<Rect> tabRects(const Glyphs &glyphs, const std::vector<std::string> &tabs,
+                           bool search = false);
+// Hits are "nav:avatar", "tool:2" (search), "nav:tab:<i>" and "nav:settings".
 void topBar(Paint paint, const TopBar &bar);
 void tabPill(Paint paint, float left, float right, float hot, float alpha = 1);
 

@@ -186,12 +186,17 @@ void focusMath() {
 void geometryAgainstMetrics() {
     namespace geometry = kit::geometry;
     namespace home = kit::metrics::home;
-    check(sameRect(geometry::avatar(), home::avatar) &&
-              sameRect(geometry::settingsButton(), home::gear) &&
-              sameRect(geometry::clock(), home::clock),
-          "The top bar's avatar, settings button and clock sit where the prototype put them");
     std::vector<Rect> tabs =
         geometry::tabRects({home::tabHome.w - 64, home::tabApps.w - 64, home::tabLive.w - 64});
+    check(sameRect(geometry::avatar(), home::avatar) &&
+              sameRect(geometry::settingsButton(tabs[2].x + tabs[2].w), home::gear, .15f),
+          "The top bar's avatar and settings button sit where the record puts them");
+    check(sameRect(geometry::clock(140), {1920 - 80 - 140 - 2 * 20 - 2 - 100, 72, 100, 48}),
+          "The clock ends before the divider and the wordmark at the right margin");
+    check(sameRect(geometry::capsule(168, 600), {168, 52, 432, 88}) &&
+              sameRect(geometry::searchButton(), {184, 68, 56, 56}) &&
+              geometry::tabsLeft(true) == 248 && geometry::tabsLeft() == 176,
+          "Search leads the tabs' capsule, concentric with its rounded end");
     // The prototype's widths are rounded to 0.1 each, so positions drift by up to 0.1.
     check(sameRect(tabs[0], home::tabHome, .15f) && sameRect(tabs[1], home::tabApps, .15f) &&
               sameRect(tabs[2], home::tabLive, .15f),
@@ -455,28 +460,47 @@ void barAndHero() {
     kit::topBar(bar.paint(), top);
     check(hitFor(bar.scene, "nav:avatar") && hitFor(bar.scene, "nav:tab:0") &&
               hitFor(bar.scene, "nav:tab:2") && hitFor(bar.scene, "nav:settings") &&
-              sameRect(hitFor(bar.scene, "nav:settings")->rect, kit::metrics::home::gear) &&
+              !hitFor(bar.scene, "tool:2") &&
+              sameRect(hitFor(bar.scene, "nav:settings")->rect,
+                       kit::geometry::settingsButton(tabs[2].x + tabs[2].w)) &&
               sameRect(hitFor(bar.scene, "nav:avatar")->rect, kit::metrics::home::avatar),
           "The top bar offers the avatar, each tab and the settings button");
-    const Node *pill = &bar.scene.nodes[0];
+    // The tabs' capsule, then the gear's, then the pill.
+    const Node &tabCapsule = bar.scene.nodes[0], &gearCapsule = bar.scene.nodes[1];
+    check(sameRect(tabCapsule.rect, {168, 52, tabs[2].x + tabs[2].w + 8 - 168, 88}) &&
+              tabCapsule.radius == 44 && sameColor(tabCapsule.color, kit::alpha::capsule) &&
+              sameRect(gearCapsule.rect, {tabs[2].x + tabs[2].w + 24, 52, 88, 88}),
+          "The tabs and the gear each sit in a capsule, as on Google TV");
+    const Node *pill = &bar.scene.nodes[2];
     check(sameRect(pill->rect, {tabs[0].x, 60, tabs[0].w, 72}) && pill->radius == 36 &&
-              sameColor(pill->color, kit::color::pillRest),
-          "The pill rests on the selected tab in the opaque rest colour");
-    check(textAt(bar.scene, "10:11") &&
-              sameRect(textAt(bar.scene, "10:11")->rect, kit::metrics::home::clock) &&
+              sameColor(pill->color, kit::color::tabSelected),
+          "The pill rests on the selected tab, light as Google TV's");
+    const Node *mark = textAt(bar.scene, "Native Tv");
+    check(mark && near(mark->rect.x + mark->rect.w, 1840, .01f) && textAt(bar.scene, "10:11") &&
+              sameRect(textAt(bar.scene, "10:11")->rect, kit::geometry::clock(mark->rect.w)) &&
               textAt(bar.scene, "10:11")->align == Node::Align::Right &&
-              sameColor(textAt(bar.scene, "Home")->color, kit::color::onSurface) &&
+              sameColor(textAt(bar.scene, "Home")->color, kit::color::onFocus) &&
               sameColor(textAt(bar.scene, "Apps")->color, kit::color::onSurface2),
-          "The clock is right-aligned at 1840; the selected tab reads brighter");
+          "The wordmark ends at 1840 after the clock; the selected tab is dark on its pill");
     Fixture hot;
     top.pillHot = 1;
     top.avatarFocus = 1;
     kit::topBar(hot.paint(), top);
-    check(sameColor(hot.scene.nodes[0].color, kit::color::focusFill) &&
+    check(sameColor(hot.scene.nodes[2].color, kit::color::focusFill) &&
               sameColor(textAt(hot.scene, "Home")->color, kit::color::onFocus) &&
               sameColor(textAt(hot.scene, "Apps")->color, kit::color::onSurface2),
-          "With focus on the bar the pill turns light and the selected tab dark");
-    check(near(hot.scene.nodes[1].group.sx, 1.12f, 1e-5f), "A focused round button grows 12%");
+          "With focus on the bar the pill turns to the focus fill");
+    check(near(hot.scene.nodes[3].group.sx, 1.12f, 1e-5f), "A focused round button grows 12%");
+    Fixture searching;
+    top.search = true;
+    kit::topBar(searching.paint(), top);
+    std::vector<Rect> shifted = kit::tabRects(bar.glyphs, top.tabs, true);
+    check(hitFor(searching.scene, "tool:2") &&
+              sameRect(hitFor(searching.scene, "tool:2")->rect, kit::geometry::searchButton()) &&
+              near(shifted[0].x, tabs[0].x + 72, .01f) &&
+              sameRect(hitFor(searching.scene, "nav:tab:0")->rect, shifted[0]),
+          "Search leads the capsule and moves the tabs along");
+    top.search = false;
     Fixture gone;
     top.pillAlpha = 0;
     kit::topBar(gone.paint(), top);
@@ -489,9 +513,9 @@ void barAndHero() {
     onSettings.selected = -1;
     onSettings.settingsSelected = true;
     kit::topBar(settingsOn.paint(), onSettings);
-    check(shapeAt(settingsOn.scene, kit::metrics::home::gear) &&
-              sameColor(shapeAt(settingsOn.scene, kit::metrics::home::gear)->color,
-                        kit::alpha::accentDim),
+    const Rect onlyGear = hitFor(settingsOn.scene, "nav:settings")->rect;
+    check(shapeAt(settingsOn.scene, onlyGear) &&
+              sameColor(shapeAt(settingsOn.scene, onlyGear)->color, kit::alpha::accentDim),
           "The settings button takes the accent fill when it is the page");
 
     Fixture wall;

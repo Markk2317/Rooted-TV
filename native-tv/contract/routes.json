@@ -681,7 +681,7 @@
       "csrf": "JSON body guard and same-origin Origin/Host comparison when Origin is present; requires allowControl unless from TV loopback",
       "bodyLimit": {"max": 8192, "unit": "JS string code units"},
       "owner": "native",
-      "notes": "The daemon opens listed apps, HDMI devices and channels, YouTube videos and Netflix titles. A feed title has no other app to open in: kind title is refused with 400. Netflix uses the native Wikidata P1874 result and existing contentTarget format. LG Home escape releases the managed takeover and launches LG Home natively; a secret-guarded Node bridge updates the remaining managed escape-state observer. Node retains standalone fallback."
+      "notes": "The daemon opens listed apps, HDMI devices and channels, YouTube videos and Netflix titles. A feed title has no other app to open in: kind title is refused with 400. Netflix uses the native Wikidata P1874 result and existing contentTarget format. Kind service with service netflix, prime or disney opens that service's installed app, on the title where Netflix's P1874 or Prime Video's P14462 GTI is known and its option is on, else on the app's own Home. LG Home escape releases the managed takeover and launches LG Home natively; a secret-guarded Node bridge updates the remaining managed escape-state observer. Node retains standalone fallback."
     },
     {
       "paths": ["/api/home/profile"],

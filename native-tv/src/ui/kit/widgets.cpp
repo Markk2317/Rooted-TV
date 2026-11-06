@@ -200,17 +200,20 @@ void LegacyGlyphs::icon(Scene &scene, Rect box, const std::string &name, Color t
 
 // ---- Top bar ------------------------------------------------------------------------------------
 
-std::vector<Rect> tabRects(const Glyphs &glyphs, const std::vector<std::string> &tabs) {
+std::vector<Rect> tabRects(const Glyphs &glyphs, const std::vector<std::string> &tabs,
+                           bool search) {
     std::vector<float> widths;
     for (const auto &tab : tabs)
         widths.push_back(glyphs.measure(tab, type::nav));
-    return geometry::tabRects(widths);
+    return geometry::tabRects(widths, search);
 }
 void tabPill(Paint paint, float left, float right, float hot, float alphaFactor) {
     if (right - left < 1 || alphaFactor <= .002f)
         return;
     Rect area = geometry::pill(left, right);
-    paint.scene.shape(area, faded(focus::mix(color::pillRest, color::focusFill, hot), alphaFactor),
+    // Google TV's selected tab is a light pill with dark text, focused or not.
+    paint.scene.shape(area,
+                      faded(focus::mix(color::tabSelected, color::focusFill, hot), alphaFactor),
                       roundRadius(area));
 }
 void roundButton(Paint paint, const RoundButton &button) {
@@ -240,6 +243,14 @@ void topBar(Paint paint, const TopBar &bar) {
         return;
     Scene &scene = paint.scene;
     Group group(scene, bar.enter);
+    std::vector<Rect> tabs = tabRects(paint.glyphs, bar.tabs, bar.search);
+    const float tabsRight = tabs.empty() ? geometry::tabsLeft(bar.search) : tabs.back().x + tabs.back().w;
+    Rect tabCapsule = geometry::capsule(geometry::capsuleLeft(), tabsRight + layout::capsulePad);
+    scene.shape(tabCapsule, alpha::capsule, roundRadius(tabCapsule));
+    Rect gear = geometry::settingsButton(tabsRight);
+    Rect gearCapsule = geometry::capsule(gear.x - 2 * layout::capsulePad,
+                                         gear.x + gear.w + 2 * layout::capsulePad);
+    scene.shape(gearCapsule, alpha::capsule, roundRadius(gearCapsule));
     tabPill(paint, bar.pillLeft, bar.pillRight, bar.pillHot, bar.pillAlpha);
 
     RoundButton avatar;
@@ -250,11 +261,22 @@ void topBar(Paint paint, const TopBar &bar) {
     avatar.focus = bar.avatarFocus;
     roundButton(paint, avatar);
 
-    std::vector<Rect> tabs = tabRects(paint.glyphs, bar.tabs);
+    if (bar.search) {
+        // Inside the capsule the buttons are its own colour until focused.
+        RoundButton search;
+        search.rest = geometry::searchButton();
+        search.id = "tool:2";
+        search.icon = "search";
+        search.fill = clear;
+        search.focus = bar.searchFocus;
+        roundButton(paint, search);
+    }
+
     for (size_t i = 0; i < tabs.size(); ++i) {
-        // Selected: on-surface at rest, on-focus once the pill turns to focus fill.
+        // The selected tab's text is dark on its light pill; the others are on the capsule.
         Color ink = static_cast<int>(i) == bar.selected
-                        ? focus::inkAt(color::onSurface, color::onFocus, bar.pillHot)
+                        ? focus::inkAt(color::onSurface, color::onFocus,
+                                       focus::clamp01(bar.pillAlpha))
                         : color::onSurface2;
         text(paint,
              {tabs[i].x, layout::navTop + (layout::navH - type::nav.line) / 2, tabs[i].w,
@@ -264,15 +286,23 @@ void topBar(Paint paint, const TopBar &bar) {
     }
 
     RoundButton settings;
-    settings.rest = geometry::settingsButton();
+    settings.rest = gear;
     settings.id = "nav:settings";
     settings.icon = "settings";
-    settings.fill = bar.settingsSelected ? alpha::accentDim : color::surface3;
+    settings.fill = bar.settingsSelected ? alpha::accentDim : clear;
     settings.ink = bar.settingsSelected ? color::accent : color::onSurface;
     settings.focus = bar.settingsFocus;
     roundButton(paint, settings);
 
-    text(paint, geometry::clock(), bar.clock, type::clock, color::onSurface, Node::Align::Right);
+    // The clock, a divider and the wordmark close the bar at the right margin.
+    const float markWidth = paint.glyphs.measure(bar.wordmark, type::clock);
+    Rect clockBox = geometry::clock(markWidth);
+    text(paint, clockBox, bar.clock, type::clock, color::onSurface, Node::Align::Right);
+    const float dividerX = clockBox.x + clockBox.w + layout::wordmarkGap;
+    scene.shape({dividerX, layout::navTop + (layout::navH - 32) / 2, 2, 32}, color::onSurface3, 1);
+    text(paint,
+         {dividerX + 2 + layout::wordmarkGap, clockBox.y, markWidth, type::clock.line},
+         bar.wordmark, type::clock, color::onSurface2);
 }
 
 // ---- Hero and pagination -----------------------------------------------------------------------

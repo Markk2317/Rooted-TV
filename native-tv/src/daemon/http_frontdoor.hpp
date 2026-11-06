@@ -15,6 +15,7 @@
 #include "service/cpu_windows.hpp"
 #include "service/home_content.hpp"
 #include "service/home_discover.hpp"
+#include "service/youtube_accounts.hpp"
 #include "service/home_image_proxy.hpp"
 #include "service/home_picture.hpp"
 #include "service/home_open.hpp"
@@ -437,6 +438,7 @@ class HttpFrontDoor {
     mutable service::HomeContent homeContent_;
     mutable service::HomeDiscover homeDiscover_;
     mutable service::HomeImageProxy homeImageProxy_;
+    mutable service::YoutubeAccounts youtubeAccounts_;
     std::string configPath_;
     std::string hdmiSeenPath_;
     std::string lastAppPath_;

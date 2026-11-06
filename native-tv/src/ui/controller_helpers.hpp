@@ -14,9 +14,11 @@ inline std::vector<size_t> navigationStops(const ViewState &state) {
     // The avatar opens Who's watching?, where the one profile's name and colour are edited too.
     if (state.catalogue["profiles"].size())
         stops.insert(stops.begin(), state.home.tabs.size());
-    // Search is drawn left of the gear (Quick settings), so the focus reaches it first.
+    // Search leads the tabs in their capsule, after the avatar; the gear (Quick settings) ends the
+    // bar.
     if (state.discover["titlesEnabled"].boolean())
-        stops.push_back(state.home.tabs.size() + 2);
+        stops.insert(stops.begin() + (state.catalogue["profiles"].size() ? 1 : 0),
+                     state.home.tabs.size() + 2);
     stops.push_back(state.home.tabs.size() + 1);
     return stops;
 }

@@ -170,14 +170,15 @@ int main() {
         reply(app, "catalogue", catalogue);
         reply(app, "discover", feed);
         check(app.snapshot()["rows"].number() == 2, "Live catalogue and feed rows are combined");
-        check(app.snapshot()["row"].number() == 1 && app.snapshot()["column"].number() == 0,
-              "Initial selection lands on the first top pick, under the apps row");
+        check(app.snapshot()["row"].number() == 0 && app.snapshot()["column"].number() == 0,
+              "Initial selection lands on the first top pick, which leads Home");
         app.key(Key::Ok);
         check(app.screenName() == "details", "OK on a title opens details");
         check(transport.count("action") == 0, "Opening details does not launch the title");
         app.key(Key::Back);
-        check(app.screenName() == "home" && app.snapshot()["row"].number() == 1,
+        check(app.screenName() == "home" && app.snapshot()["row"].number() == 0,
               "Back restores Home's row selection");
+        app.key(Key::Down); // to the apps row
         app.key(Key::Back);
         check(app.snapshot()["row"].number() == 0, "Back first returns to the first Home row");
         app.key(Key::Back);
@@ -192,29 +193,26 @@ int main() {
         Application navigation(navigationTransport);
         reply(navigation, "catalogue", catalogue);
         reply(navigation, "discover", feed);
-        navigation.key(Key::Up); // to the apps row
         navigation.key(Key::Up); // to the bar
-        for (int i = 0; i < 3; ++i)
-            navigation.key(Key::Right);
+        navigation.key(Key::Left);
         navigation.key(Key::Ok);
         check(navigation.screenName() == "search",
-              "From the first tab the third Right reaches Search, drawn left of Quick settings");
+              "From the first tab Left reaches Search, which leads the tabs' capsule");
         FakeTransport gearTransport;
         Application gear(gearTransport);
         reply(gear, "catalogue", catalogue);
         reply(gear, "discover", feed);
         gear.key(Key::Up);
-        gear.key(Key::Up);
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 3; ++i)
             gear.key(Key::Right);
         gear.key(Key::Ok);
-        check(gear.screenName() == "quick", "A fourth Right reaches Quick settings");
+        check(gear.screenName() == "quick", "A third Right, past the tabs, reaches Quick settings");
         FakeTransport avatarTransport;
         Application avatar(avatarTransport);
         reply(avatar, "catalogue", catalogue);
         reply(avatar, "discover", feed);
         avatar.key(Key::Up);
-        avatar.key(Key::Up);
+        avatar.key(Key::Left); // search
         avatar.key(Key::Left);
         avatar.key(Key::Ok);
         check(avatar.screenName() == "profiles",
@@ -229,9 +227,12 @@ int main() {
         reply(clock, "catalogue", twelveHourCatalogue.dump());
         Scene twelveHourScene = clock.scene();
         const Node *twelveHourTime = textNode(twelveHourScene, "5:05");
-        check(twelveHourTime && twelveHourTime->rect.x == 1740 && twelveHourTime->rect.y == 72 &&
-                  twelveHourTime->rect.w == 100 && twelveHourTime->align == Node::Align::Right,
-              "The 12-hour clock sits right-aligned at the bar's right margin");
+        const Node *wordmark = textNode(twelveHourScene, "Native Tv");
+        const Rect clockBox = wordmark ? kit::geometry::clock(wordmark->rect.w) : Rect{};
+        check(twelveHourTime && wordmark && twelveHourTime->rect.x == clockBox.x &&
+                  twelveHourTime->rect.y == 72 && twelveHourTime->rect.w == 100 &&
+                  twelveHourTime->align == Node::Align::Right,
+              "The 12-hour clock sits right-aligned before the wordmark");
         Json twentyFourHourCatalogue = Json::parse(catalogue);
         FakeTransport clock24Transport;
         Application clock24(clock24Transport);
@@ -307,9 +308,9 @@ int main() {
         const Node *carouselTitle = textNode(focusedWallpaper, "Coast");
         bool focusedCard = false;
         for (const auto &hit : focusedWallpaper.hits)
-            focusedCard = focusedCard || hit.id == "card:1:0";
+            focusedCard = focusedCard || hit.id == "card:0:0";
         check(wallpaper.snapshot()["wallpaper"].string() == "visible" &&
-                  wallpaper.snapshot()["row"].number() == 1 && focusedCard && carouselTitle &&
+                  wallpaper.snapshot()["row"].number() == 0 && focusedCard && carouselTitle &&
                   carouselTitle->rect.x == 80 && carouselTitle->rect.w == 1400 &&
                   carouselTitle->color.a == 1,
               "The hero title keeps the design's geometry over the wallpaper");
@@ -453,44 +454,48 @@ int main() {
         check(home.snapshot()["heroTitle"].string() == "One",
               "The hero shows the first top pick once its art is ready");
         // Focus: ring and lift follow the focused card, the row keeps the 4th slot. The top
-        // picks (row 1, under the apps) start focused.
-        check(motion.value("f:1.0") == 1 && motion.value("f:1.1") == 0,
+        // picks (row 0, over the apps) start focused.
+        check(motion.value("f:0.0") == 1 && motion.value("f:0.1") == 0,
               "The first top pick starts focused");
         for (int i = 0; i < 6; ++i)
             home.key(Key::Right);
         clockMs = run(home, clockMs, 900);
-        check(motion.value("f:1.6") == 1 && motion.value("f:1.0") == 0,
+        check(motion.value("f:0.6") == 1 && motion.value("f:0.0") == 0,
               "Focus moves with the keys and the old card drops its ring");
         float rowTarget = kit::geometry::rowScrollTarget(6, 8, 300, 24);
-        check(rowTarget < 0 && std::fabs(motion.value("rx:1") - rowTarget) < .5,
+        check(rowTarget < 0 && std::fabs(motion.value("rx:0") - rowTarget) < .5,
               "The row scrolls so the focused card keeps the keyline slot");
         check(home.snapshot()["heroTitle"].string() == "Seven",
               "The hero follows a focused title after the key settles");
         home.key(Key::Down);
         clockMs = run(home, clockMs, 900);
-        check(std::fabs(motion.value("sy") + 252) < .5 && motion.value("rd:1") == 1 &&
+        check(!home.snapshot()["navigation"].boolean() && home.snapshot()["row"].number() == 1,
+              "Down from the top picks reaches the apps row");
+        check(!home.snapshot()["heroTitle"].string().empty() && home.snapshot()["heroTitle"].string() != "Alpha",
+              "An app has no preview in the hero: it stays on a top pick");
+        home.key(Key::Down);
+        clockMs = run(home, clockMs, 900);
+        check(std::fabs(motion.value("sy") + 2 * 252) < .5 && motion.value("rd:1") == 1 &&
                   motion.value("rd:2") == 0,
-              "Down snaps the stack one row up and dims the row left behind");
+              "Each Down snaps the stack one row up and dims the rows left behind");
         Scene stacked = home.scene();
         check(hasHit(stacked, "card:2:0"), "The rows follow the focus");
         home.key(Key::Up);
+        home.key(Key::Up);
         check(std::fabs(motion.value("sy")) < .5 || motion.moving("sy"),
               "Up to the top picks brings the stack back");
-        home.key(Key::Up);
         check(!home.snapshot()["navigation"].boolean() && home.snapshot()["row"].number() == 0,
-              "Up from the top picks reaches the apps row");
-        clockMs = run(home, clockMs, 900);
-        check(!home.snapshot()["heroTitle"].string().empty() && home.snapshot()["heroTitle"].string() != "Alpha",
-              "An app has no preview in the hero: it stays on a top pick");
+              "Up from the apps row reaches the top picks");
         home.key(Key::Up);
-        check(home.snapshot()["navigation"].boolean(), "Up from the apps row focuses the bar");
+        check(home.snapshot()["navigation"].boolean(), "Up from the top picks focuses the bar");
         clockMs = run(home, clockMs, 900);
         check(std::fabs(motion.value("sy")) < .5 && motion.value("pill:hot") == 1,
               "The bar returns the stack to the top and turns the pill hot");
 
         // The bar: the pill leads with the focus, the page follows after the focus rests.
         kit::LegacyGlyphs glyphs;
-        std::vector<Rect> tabBoxes = kit::tabRects(glyphs, {"Home", "Apps", "Inputs"});
+        // Titles can be searched, so search leads the capsule and the tabs follow it.
+        std::vector<Rect> tabBoxes = kit::tabRects(glyphs, {"Home", "Apps", "Inputs"}, true);
         check(std::fabs(motion.value("pill:0") - tabBoxes[0].x) < .5 &&
                   std::fabs(motion.value("pill:1") - (tabBoxes[0].x + tabBoxes[0].w)) < .5,
               "The pill rests on the selected tab");
@@ -544,11 +549,12 @@ int main() {
         home.key(Key::Back);
         clockMs = run(home, clockMs, 600);
         check(home.snapshot()["tab"].string() == "home" && !home.snapshot()["navigation"].boolean() &&
-                  home.snapshot()["row"].number() == 1,
+                  home.snapshot()["row"].number() == 0,
               "Back from a grid tile goes to the Home tab, focus on its top picks");
+        home.key(Key::Down);
         home.key(Key::Back);
         check(home.snapshot()["row"].number() == 0 && !home.snapshot()["navigation"].boolean(),
-              "Back from the top picks goes to the apps row");
+              "Back from the apps row goes to the top picks");
         home.key(Key::Back);
         check(home.snapshot()["navigation"].boolean(), "Back from the first row goes to the bar");
         home.key(Key::Back);
@@ -642,11 +648,12 @@ int main() {
                       !hiddenApps.snapshot()["navigation"].boolean() &&
                       hiddenTransport.count("recents") == 0,
                   "Back from the Apps page by kind goes to the Home tab with focus in its content");
-            hiddenApps.key(Key::Up); // to the apps row
+            hiddenApps.key(Key::Down); // from the top picks to the apps row
             hiddenMs = run(hiddenApps, hiddenMs, 200);
-            check(hasHit(hiddenApps.scene(), "card:0:2"),
+            check(hiddenApps.snapshot()["row"].number() == 1 && hasHit(hiddenApps.scene(), "card:1:2"),
                   "An app hidden on the Apps page is still on Home's row");
             hiddenApps.key(Key::Right);
+            hiddenApps.key(Key::Up);
             hiddenApps.key(Key::Up);
             hiddenApps.key(Key::Up);
             hiddenApps.key(Key::Right);
@@ -666,10 +673,11 @@ int main() {
             reply(homeHidden, "catalogue", hiddenOnHome);
             reply(homeHidden, "discover", fullFeed);
             uint32_t homeHiddenMs = run(homeHidden, 16, 1500);
-            homeHidden.key(Key::Up); // Home's row: Alpha and Gamma only
+            homeHidden.key(Key::Down); // Home's row: Alpha and Gamma only
             homeHiddenMs = run(homeHidden, homeHiddenMs, 200);
-            check(hasHit(homeHidden.scene(), "card:0:1") && !hasHit(homeHidden.scene(), "card:0:2"),
+            check(hasHit(homeHidden.scene(), "card:1:1") && !hasHit(homeHidden.scene(), "card:1:2"),
                   "An app hidden on Home's row is not on it");
+            homeHidden.key(Key::Up);
             homeHidden.key(Key::Up);
             homeHidden.key(Key::Right);
             homeHidden.key(Key::Ok);
@@ -754,8 +762,9 @@ int main() {
             reply(app, "catalogue", catalogueJson);
             reply(app, "discover", feed);
             uint32_t at = run(app, 16, 1500);
-            app.key(Key::Up); // from the top picks to the apps row
+            app.key(Key::Down); // from the top picks to the apps row
             if (tab) {
+                app.key(Key::Up);
                 app.key(Key::Up);
                 app.key(Key::Right);
                 app.key(Key::Ok);
@@ -792,11 +801,11 @@ int main() {
             FakeTransport transport;
             Application app(transport);
             editable(app, editCatalogue, 0);
-            check(hasHit(app.scene(), "card:0:3"), "The hidden app is on the row while editing");
+            check(hasHit(app.scene(), "card:1:3"), "The hidden app is on the row while editing");
             app.key(Key::Ok);
             run(app, 3000, 400);
             check(layoutWrites(transport).empty() && !textNode(app.scene(), "Moving apps") &&
-                      !hasHit(app.scene(), "card:0:3"),
+                      !hasHit(app.scene(), "card:1:3"),
                   "Ending with no change saves nothing, and the hidden app leaves the row");
         }
         {
@@ -810,6 +819,7 @@ int main() {
             check(app.snapshot()["rowHead"].string() == "b,c" && app.snapshot()["focusCard"].string() == "b",
                   "The hidden app is gone from the row, the focus on the one after it");
             // Hiding on Home leaves the Apps page alone.
+            app.key(Key::Up);
             app.key(Key::Up);
             app.key(Key::Right);
             app.key(Key::Ok);
@@ -906,7 +916,7 @@ int main() {
             // The apps hidden on the Apps page do not change Home's row.
             app.key(Key::Back);
             run(app, 4000, 600);
-            app.key(Key::Up);
+            app.key(Key::Down); // from the top picks to the apps row
             check(app.snapshot()["tab"].string() == "home" && app.snapshot()["rowHead"].string() == "a,b,c",
                   "An app hidden on the Apps page is still on Home's row");
         }
@@ -941,12 +951,12 @@ int main() {
             check(app.screenName() == "home" && !app.snapshot()["editing"].boolean() &&
                       transport.count("recents") == 0,
                   "Holding OK on a title does nothing");
-            app.key(Key::Up);
             app.key(Key::Up); // the bar
             app.longPress();
             check(!app.snapshot()["editing"].boolean() && transport.count("recents") == 0,
                   "Holding OK on the bar does nothing");
             app.key(Key::Down);
+            app.key(Key::Down); // past the top picks to the apps
             app.longPress();
             check(app.snapshot()["editing"].boolean(), "Holding OK on an app edits the apps");
             app.longBack();
@@ -975,8 +985,9 @@ int main() {
             reply(own, "catalogue", R"({"ok":true,)" + ownApps + layout + ownProfiles);
             reply(own, "discover", fullFeed);
             uint32_t ownMs = run(own, 16, 1500);
-            own.key(Key::Up); // to the apps row
+            own.key(Key::Down); // to the apps row
             if (layoutCase) {
+                own.key(Key::Up);
                 own.key(Key::Up);
                 own.key(Key::Right); // the Apps tab, after Home's
                 own.key(Key::Ok);
@@ -1153,8 +1164,8 @@ int main() {
                   "The apps enter on their icons, without the feed");
             reply(iconed, "discover", fullFeed);
             iconClock = run(iconed, iconClock, 300);
-            check(iconed.snapshot()["rows"].number() == 3 && iconed.snapshot()["row"].number() == 1 &&
-                      hasHit(iconed.scene(), "card:1:0"),
+            check(iconed.snapshot()["rows"].number() == 3 && iconed.snapshot()["row"].number() == 0 &&
+                      hasHit(iconed.scene(), "card:0:0"),
                   "The feed's rows enter when it answers and the focus lands on the top picks");
 
             FakeTransport lateTransport;

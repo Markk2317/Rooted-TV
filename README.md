@@ -177,12 +177,13 @@ Rules for the assistant:
 
 ## API keys
 
-Installing and running Native Tv needs no account or key: the dashboard, the TV app, the privacy tools and the Home Assistant bridge all work without one. (The MQTT bridge needs the broker's address and, if it has one, a username and password.) Two optional keys switch on rows of titles in [Native Tv Home](https://ihtisham1211.github.io/native-tv/dashboard/home/), which is experimental:
+Installing and running Native Tv needs no account or key: the dashboard, the TV app, the privacy tools and the Home Assistant bridge all work without one. (The MQTT bridge needs the broker's address and, if it has one, a username and password.) Optional keys switch on rows of titles in [Native Tv Home](https://ihtisham1211.github.io/native-tv/dashboard/home/), which is experimental:
 
 | Key | What it adds | Where it goes |
 | :-- | :-- | :-- |
 | TMDB API key | The film and series rows, and what is popular on Netflix, Prime Video and Disney+ in the TV's country: titles, posters, details and trailers. Without it Home shows only what is on the TV | The browser dashboard: Apps, **Native Tv Home** tab, **Films and series** (or `"tmdbKey"` in `config.json`) |
 | YouTube Data API key | The **Trending on YouTube** row | The same tab, **Trending on YouTube** (or `"youtubeKey"` in `config.json`) |
+| Google OAuth client (TVs and Limited Input devices) | **From your YouTube subscriptions**, for each profile signed in with Google | The same tab, **Your YouTube subscriptions** (or `"youtubeClientId"` and `"youtubeClientSecret"` in `config.json`) |
 
 The TV app has no field for either key. The Native Tv Home tab (`http://<tv-ip>:8080/?tab=home`) is on every TV the TV app runs on; it can switch Native Tv Home on in LG's Home's place on webOS 9 and 10, and on webOS 11 once `"allowExperimentalHome": true` is set. Elsewhere Native Tv Home is the TV app's own, opened with Back from its Settings.
 

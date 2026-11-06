@@ -142,6 +142,19 @@ int main() {
               "The services' rows follow the top picks in the apps' order, without a hidden app's");
         check(rows[2].title == "Popular on Prime Video" && rows[3].title == "Popular on Netflix",
               "A service's row is named after it");
+        Json withSubscriptions = Json::parse(
+            R"({"apps":[{"id":"youtube.leanback.v4","title":"YouTube"},{"id":"netflix","title":"Netflix"}],"devices":[],"channels":[],"order":{"app":["youtube.leanback.v4","netflix"]},"layout":{"rows":["app"],"hidden":{}},"sources":{"channels":0}})");
+        Json subscriptionsFeed = Json::parse(
+            R"({"rows":[{"key":"on:netflix","items":[{"id":4,"type":"tv","title":"Four","poster":"/n.jpg","service":"netflix"}]},{"key":"youtube:subscriptions","items":[{"id":"bbbbbbbbbb1","type":"youtube","title":"Newest","overview":"B","image":"https://i.ytimg.com/vi/bbbbbbbbbb1/mqdefault.jpg"}]}]})");
+        auto subscriptionRows = homeRows("home", withSubscriptions, subscriptionsFeed, Json());
+        check(subscriptionRows.size() == 3 && subscriptionRows[1].key == "youtube:subscriptions" &&
+                  subscriptionRows[1].title == "From your YouTube subscriptions" &&
+                  subscriptionRows[2].key == "on:netflix",
+              "The YouTube subscriptions take YouTube's place among the services");
+        check(subscriptionRows[1].cards[0].kind == "youtube" &&
+                  subscriptionRows[1].cards[0].command.body["kind"].string() == "youtube" &&
+                  !subscriptionRows[1].posters,
+              "OK on a subscription's video plays it in YouTube");
         check(rows[2].cards[0].kind == "title" && rows[2].cards[0].command.route == "details" &&
                   rows[2].cards[0].data["service"].string() == "prime",
               "OK on a service's title opens its details, which know the service");

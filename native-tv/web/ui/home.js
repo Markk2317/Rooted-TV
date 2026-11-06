@@ -69,16 +69,21 @@ let tmdbKeySet = false;
 let youtubeKeySet = false;
 // null where the server offers no Home button switch (LG's Home is replaced, or none to watch).
 let homeButtonOn = null;
+// The Google account of the profile in use: {clientSet, linked, name, pending, error}.
+let googleAccount = null;
+let googleWatch = null;
 async function loadHomeKeys() {
   try {
     const status = await (await fetch(api('/api/update'), { cache: 'no-store' })).json();
     tmdbKeySet = status.tmdbKeySet === true;
     youtubeKeySet = status.youtubeKeySet === true;
     homeButtonOn = typeof status.homeButton === 'boolean' ? status.homeButton : null;
+    googleAccount = status.youtubeAccount || null;
   } catch (e) { return; }
   renderHomeButton();
   renderTmdb();
   renderYoutube();
+  renderGoogle();
 }
 function renderHomeButton() {
   const row = q('home-button-row'), btn = q('home-button');
@@ -132,6 +137,50 @@ async function homeYoutubeSave() {
 async function homeYoutubeRemove() {
   const r = await sendCommand('setYoutubeKey', '');
   if (r && r.ok) { youtubeKeySet = r.youtubeKeySet === true; renderYoutube(); }
+}
+
+function renderGoogle() {
+  const row = q('home-google-row');
+  if (!row) return;
+  const account = googleAccount;
+  row.hidden = !account;
+  if (!account) return;
+  const pending = account.pending;
+  let state;
+  if (pending) state = t('home.googleCode', 'On a phone or computer, open {url} and enter {code}. This page follows along.', { url: pending.url, code: pending.code });
+  else if (account.linked) state = account.name
+    ? t('home.googleIn', 'Signed in as {name}. Its subscriptions are on Native Tv Home.', { name: account.name })
+    : t('home.googleInUnnamed', 'Signed in. Its subscriptions are on Native Tv Home.');
+  else if (account.clientSet) state = t('home.googleOut', 'This profile is not signed in.');
+  else state = t('home.googleNoClient', 'No Google client is saved.');
+  if (account.error && !pending) state += ' ' + account.error;
+  q('home-google-state').textContent = state;
+  q('home-google-client').hidden = account.clientSet;
+  q('home-google-save').hidden = account.clientSet;
+  q('home-google-signin').hidden = !account.clientSet || account.linked || !!pending;
+  q('home-google-signout').hidden = !account.linked;
+  q('home-google-remove').hidden = !account.clientSet;
+  // While a code waits to be entered, the page asks again every few seconds.
+  clearTimeout(googleWatch);
+  if (pending) googleWatch = setTimeout(loadHomeKeys, 3000);
+}
+async function homeGoogleSave() {
+  const id = q('home-google-id').value.trim(), secret = q('home-google-secret').value.trim();
+  if (!id || !secret) return;
+  const r = await sendCommand('setYoutubeClient', { id, secret });
+  if (r && r.ok) { q('home-google-id').value = ''; q('home-google-secret').value = ''; googleAccount = r.youtubeAccount || null; renderGoogle(); }
+}
+async function homeGoogleRemove() {
+  const r = await sendCommand('setYoutubeClient', '');
+  if (r && r.ok) { googleAccount = r.youtubeAccount || null; renderGoogle(); }
+}
+async function homeGoogleSignIn() {
+  const r = await sendCommand('youtubeSignIn');
+  if (r && r.ok) { googleAccount = r.youtubeAccount || null; renderGoogle(); }
+}
+async function homeGoogleSignOut() {
+  const r = await sendCommand('youtubeSignOut');
+  if (r && r.ok) { googleAccount = r.youtubeAccount || null; renderGoogle(); }
 }
 
 function homeWritable() { return !!(!homeSaving && homeStatus && (homeStatus.supported.ok || homeStatus.enabled || homeStatus.restorePending || homeStatus.inApp) && homeStatus.writable !== false); }

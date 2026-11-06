@@ -1765,6 +1765,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       homeContent_(dataRoot_),
       homeDiscover_(dataRoot_),
       homeImageProxy_(dataRoot_),
+      youtubeAccounts_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
       hiddenAppsPath_(dataFilePath(dataRoot_, "hidden_apps")),
@@ -2446,6 +2447,14 @@ Json HttpFrontDoor::currentConfigDocument() const {
 
 // The shared server-status response: the Server tab's switches and the
 // daemon's own vitals. Node assembled the same document from its modules.
+namespace {
+// The id of the Native Tv Home profile in use, "main" until there are others.
+std::string activeHomeProfile(const std::string &dataRoot) {
+    JsonFile homeFile(dataFilePath(dataRoot, "home.json"));
+    return service::normalizeHomeDocument(homeFile.load().value)["profile"].string("main");
+}
+} // namespace
+
 Json HttpFrontDoor::serverStatus() const {
     const Json document = currentConfigDocument();
     Json status = Json::object();
@@ -2495,6 +2504,13 @@ Json HttpFrontDoor::serverStatus() const {
     // Whether films and series are on: the key itself is never sent back.
     status.set("tmdbKeySet", Json::flag(!trimmedText(document["tmdbKey"].string()).empty()));
     status.set("youtubeKeySet", Json::flag(!trimmedText(document["youtubeKey"].string()).empty()));
+    // The Google account of the Home profile in use; the client secret and tokens are never sent.
+    {
+        Json account = youtubeAccounts_.status(activeHomeProfile(dataRoot_));
+        account.set("clientSet", Json::flag(!document["youtubeClientId"].string().empty() &&
+                                            !document["youtubeClientSecret"].string().empty()));
+        status.set("youtubeAccount", account);
+    }
     // Offered where the watcher runs: webOS 3.4's Home is the compositor's, not an app.
     status.set("homeButton", homeKeyWatcher_
         ? Json::flag(document["homeButtonOpensNativeHome"].boolean()) : Json());
@@ -2665,6 +2681,51 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         if (!ConfigStore(configPath_).setTopLevel(change, &error))
             return fail("could not save setting: " + error);
         reloadNode();
+        return answer();
+    }
+    if (action == "setYoutubeClient") {
+        // The owner's OAuth client of Google's "TVs and Limited Input devices" type: {"id", "secret"},
+        // or "" to remove both.
+        const std::string badClient = say::msg("srv.youtube.badClient",
+            "A Google client ID ends in .apps.googleusercontent.com, and its secret is 10 to 100 "
+            "letters, digits, - and _");
+        std::string id, secret;
+        if (value.isObject()) {
+            id = trimmedText(value["id"].string());
+            secret = trimmedText(value["secret"].string());
+            const std::string suffix = ".apps.googleusercontent.com";
+            bool valid = id.size() > suffix.size() && id.size() <= 200 &&
+                         id.compare(id.size() - suffix.size(), suffix.size(), suffix) == 0 &&
+                         secret.size() >= 10 && secret.size() <= 100;
+            for (char character : id)
+                valid = valid && (std::isalnum(static_cast<unsigned char>(character)) ||
+                                  character == '-' || character == '.' || character == '_');
+            for (char character : secret)
+                valid = valid && (std::isalnum(static_cast<unsigned char>(character)) ||
+                                  character == '-' || character == '_');
+            if (!valid) return fail(badClient);
+        } else if (!(value.isString() && value.string().empty())) {
+            return fail(badClient);
+        }
+        Json change = Json::object();
+        change.set("youtubeClientId", Json::text(id));
+        change.set("youtubeClientSecret", Json::text(secret));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
+        return answer();
+    }
+    if (action == "youtubeSignIn") {
+        const Json live = currentConfigDocument();
+        const Json started = youtubeAccounts_.signIn(live["youtubeClientId"].string(),
+                                                     live["youtubeClientSecret"].string(),
+                                                     activeHomeProfile(dataRoot_));
+        if (!started["ok"].boolean()) return fail(started["error"].string());
+        return answer();
+    }
+    if (action == "youtubeSignOut") {
+        youtubeAccounts_.signOut(activeHomeProfile(dataRoot_));
         return answer();
     }
     if (action == "setNtpEnabled" || action == "setNtpServer") {
@@ -16492,9 +16553,19 @@ std::string tvRegion(const std::string &dataRoot) {
 
 void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     const Json document = currentConfigDocument();
-    const Json result = homeDiscover_.feed(document["tmdbKey"].string(),
-                                           document["youtubeKey"].string(),
-                                           tvRegion(dataRoot_));
+    Json result = homeDiscover_.feed(document["tmdbKey"].string(),
+                                     document["youtubeKey"].string(), tvRegion(dataRoot_));
+    // The profile's own YouTube subscriptions, where it has signed in with Google.
+    const Json subscriptions = youtubeAccounts_.row(document["youtubeClientId"].string(),
+                                                    document["youtubeClientSecret"].string(),
+                                                    activeHomeProfile(dataRoot_));
+    if (subscriptions.isObject()) {
+        Json rows = Json::array();
+        for (const Json &row : result["rows"].items()) rows.add(row);
+        rows.add(subscriptions);
+        result.set("rows", rows);
+        result.set("enabled", Json::flag(true));
+    }
     if (result["enabled"].boolean() && result["rows"].isArray() &&
         result["rows"].size())
         homeImageProxy_.retainAndWarm(result["rows"]);

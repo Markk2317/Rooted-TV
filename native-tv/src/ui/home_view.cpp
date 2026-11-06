@@ -120,17 +120,10 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab) {
     bar.pillHot = static_cast<float>(motion.value("pill:hot"));
     bar.avatarFocus = static_cast<float>(motion.value("f:av"));
     bar.settingsFocus = static_cast<float>(motion.value("f:gr"));
+    bar.search = state.discover["titlesEnabled"].boolean();
+    bar.searchFocus = static_cast<float>(motion.value("f:sr"));
     bar.clock = clockText(state);
     kit::topBar(paint, bar);
-    if (state.discover["titlesEnabled"].boolean()) {
-        kit::RoundButton search;
-        Rect gear = kit::geometry::settingsButton();
-        search.rest = {gear.x - layout::circle - 24, gear.y, layout::circle, layout::circle};
-        search.id = "tool:2";
-        search.icon = "search";
-        search.focus = static_cast<float>(motion.value("f:sr"));
-        kit::roundButton(paint, search);
-    }
     if (state.catalogue["layout"]["picture"].boolean() && !home.editing)
         paint.glyphs.text(paint.scene, {800, 136, 1040, kit::type::labelM.line},
                           pictureLabel(home.picture), kit::type::labelM, kit::color::onSurface3,

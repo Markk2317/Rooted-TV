@@ -45,6 +45,7 @@ constexpr Color onFocus = rgb(0x131118);
 constexpr Color warn = rgb(0xFFB784);
 constexpr Color bad = rgb(0xFF8A80);
 constexpr Color pillRest = rgb(0x2E2C35);
+constexpr Color tabSelected = rgb(0xE3E1E8);
 } // namespace color
 // Colours that carry an alpha.
 namespace alpha {
@@ -52,6 +53,7 @@ constexpr Color outline = rgb(0xF1EEF4, 0.12f);
 constexpr Color outlineStrong = rgb(0xF1EEF4, 0.24f);
 constexpr Color accentDim = rgb(0xA8C7FA, 0.16f);
 constexpr Color scrimStrong = rgb(0x0C0B0E, 0.86f);
+constexpr Color capsule = rgb(0x1E1D24, 0.72f);
 } // namespace alpha
 namespace type {
 constexpr const char *family = "Google Sans Flex";
@@ -110,6 +112,10 @@ constexpr float avatarGap = 32;
 constexpr float tabPad = 32;
 constexpr float clockW = 100;
 constexpr float clockGap = 28;
+constexpr float capsuleInset = 8;
+constexpr float capsulePad = 8;
+constexpr float capsuleGap = 16;
+constexpr float wordmarkGap = 20;
 constexpr float heroW = 1400;
 constexpr float heroSourceTop = 226;
 constexpr float heroSourceH = 40;
@@ -254,11 +260,11 @@ constexpr int heroText[3] = {80, 160, 240};
 namespace metrics {
 namespace home {
 constexpr Rect avatar = {80, 68, 56, 56};
-constexpr Rect tabHome = {168, 60, 153.3f, 72};
-constexpr Rect tabApps = {321.3f, 60, 140.9f, 72};
-constexpr Rect tabLive = {462.2f, 60, 123.1f, 72};
-constexpr Rect gear = {1656, 68, 56, 56};
-constexpr Rect clock = {1740, 72, 100, 48};
+constexpr Rect tabHome = {176, 60, 153.3f, 72};
+constexpr Rect tabApps = {329.3f, 60, 140.9f, 72};
+constexpr Rect tabLive = {470.2f, 60, 123.1f, 72};
+constexpr Rect gear = {633.3f, 68, 56, 56};
+constexpr Rect clock = {1563, 72, 100, 48};
 constexpr Rect heroMeta = {80, 226, 1400, 40};
 constexpr Rect heroTitle = {80, 274, 1400, 88};
 constexpr Rect heroSubtitle = {80, 370, 1400, 40};

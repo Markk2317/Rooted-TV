@@ -227,6 +227,9 @@ Wikidata. Mappings, including empty results, share the bounded metadata cache
 for seven days. A Netflix launch passes the resolved numeric ID to the
 installed app in `contentTarget` as
 `m=https://www.netflix.com/title/<id>&source_type=4`.
+A Home profile signed in with Google keeps its token in `youtube-accounts.json` and its
+row in `youtube-rows.json` in the data directory, both mode 0600; signing out removes them.
+
 `primeDeepLinks`, off by default, permits the same request for a title opened
 from Popular on Prime Video, for its `P14462` claim, kept apart in the same
 cache; the GTI goes to the installed Prime Video app in `contentTarget`.

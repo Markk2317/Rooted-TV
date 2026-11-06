@@ -311,6 +311,15 @@ A configured YouTube key (set in the dashboard's Native Tv Home tab or as `youtu
 as 20 to 100 letters, digits, `-` and `_`, and nothing else is sent with it but the TV's
 country, once known, for that country's list.
 
+A Google OAuth client (`youtubeClientId`, `youtubeClientSecret`; the dashboard never
+shows the secret again) lets each Home profile sign in to a Google account through
+Google's sign-in for TVs, asking only for `youtube.readonly`. The refresh token Google
+returns is kept in `youtube-accounts.json` beside the server, mode 0600, and sent only to
+`oauth2.googleapis.com` for an access token, which goes only to `www.googleapis.com` for
+the account's subscriptions, its channels' latest uploads and those videos' details, about
+hourly while Home is shown; the row is kept in `youtube-rows.json`, also 0600. Signing out
+deletes both and asks Google to revoke the token.
+
 `netflixDeepLinks: true` separately enables requests to `www.wikidata.org`
 for the selected title's exact Wikidata QID, obtained from TMDB. Wikidata
 receives that QID and the TV's public IP, without the TMDB key, profile name

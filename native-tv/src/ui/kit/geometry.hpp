@@ -19,16 +19,32 @@ constexpr Rect avatar() {
     return {canvas::safeX, layout::navTop + (layout::navH - layout::circle) / 2, layout::circle,
             layout::circle};
 }
-constexpr float tabsLeft() {
+// As on Google TV since its 2025 redesign, a capsule after the avatar holds search, where it is
+// offered, and the tabs; the gear has a capsule of its own after it.
+constexpr float capsuleLeft() {
     return canvas::safeX + layout::circle + layout::avatarGap;
+}
+// A capsule round the bar's items from `left` to `right`, a little taller than the tab pill.
+constexpr Rect capsule(float left, float right) {
+    return {left, layout::navTop - layout::capsuleInset, right - left,
+            layout::navH + 2 * layout::capsuleInset};
+}
+// Search sits in the capsule's rounded end, as far from its edge as from its top.
+constexpr Rect searchButton() {
+    return {capsuleLeft() + 2 * layout::capsulePad,
+            layout::navTop + (layout::navH - layout::circle) / 2, layout::circle, layout::circle};
+}
+constexpr float tabsLeft(bool search = false) {
+    return capsuleLeft() + layout::capsulePad +
+           (search ? layout::circle + 2 * layout::capsulePad : 0);
 }
 constexpr float tabWidth(float textWidth) {
     return textWidth + 2 * layout::tabPad;
 }
 // Tabs touch; each is its text plus the pad on both sides.
-inline std::vector<Rect> tabRects(const std::vector<float> &textWidths) {
+inline std::vector<Rect> tabRects(const std::vector<float> &textWidths, bool search = false) {
     std::vector<Rect> rects;
-    float x = tabsLeft();
+    float x = tabsLeft(search);
     for (float width : textWidths) {
         rects.push_back({x, layout::navTop, tabWidth(width), layout::navH});
         x += tabWidth(width);
@@ -39,14 +55,18 @@ inline std::vector<Rect> tabRects(const std::vector<float> &textWidths) {
 constexpr Rect pill(float left, float right) {
     return {left, layout::navTop, right - left, layout::navH};
 }
-constexpr Rect clock() {
-    return {canvas::width - canvas::safeX - layout::clockW,
+// The gear's capsule follows the tabs' capsule, which ends a pad after the last tab.
+constexpr Rect settingsButton(float tabsRight) {
+    return {tabsRight + layout::capsulePad + layout::capsuleGap + 2 * layout::capsulePad,
+            layout::navTop + (layout::navH - layout::circle) / 2, layout::circle, layout::circle};
+}
+// The clock ends where the divider before the wordmark begins; `wordmarkWidth` is the
+// wordmark's text, which ends at the right margin.
+constexpr Rect clock(float wordmarkWidth) {
+    return {canvas::width - canvas::safeX - wordmarkWidth - 2 * layout::wordmarkGap - 2 -
+                layout::clockW,
             layout::navTop + (layout::navH - type::clock.line) / 2, layout::clockW,
             type::clock.line};
-}
-constexpr Rect settingsButton() {
-    return {clock().x - layout::clockGap - layout::circle,
-            layout::navTop + (layout::navH - layout::circle) / 2, layout::circle, layout::circle};
 }
 
 // Hero block, bottom-left of Home.
