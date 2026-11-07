@@ -265,6 +265,8 @@ class Application : private ScreenHost {
     void key(Key key);
     // OK held: on Home it starts editing the apps or lifts a kind's row; elsewhere it does nothing.
     void longPress();
+    // Whether holding OK would do something here (longPress); elsewhere OK acts when pressed.
+    bool okHoldable() const;
     // Back held: on Home it opens the recent apps, the only way to them; a tap of Back never does.
     void longBack();
     void input(const std::string &text);

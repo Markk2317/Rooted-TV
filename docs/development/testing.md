@@ -224,7 +224,9 @@ still do are listed in `tests/optimistic_guard.json`, and the counts only go dow
 
 The client's parts have their own tests. `native-motion` checks the springs
 against a reference integrator, velocity kept on retarget, the bezier curves and
-the stagger on a fake clock. `native-kit` holds every component's geometry to the
+the stagger on a fake clock. `native-key-hold` checks how OK and Back tell a tap
+from a hold, for a remote that releases in time and for one that sends its
+release late. `native-kit` holds every component's geometry to the
 numbers in `native-tv/design/metrics.json`, and `native-kit-tokens` fails when
 `src/ui/kit/tokens.hpp` is stale against `native-tv/design/tokens.json`
 (`tools/gen_tokens.py` regenerates it). `native-raster` renders the SDF fill, ring,

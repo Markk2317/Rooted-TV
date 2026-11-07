@@ -247,8 +247,22 @@ bool Application::activate(const std::string &id) {
     }
     return false;
 }
-void Application::longPress() {
+bool Application::okHoldable() const {
     if (state_.screen != Screen::Home)
+        return false;
+    const auto &home = state_.home;
+    if (flow_.pendingTab >= 0 || home.arranging)
+        return false;
+    if (home.editing)
+        return true;
+    if (!home.grid && !home.navigation && !home.heroFocus && !home.tabs.empty() &&
+        home.tabs[home.tab].key == "apps" && home.rows.size() > 1)
+        return true;
+    return !home.navigation && !home.heroFocus && home.row < home.rows.size() &&
+           home::isApps(home.rows[home.row]) && home.column < home.rows[home.row].cards.size();
+}
+void Application::longPress() {
+    if (state_.screen != Screen::Home || state_.home.heroFocus)
         return;
     auto &home = state_.home;
     if (flow_.pendingTab >= 0)

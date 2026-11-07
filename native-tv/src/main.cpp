@@ -14,6 +14,7 @@
 #include "platform/paths.hpp"
 #include "platform/probe.hpp"
 #include "platform/row_sweep.hpp"
+#include "platform/key_hold.hpp"
 #include "platform/server_wake.hpp"
 #include "ui/application.hpp"
 #include "ui/kit/run_glyphs.hpp"
@@ -386,11 +387,18 @@ int main(int argc, char **argv) {
             const bool stops = fixed || opts.duration;
             const Uint32 stopAt = fixed ? static_cast<Uint32>(opts.time) : opts.duration;
             AppClock clock(fixed, SDL_GetTicks());
-            // OK and Back act when released, unless held for 650 ms: then OK starts editing and
-            // Back opens the recent apps, once, and the release is swallowed.
-            Uint32 okAt = 0, backAt = 0;
-            bool okDown = false, held = false, backDown = false, backHeld = false, draw = true,
-                 quit = false, active = true, animating = true;
+            // Where a hold does something (OK on an app of Home starts editing, Back on Home opens
+            // the recent apps) the key acts when released, or held (KeyHold); elsewhere at once.
+            KeyHold okHold, backHold;
+            // The remote's key events go to /tmp/nativetv-keys.log while /tmp/nativetv-debug-keys
+            // exists (the app's jail shares /tmp with the TV), to see how a remote sends its presses
+            // and releases.
+            std::FILE *keyLog = std::ifstream("/tmp/nativetv-debug-keys").good()
+                                    ? std::fopen("/tmp/nativetv-keys.log", "a")
+                                    : nullptr;
+            if (keyLog)
+                std::setvbuf(keyLog, nullptr, _IOLBF, 0);
+            bool draw = true, quit = false, active = true, animating = true;
             bool drewLast = false; // the last turn built a frame: the trailers it asked for are known
             unsigned frames = 0;
             Json screens = Json::array();
@@ -464,14 +472,11 @@ int main(int argc, char **argv) {
                         const double due = script[step]["at"].number() - waited;
                         wait = std::min(wait, due < 1 ? 1u : static_cast<Uint32>(due));
                     }
-                    if (active && okDown && !held) {
-                        const Sint32 due = static_cast<Sint32>(okAt + 650 - waited);
-                        wait = std::min(wait, due < 1 ? 1u : static_cast<Uint32>(due));
-                    }
-                    if (active && backDown && !backHeld) {
-                        const Sint32 due = static_cast<Sint32>(backAt + 650 - waited);
-                        wait = std::min(wait, due < 1 ? 1u : static_cast<Uint32>(due));
-                    }
+                    for (const KeyHold *hold : {&okHold, &backHold})
+                        if (active && hold->waiting()) {
+                            const Sint32 due = static_cast<Sint32>(hold->dueAt() - waited);
+                            wait = std::min(wait, due < 1 ? 1u : static_cast<Uint32>(due));
+                        }
                     pending = SDL_WaitEventTimeout(&event, static_cast<int>(wait)) == 1;
                 }
                 // A fixed-clock run waits for what the last frame asked of the server, so the
@@ -509,7 +514,8 @@ int main(int argc, char **argv) {
                         if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST ||
                             event.window.event == SDL_WINDOWEVENT_HIDDEN) {
                             active = false;
-                            okDown = backDown = false;
+                            okHold.cancel();
+                            backHold.cancel();
                             clock.pause(SDL_GetTicks());
                             app.active(false);
                             videos.stopAll();
@@ -536,40 +542,46 @@ int main(int argc, char **argv) {
                             key = event.key.keysym.scancode == 480 ? Key::PageUp : Key::PageDown;
                             known = true;
                         }
+                        if (keyLog)
+                            std::fprintf(keyLog, "%u down sym=%d scancode=%d repeat=%d\n",
+                                         event.key.timestamp, event.key.keysym.sym,
+                                         event.key.keysym.scancode, event.key.repeat);
                         if (known) {
                             if (key == Key::Ok) {
-                                if (!okDown && !event.key.repeat) {
-                                    okDown = true;
-                                    held = false;
-                                    okAt = now;
-                                }
+                                // OK acts at once where holding it does nothing, so a remote that
+                                // sends its release late never loses a press.
+                                if (okHold.waiting())
+                                    okHold.repeat();
+                                else if (event.key.repeat) {
+                                } else if (!app.okHoldable())
+                                    app.key(Key::Ok);
+                                else
+                                    okHold.press(now);
                             } else if (key == Key::Back) {
                                 // Only Home tells a tap from a hold (the recent apps); everywhere else Back
-                                // acts on the press, so a remote that sends no release never loses it.
-                                if (event.key.repeat) {
+                                // acts on the press.
+                                if (backHold.waiting())
+                                    backHold.repeat();
+                                else if (event.key.repeat) {
                                 } else if (app.screenName() != "home")
                                     app.key(Key::Back);
-                                else if (!backDown) {
-                                    backDown = true;
-                                    backHeld = false;
-                                    backAt = now;
-                                }
+                                else
+                                    backHold.press(now);
                             } else if (!event.key.repeat || key != Key::Red)
                                 app.key(key);
                         }
                     } else if (event.type == SDL_KEYUP) {
                         Key key;
                         const bool known = translate(event.key.keysym.sym, key);
-                        if (known && key == Key::Ok && okDown) {
-                            okDown = false;
-                            if (!held)
+                        if (keyLog)
+                            std::fprintf(keyLog, "%u up sym=%d scancode=%d\n", event.key.timestamp,
+                                         event.key.keysym.sym, event.key.keysym.scancode);
+                        if (known && key == Key::Ok) {
+                            if (okHold.release(now) == KeyHold::Action::Tap)
                                 app.key(Key::Ok);
-                        } else if (backDown &&
-                                   ((known && key == Key::Back) ||
-                                    event.key.keysym.scancode == 482 ||
-                                    event.key.keysym.scancode == 505)) {
-                            backDown = false;
-                            if (!backHeld)
+                        } else if ((known && key == Key::Back) || event.key.keysym.scancode == 482 ||
+                                   event.key.keysym.scancode == 505) {
+                            if (backHold.release(now) == KeyHold::Action::Tap)
                                 app.key(Key::Back);
                         }
                     } else if (event.type == SDL_TEXTINPUT)
@@ -583,14 +595,16 @@ int main(int argc, char **argv) {
                         app.key(event.wheel.y > 0 ? Key::Up : Key::Down);
                 }
                 repushedAt = 0;
-                if (okDown && !held && now - okAt >= 650 && app.screenName() == "home") {
-                    held = true;
+                const KeyHold::Action ok = okHold.tick(now, app.okHoldable());
+                if (ok == KeyHold::Action::Hold)
                     app.longPress();
-                }
-                if (backDown && !backHeld && now - backAt >= 650 && app.screenName() == "home") {
-                    backHeld = true;
+                else if (ok == KeyHold::Action::Tap)
+                    app.key(Key::Ok);
+                const KeyHold::Action back = backHold.tick(now, app.screenName() == "home");
+                if (back == KeyHold::Action::Hold)
                     app.longBack();
-                }
+                else if (back == KeyHold::Action::Tap)
+                    app.key(Key::Back);
                 if (pumpNetwork(now))
                     draw = true;
                 if (sweep.active()) {
