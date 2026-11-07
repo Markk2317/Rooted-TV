@@ -50,7 +50,9 @@ void Application::key(Key key) {
                 if (home.nav < home.tabs.size()) {
                     homeSelectTab(home.nav);
                     home.navigation = false;
-                } else
+                } else if (home.nav == home.tabs.size() + 4)
+                    startScreensaver();
+                else
                     route(home.nav == home.tabs.size()       ? "profiles"
                           : home.nav == home.tabs.size() + 1 ? "quick"
                           : home.nav == home.tabs.size() + 2 ? "search"
@@ -196,6 +198,8 @@ void Application::click(float x, float y) {
                 state_.home.navigation = true;
                 state_.home.nav = index;
                 key(Key::Ok);
+            } else if (type == "tool" && index == 4) {
+                startScreensaver();
             } else if (type == "tool") {
                 if (state_.home.editing)
                     homeEditDone(false);
@@ -426,5 +430,9 @@ void Application::homeEditDone(bool toggle) {
     state_.catalogue.set("layout", layout);
     rebuildHome();
     execute(post(Operation::SetHomeLayout, body));
+}
+// Google TV's screen saver button: the TV starts its screen saver at once.
+void Application::startScreensaver() {
+    execute(post(Operation::Control, fields({{"action", Json::text("screensaver")}})));
 }
 } // namespace nativetv

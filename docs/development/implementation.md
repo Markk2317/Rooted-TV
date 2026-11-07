@@ -1879,17 +1879,23 @@ titles leave it as they leave the other rows. The client's spotlight is that row
 (`featuredCards`), or the first top picks from a server without it. `HomeState::heroFocus` is
 the banner's focus: it starts there on Home when the spotlight is the server's own, Up from the
 first row and Down from the bar reach it, Left and Right change `spotIndex`, OK opens the
-details, and Back goes rows, banner, bar. Off the banner the rows rise over it
-(`geometry::risenStackTarget`): the focused row's label at `rowsRisenTop`, the bar gone, and
-the rows before it fading out above (`risenRowAlpha`). While the focus is on the banner, the
-bar, Top picks for you or Your apps the hero shows the spotlight, and the slideshow and its
-trailer run only while the rows have not covered it (`kBannerCoveredY`); further down the
-hero, dimmed under the rows, follows the focused title. Without a banner of its own (the Live
-tab, an older server) the first screen keeps the stack at 0, except that a row whose items and
-the focused app's name would run past the bottom rises just enough, and past it the focused
-row takes the first row's place. The hero's art is TMDB's `w1920_and_h1080_bestv2` cut
+details, and Back goes rows, banner, bar. `homeFocus` places Home in one of the states measured on
+Google TV's 2025 home (`Place`): the bar focused (stack 0), the banner focused (`bannerDrop`, its
+description and button shown through the `he`/`hb` values), the top picks focused (`picksDrop`, the
+bar away through `ba`, the hero showing the focused card with its lines lifted by `picksLift`), Your
+apps focused (its circles at `appsFocusTop`, the hero's text gone and its art dimmed through `hd`)
+and the rows below, which rise to `rowsRisenTop` (`rs`, and `rg:<row>` growing the focused row's
+title). Rows are not one pitch apart any more: `home::rowTops` lays them out from each row's
+`RowLook` (title size, the large 391 × 220 cards of the rows under the first screen, the apps'
+names). Without a banner of its own (the Live tab, an older server) the first rows stay under the
+hero and past them the focused row takes the first row's place. The hero's art is TMDB's `w1920_and_h1080_bestv2` cut
 (`kHeroArtSize`), which the image proxy allows and warms for the featured row, decoded at
 1920 × 1080.
+
+The banner's service is drawn from `assets/icons/wordmark-<service>.svg` as a white icon mask
+(`Hero::wordmark`), as Google TV shows the service's logo over the title. Its left scrim is the
+art's own colour: `decodeImage` keeps the mean of each picture's left third
+(`DecodedImage::tone`), and `scrimOf` darkens it for the slot's tint.
 
 Key art: Google TV's cards are the studios' art with the title on it, and print no title.
 TMDB files such art under a language and the plain pictures under none, so with

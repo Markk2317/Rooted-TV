@@ -1,4 +1,5 @@
 #include "ui/application.hpp"
+#include "ui/home_layout.hpp"
 #include <clocale>
 #include <cmath>
 #include <cstdio>
@@ -206,7 +207,43 @@ int main() {
         for (int i = 0; i < 3; ++i)
             gear.key(Key::Right);
         gear.key(Key::Ok);
-        check(gear.screenName() == "quick", "A third Right, past the tabs, reaches Quick settings");
+        check(gear.screenName() == "home" && !gearTransport.requests.empty() &&
+                  gearTransport.requests.back().body["action"].string() == "screensaver",
+              "A third Right, past the tabs, reaches the screen saver's button, which starts it");
+        gear.key(Key::Right);
+        gear.key(Key::Ok);
+        check(gear.screenName() == "quick", "The gear after it opens Quick settings");
+        // With a Gemini key the assistant leads the icon capsule: the screen saver is one stop on.
+        FakeTransport assistantTransport;
+        Application assisted(assistantTransport);
+        reply(assisted, "catalogue", catalogue);
+        Json assistantFeed = Json::parse(feed);
+        assistantFeed.set("assistant", Json::flag(true));
+        reply(assisted, "discover", assistantFeed.dump());
+        assisted.key(Key::Up);
+        for (int i = 0; i < 3; ++i)
+            assisted.key(Key::Right);
+        const size_t beforeSaver = assistantTransport.requests.size();
+        assisted.key(Key::Right);
+        assisted.key(Key::Ok);
+        check(assisted.screenName() == "home" &&
+                  assistantTransport.requests.size() == beforeSaver + 1 &&
+                  assistantTransport.requests.back().operation == Operation::Control &&
+                  assistantTransport.requests.back().body["action"].string() == "screensaver",
+              "After the assistant the next Right reaches the screen saver's button");
+        reply(assisted, "action", R"({"ok":true})", 200, assistantTransport.revisions["action"]);
+        Rect saverHit{};
+        for (const auto &hit : assisted.scene().hits)
+            if (hit.id == "tool:4")
+                saverHit = hit.rect;
+        assisted.click(saverHit.x + saverHit.w / 2, saverHit.y + saverHit.h / 2);
+        size_t saverPosts = 0;
+        for (const auto &request : assistantTransport.requests)
+            saverPosts += request.operation == Operation::Control &&
+                          request.body["action"].string() == "screensaver";
+        check(saverHit.w > 0 && saverPosts == 2 &&
+                  assistantTransport.requests.back().body["action"].string() == "screensaver",
+              "Clicking the screen saver's button starts it too");
         FakeTransport avatarTransport;
         Application avatar(avatarTransport);
         reply(avatar, "catalogue", catalogue);
@@ -230,7 +267,7 @@ int main() {
         const Node *wordmark = textNode(twelveHourScene, "Native Tv");
         const Rect clockBox = wordmark ? kit::geometry::clock(wordmark->rect.w) : Rect{};
         check(twelveHourTime && wordmark && twelveHourTime->rect.x == clockBox.x &&
-                  twelveHourTime->rect.y == 72 && twelveHourTime->rect.w == 100 &&
+                  twelveHourTime->rect.y == 84 && twelveHourTime->rect.w == 130 &&
                   twelveHourTime->align == Node::Align::Right,
               "The 12-hour clock sits right-aligned before the wordmark");
         Json twentyFourHourCatalogue = Json::parse(catalogue);
@@ -311,7 +348,7 @@ int main() {
             focusedCard = focusedCard || hit.id == "card:0:0";
         check(wallpaper.snapshot()["wallpaper"].string() == "visible" &&
                   wallpaper.snapshot()["row"].number() == 0 && focusedCard && carouselTitle &&
-                  carouselTitle->rect.x == 80 && carouselTitle->rect.w == 1500 &&
+                  carouselTitle->rect.x == 116 && carouselTitle->rect.w == 1460 &&
                   carouselTitle->color.a == 1,
               "The hero title keeps the design's geometry over the wallpaper");
         check(imageNode(focusedWallpaper, "wallpaper:night@r1"),
@@ -444,46 +481,119 @@ int main() {
             reply(banner, "catalogue", fullCatalogue);
             reply(banner, "discover", bannerFeed);
             uint32_t at = run(banner, 16, 1500);
+            Motion &bannerMotion = banner.animation();
             check(banner.snapshot()["heroFocus"].boolean() && banner.snapshot()["slides"].number() == 3 &&
                       banner.snapshot()["heroTitle"].string() == "Banner One",
                   "The banner has titles of its own and the focus starts on it");
+            check(std::fabs(bannerMotion.value("sy") - kit::layout::bannerDrop) < 1 &&
+                      bannerMotion.value("he") > .99 && bannerMotion.value("hb") > .99 &&
+                      bannerMotion.value("ba") < .01 && banner.shows("And more.") &&
+                      banner.shows("Watch on Netflix"),
+                  "The focused banner drops the rows by bannerDrop and adds the rest of its "
+                  "description and a Watch on button");
             banner.key(Key::Right);
             at = run(banner, at, 1500);
             check(banner.snapshot()["heroFocus"].boolean() &&
                       banner.snapshot()["heroTitle"].string() == "Banner Two",
                   "Right on the banner shows its next title");
+            check(banner.shows("More info") && !banner.shows("Watch on"),
+                  "A banner title on no known service offers More info");
             banner.key(Key::Down);
             at = run(banner, at, 1500);
             check(!banner.snapshot()["heroFocus"].boolean() && banner.snapshot()["row"].number() == 0 &&
                       banner.snapshot()["column"].number() == 0 &&
-                      banner.snapshot()["heroTitle"].string() == "Banner Two",
-                  "Down reaches the top picks, and the banner keeps its own title over them");
-            check(std::fabs(banner.animation().value("sy") - kit::geometry::risenStackTarget(0)) < 1,
-                  "Down raises the rows over the banner, the top picks at the top");
+                      banner.snapshot()["heroTitle"].string() == "Keyart",
+                  "Down reaches the top picks, and the banner shows the focused pick");
+            check(std::fabs(bannerMotion.value("sy") - kit::layout::picksDrop) < 1 &&
+                      bannerMotion.value("ba") > .99 && bannerMotion.value("hu") > .99 &&
+                      bannerMotion.value("hb") < .01 && !banner.shows("More info"),
+                  "Down drops the rows by picksDrop under the banner, the bar away and the pick's "
+                  "lines lifted, with no button");
+            // The hero shows the focused pick's title, so look for each card's own title on it.
+            const auto titleOnCard = [](const Scene &scene, const std::string &card,
+                                        const std::string &title) {
+                for (const auto &hit : scene.hits)
+                    if (hit.id == card)
+                        for (const auto &node : scene.nodes)
+                            if (node.kind == Node::Kind::Text && node.value == title &&
+                                node.rect.y >= hit.rect.y && node.rect.y < hit.rect.y + hit.rect.h)
+                                return true;
+                return false;
+            };
             bool keyArt = false;
-            for (const auto &node : banner.scene().nodes)
+            const Scene picks = banner.scene();
+            for (const auto &node : picks.nodes)
                 keyArt = keyArt || (node.kind == Node::Kind::Image &&
                                     node.value == "tmdb:w500:/titled-abcdefgh.jpg");
-            check(keyArt && !banner.shows("Keyart") && banner.shows("Plain"),
+            check(keyArt && !titleOnCard(picks, "card:0:0", "Keyart") &&
+                      titleOnCard(picks, "card:0:1", "Plain"),
                   "A card drawn with key art prints no title; one without it keeps its title");
             at = run(banner, at, 2 * kit::motion::ms::heroAdvance + 3000);
-            check(banner.snapshot()["heroTitle"].string() == "Banner Two" &&
+            check(banner.snapshot()["heroTitle"].string() == "Keyart" &&
                       banner.snapshot()["column"].number() == 0,
-                  "The banner holds still under the rows, and the top picks keep their focus");
+                  "The banner holds the focused pick under the rows, and the top picks keep their "
+                  "focus");
             banner.key(Key::Up);
             check(banner.snapshot()["heroFocus"].boolean() && !banner.snapshot()["navigation"].boolean(),
                   "Up from the top picks reaches the banner");
+            at = run(banner, at, 1500);
+            check(banner.snapshot()["heroTitle"].string() == "Banner Two",
+                  "The banner comes back on its own title, which did not move on under the rows");
             at = run(banner, at, kit::motion::ms::heroAdvance + 3000);
-            check(std::fabs(banner.animation().value("sy")) < 1 &&
+            check(std::fabs(bannerMotion.value("sy") - kit::layout::bannerDrop) < 1 &&
                       banner.snapshot()["heroTitle"].string() == "Banner Three",
-                  "The rows go back under the banner, which moves on by itself again");
+                  "The rows drop back under the focused banner, which moves on by itself again");
             banner.key(Key::Up);
             check(!banner.snapshot()["heroFocus"].boolean() && banner.snapshot()["navigation"].boolean(),
                   "Up from the banner reaches the bar");
+            at = run(banner, at, 1500);
+            check(std::fabs(bannerMotion.value("sy")) < 1 && bannerMotion.value("he") < .01 &&
+                      bannerMotion.value("bd") > .99 && bannerMotion.value("ba") < .01,
+                  "On the bar the rows rise back under the compact banner and the page dims under "
+                  "the bar");
             banner.key(Key::Down);
             check(banner.snapshot()["heroFocus"].boolean(), "Down from the bar comes back to the banner");
             banner.key(Key::Ok);
             check(banner.screenName() == "details", "OK on the banner opens its title");
+
+            // Further down Google TV's Home has two more states: Your apps over the banner's art,
+            // dimmed, its text gone; past it the rows risen to the top, the focused row's title
+            // large.
+            const char *lowerFeed =
+                R"({"ok":true,"enabled":true,"titlesEnabled":true,"rows":[{"key":"featured","items":[{"id":11,"type":"movie","title":"Banner One","overview":"First."}]},{"key":"trending","items":[{"id":1,"type":"movie","title":"Plain"}]},{"key":"movies","items":[{"id":9,"type":"movie","title":"Nine"}]}]})";
+            FakeTransport lowerTransport;
+            Application lower(lowerTransport);
+            lower.update(0);
+            reply(lower, "catalogue", fullCatalogue);
+            reply(lower, "discover", lowerFeed);
+            uint32_t lowerMs = run(lower, 16, 1500);
+            Motion &lowerMotion = lower.animation();
+            lower.key(Key::Down); // the top picks
+            lower.key(Key::Down); // Your apps
+            lowerMs = run(lower, lowerMs, 1500);
+            check(lower.snapshot()["row"].number() == 1 &&
+                      std::fabs(lowerMotion.value("sy") -
+                                (kit::layout::appsFocusTop - kit::geometry::rowItemsY(1))) < 1 &&
+                      lowerMotion.value("ht") < .01 && lowerMotion.value("hd") > .99 &&
+                      lowerMotion.value("ba") > .99 && lowerMotion.value("rs") < .01,
+                  "Your apps focused stands its circles at appsFocusTop over the dimmed art, the "
+                  "banner's text gone");
+            check(lower.shows("Alpha") && lower.shows("Beta") && lower.shows("Gamma"),
+                  "Your apps focused shows every app's name, as Google TV's row does");
+            lower.key(Key::Down); // the films under Your apps
+            lowerMs = run(lower, lowerMs, 1500);
+            bool risenTitle = false;
+            for (const auto &node : lower.scene().nodes)
+                if (node.kind == Node::Kind::Text && node.value == "Trending films this week") {
+                    const Rect drawn = node.group.apply(node.rect);
+                    risenTitle = risenTitle ||
+                                 (std::fabs(drawn.y - kit::layout::rowsRisenTop) < 1 &&
+                                  std::fabs(node.group.sx - 1) < 1e-3f);
+                }
+            check(lower.snapshot()["row"].number() == 2 && lowerMotion.value("rs") > .99 &&
+                      lowerMotion.value("rg:2") > .99 && lowerMotion.value("rg:1") < .01 &&
+                      risenTitle,
+                  "Past Your apps the rows rise, the focused row's 52 px title at rowsRisenTop");
         }
         FakeTransport homeTransport;
         Application home(homeTransport);
@@ -505,8 +615,8 @@ int main() {
               "The entrance finishes for every item");
         check(home.snapshot()["heroTitle"].string() == "One",
               "The hero shows the first top pick once its art is ready");
-        // Focus: ring and lift follow the focused card, the row keeps the 4th slot. The top
-        // picks (row 0, over the apps) start focused.
+        // Focus: ring and lift follow the focused card, the row keeps it in the first slot. The
+        // top picks (row 0, over the apps) start focused.
         check(motion.value("f:0.0") == 1 && motion.value("f:0.1") == 0,
               "The first top pick starts focused");
         for (int i = 0; i < 6; ++i)
@@ -529,7 +639,10 @@ int main() {
               "The apps row, on the first screen, rises only enough to show the focused name");
         home.key(Key::Down);
         clockMs = run(home, clockMs, 900);
-        check(std::fabs(motion.value("sy") + 2 * kit::layout::rowPitch) < .5 && motion.value("rd:1") == 1 &&
+        // The top picks' row and Your apps' (its names hidden) go up past the screen's top.
+        const float firstTwoRows = 2 * (kit::layout::rowLabelH + kit::layout::rowLabelGap) +
+                                   kit::layout::cardH + kit::layout::appD + 2 * kit::layout::rowGap;
+        check(std::fabs(motion.value("sy") + firstTwoRows) < .5 && motion.value("rd:1") == 1 &&
                   motion.value("rd:2") == 0,
               "Past the first screen the focused row takes the first row's place; the rows left behind dim");
         Scene stacked = home.scene();
@@ -763,13 +876,17 @@ int main() {
             check(std::fabs(fiveMotion.value("sy")) < .5, "The first two kind rows stay where they are");
             five.key(Key::Down);
             fiveMs = run(five, fiveMs, 800);
-            check(std::fabs(fiveMotion.value("sy") + kit::layout::rowPitch) < .5,
+            // A kind row: its title, the circles and every name under them.
+            const float kindPitch = nativetv::home::kindPitch();
+            check(std::fabs(kindPitch - (55 + kit::layout::appD + kit::layout::rowGap +
+                                         kit::layout::appNames)) < .01f &&
+                      std::fabs(fiveMotion.value("sy") + kindPitch) < .5,
                   "On the third row the page moves up one row so the next one shows");
             for (int i = 0; i < 2; ++i)
                 five.key(Key::Down);
             fiveMs = run(five, fiveMs, 800);
             check(five.snapshot()["row"].number() == 4 &&
-                      std::fabs(fiveMotion.value("sy") + 2 * kit::layout::rowPitch) < .5,
+                      std::fabs(fiveMotion.value("sy") + 2 * kindPitch) < .5,
                   "The last rows end flush with the screen: three stay in view");
         }
         // The Apps grid keeps its focus in range when apps are hidden under it.

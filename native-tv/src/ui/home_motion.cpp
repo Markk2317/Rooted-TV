@@ -59,6 +59,22 @@ Color tintOf(const Card &card) {
     return home::hsl(static_cast<float>(home::hashOf(card.id + card.title) % 360), .45f,
                      isTitle(card) ? .115f : .2f);
 }
+// Google TV's banner extends its art's own colour, very dark, under the text at its left: the left
+// third's mean (graphics/image_loader.hpp), its hue and saturation kept, its lightness brought down.
+Color scrimOf(int tone) {
+    const float r = ((tone >> 16) & 0xff) / 255.0f, g = ((tone >> 8) & 0xff) / 255.0f,
+                b = (tone & 0xff) / 255.0f;
+    const float high = std::max(r, std::max(g, b)), low = std::min(r, std::min(g, b));
+    const float lightness = (high + low) / 2, chroma = high - low;
+    float hue = 0, saturation = 0;
+    if (chroma > 0) {
+        saturation = chroma / (1 - std::fabs(2 * lightness - 1));
+        hue = high == r ? 60 * std::fmod((g - b) / chroma + 6, 6.0f)
+              : high == g ? 60 * ((b - r) / chroma + 2)
+                          : 60 * ((r - g) / chroma + 4);
+    }
+    return home::hsl(hue, std::min(saturation, .8f), std::min(std::max(lightness * .35f, .06f), .15f));
+}
 // The pick on show behind a focused app, as a wallpaper.
 constexpr float kWallpaperAlpha = .22f;
 size_t rowIndex(const std::vector<CardRow> &rows, const char *key) {
@@ -101,19 +117,6 @@ std::string loglineOf(const std::string &overview) {
             return overview.substr(0, at + 1);
     return overview;
 }
-// The installed app of a streaming service (names::streamingServices), for its icon.
-std::string serviceAppOf(const ViewState &state, const std::string &service) {
-    const names::StreamingService *known = nullptr;
-    for (const auto &candidate : names::streamingServices())
-        if (candidate.key == service)
-            known = &candidate;
-    if (!known)
-        return "";
-    for (const Json &app : state.catalogue["apps"].items())
-        if (std::find(known->apps.begin(), known->apps.end(), app["id"].string()) != known->apps.end())
-            return app["id"].string();
-    return "";
-}
 bool featured(const ViewState &state, const Card &card) {
     for (const Card &candidate : state.home.spotlight)
         if (candidate.id == card.id && candidate.kind == card.kind)
@@ -130,12 +133,31 @@ HeroText linesOf(const ViewState &state, const Card &card) {
         for (const auto &candidate : names::streamingServices())
             if (candidate.key == service)
                 text.source = candidate.name;
-        const std::string app = serviceAppOf(state, service);
-        if (!text.source.empty() && !app.empty())
-            text.sourceImage = "app:" + app;
+        // Google TV shows the service's own wordmark there, in white.
+        if (!text.source.empty())
+            text.wordmark = "wordmark-" + service;
         text.tag = "Trending";
         text.facts = card.subtitle;
-        text.description = loglineOf(card.data["overview"].string());
+        const std::string overview = card.data["overview"].string();
+        text.description = loglineOf(overview);
+        // The focused banner's description goes on from its logline.
+        std::string rest = overview.compare(0, text.description.size(), text.description) == 0
+                               ? overview.substr(text.description.size())
+                               : overview;
+        rest.erase(0, std::min(rest.find_first_not_of(" "), rest.size()));
+        text.more = rest;
+        text.button = text.source.empty() ? "More info" : "Watch on " + text.source;
+    } else if (isTitle(card) && state.home.spotlightOwn) {
+        // A focused top pick on Google TV's banner: its service's wordmark, the title, its facts
+        // and, under them, its description.
+        const std::string service = card.data["service"].string();
+        for (const auto &candidate : names::streamingServices())
+            if (candidate.key == service) {
+                text.source = candidate.name;
+                text.wordmark = "wordmark-" + service;
+            }
+        text.facts = card.subtitle.empty() && card.kind == "youtube" ? "YouTube" : card.subtitle;
+        text.more = card.data["overview"].string();
     } else if (isTitle(card)) {
         text.source = rowTitleOf(state, card);
         if (text.source.empty())
@@ -204,7 +226,8 @@ void Application::homeStart() {
     if (!flow_.beatAt)
         flow_.beatAt = now_ + kBeatMs;
     for (const char *prefix :
-         {"f:", "rx", "rd", "E", "ha", "hx", "hv", "dot", "pgx", "dim", "gy", "sy", "lift"})
+         {"f:", "rx", "rd", "rg", "rn", "rs", "bd", "he", "hb", "ht", "hd", "hu", "ba", "E", "ha", "hx", "hv", "dot",
+          "pgx", "dim", "gy", "sy", "lift"})
         motion_.erasePrefix(prefix);
     home.art = HeroArt();
     home.hero = Card();
@@ -365,7 +388,7 @@ void Application::homeFocus(bool jump) {
         if (jump)
             motion_.set(name, to);
         else
-            motion_.tween(name, to, ms::focus, easing(ease::out));
+            motion_.tween(name, to, ms::focus, easing(ease::decelerate));
     };
     std::string now;
     // The bar, editing or moving take the focus from the banner.
@@ -380,6 +403,8 @@ void Application::homeFocus(bool jump) {
             now = "f:sr";
         else if (home.nav == home.tabs.size() + 3)
             now = "f:as";
+        else if (home.nav == home.tabs.size() + 4)
+            now = "f:sv";
     } else if (home.heroFocus)
         now = "f:hero";
     else if (home.editing && home.editHide)
@@ -416,27 +441,80 @@ void Application::homeFocus(bool jump) {
                 motion_.spring(name, target, springParams(kit::motion::spring::row));
         }
     }
-    // Google TV's banner holds the focus until Down: then the rows rise over it, the focused one at
-    // the top. Without a banner of its own (the Live tab, an older server) the hero follows the
-    // focus, so the first rows stay under it, and past them the focused row takes the first row's
-    // place, the ones before it above.
+    // Google TV's Home, as measured on its 2025 home (gtv-refs/motion.md): with the bar focused the
+    // banner is compact and the top picks and Your apps sit under it; the banner focused grows its
+    // description and button and the rows drop; the top picks focused lose the bar and the banner
+    // shows the focused title; Your apps focused rises a little over the dimmed art; further down
+    // the rows rise to the top, the focused one's title large. Without a banner of its own (the
+    // Live tab, an older server) the first rows stay under the hero and past them the focused row
+    // takes the first row's place.
     const bool kindRows = home.tabs[home.tab].key == "apps" && !grid;
     const bool overBanner = homeHeroOffered();
+    enum class Place { Bar, Banner, Picks, Apps, Lower, Other };
+    Place place = Place::Other;
+    if (overBanner && !grid) {
+        if (home.navigation)
+            place = Place::Bar;
+        else if (home.heroFocus)
+            place = Place::Banner;
+        else if (home.row < home.rows.size())
+            place = home.rows[home.row].key == "trending" ? Place::Picks
+                    : home::isApps(home.rows[home.row]) ? Place::Apps
+                                                        : Place::Lower;
+    }
+    const bool risen = place == Place::Lower;
+    const bool namedApps = home.tabs[home.tab].key == "apps";
+    auto tween = [&](const std::string &name, double to) {
+        if (jump)
+            motion_.set(name, to);
+        else
+            motion_.tween(name, to, ms::page, easing(ease::decelerate));
+    };
+    tween("rs", risen ? 1 : 0);
+    tween("bd", home.navigation && !home.editing ? 1 : 0);
+    tween("he", place == Place::Banner || place == Place::Picks ? 1 : 0); // the banner's description
+    tween("hb", place == Place::Banner ? 1 : 0);                          // and its button
+    tween("ht", place == Place::Apps || place == Place::Lower ? 0 : 1);   // the banner's text
+    tween("hd", place == Place::Apps ? 1 : 0);                            // the art dimmed
+    tween("hu", place == Place::Picks ? 1 : 0); // a focused pick's lines, higher up, without dots
+    tween("ba", place == Place::Picks || place == Place::Apps || place == Place::Lower ? 1 : 0);
+    std::vector<home::RowLook> looks;
+    for (size_t r = 0; r < home.rows.size(); ++r) {
+        home::RowLook look;
+        look.risen = risen ? 1 : 0;
+        look.grow = risen && r == home.row ? 1 : 0;
+        look.names = namedApps ? 1 : home::isApps(home.rows[r]) && (risen ? r == home.row : place == Place::Apps) ? 1 : 0;
+        tween(home::id("rg", r), look.grow);
+        tween(home::id("rn", r), look.names);
+        looks.push_back(look);
+    }
+    const std::vector<float> tops = home::rowTops(home.rows, looks);
     const int firstScreenRows = home.tabs[home.tab].key == "home" ? 1 : 0;
-    const int contentRow = static_cast<int>(home.row) - static_cast<int>(defaultRow(home));
-    double stack = home.navigation || home.heroFocus || grid ? 0
-                   : kindRows   ? home::kindStackTarget(home.row, home.rows.size())
-                   : overBanner ? kit::geometry::risenStackTarget(contentRow)
-                                : kit::geometry::stackTarget(contentRow <= firstScreenRows ? 0
-                                                                                           : contentRow);
+    const size_t first = defaultRow(home);
+    const int contentRow = static_cast<int>(home.row) - static_cast<int>(first);
+    double stack = 0;
+    if (place == Place::Banner)
+        stack = kit::layout::bannerDrop;
+    else if (place == Place::Picks)
+        stack = kit::layout::picksDrop;
+    else if (place == Place::Apps)
+        stack = kit::layout::appsFocusTop - (tops[home.row] + home::labelArea(looks[home.row]));
+    else if (place == Place::Lower)
+        stack = kit::layout::rowsRisenTop - tops[home.row];
+    else if (home.row < home.rows.size() && !home.navigation && !home.heroFocus && !grid) {
+        if (kindRows)
+            stack = home::kindStackTarget(home.row, home.rows.size());
+        else if (contentRow > firstScreenRows && first < tops.size())
+            stack = tops[first] - tops[home.row];
+    }
     // A row of the first screen that reaches past the bottom (Your apps, with the focused app's
     // name under it) rises just enough to show it whole.
-    if (!home.navigation && !home.heroFocus && !grid && !kindRows && !overBanner &&
+    if (place == Place::Other && !home.navigation && !home.heroFocus && !grid && !kindRows &&
         contentRow >= 0 && contentRow <= firstScreenRows && home.row < home.rows.size()) {
         const CardRow &row = home.rows[home.row];
-        const float bottom = kit::geometry::rowItemsY(static_cast<int>(home.row)) +
+        const float bottom = tops[home.row] + home::labelArea(looks[home.row]) +
                              (home::isApps(row) ? kit::layout::appNameTop + kit::type::labelM.line
-                                                : home::item(row, home.row, 0).h) +
+                                                : home::itemHeight(row)) +
                              kit::layout::rowLabelGap;
         if (bottom > kit::canvas::height)
             stack = std::min(stack, static_cast<double>(kit::canvas::height - bottom));
@@ -604,12 +682,14 @@ void Application::homeUpdate() {
         const size_t firstScreenEnd = defaultRow(home) + 2;
         const bool appFocus = focus && focus->kind == "app" && picks;
         bool onSpotlight = home.spotlightOwn
-                               ? home.navigation || home.heroFocus || appFocus ||
-                                     home.row < firstScreenEnd || !focus
+                               ? home.navigation || home.heroFocus || !focus
                                : home.navigation || home.row == rowIndex(home.rows, "trending") ||
                                      appFocus;
+        (void)firstScreenEnd;
         Card want;
-        if (focus && !(home.spotlightOwn && onSpotlight) && !appFocus)
+        if (home.spotlightOwn && appFocus && !flow_.wantId.empty())
+            want = flow_.want; // Google TV keeps the last art, dimmed, behind Your apps
+        else if (focus && !(home.spotlightOwn && onSpotlight) && !appFocus)
             want = *focus;
         else if (picks)
             want = home.spotlight[home.spotIndex];
@@ -766,7 +846,10 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
         art.newest = incoming;
         art.image[incoming] = path;
         art.artAlpha[incoming] = artAlpha;
-        art.tint[incoming] = tintOf(card);
+        const int tone = pictures_ && !path.empty()
+                             ? pictures_->view(path, kHeroWidth, kHeroHeight, ImageFit::Cover, now_).tone
+                             : -1;
+        art.tint[incoming] = tone >= 0 && isTitle(card) ? scrimOf(tone) : tintOf(card);
         art.wallTint = art.tint[incoming];
         std::string in = home::id("ha", incoming), out = home::id("ha", outgoing);
         if (instant || !hadArt) {

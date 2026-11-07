@@ -22,6 +22,8 @@ inline std::vector<size_t> navigationStops(const ViewState &state) {
     // The assistant, where there is one, comes before the gear in their capsule.
     if (state.discover["assistant"].boolean())
         stops.push_back(state.home.tabs.size() + 3);
+    // The screen saver's button, as Google TV's, then the gear.
+    stops.push_back(state.home.tabs.size() + 4);
     stops.push_back(state.home.tabs.size() + 1);
     return stops;
 }

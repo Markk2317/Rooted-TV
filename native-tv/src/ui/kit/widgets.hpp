@@ -69,6 +69,7 @@ struct TopBar {
     // The assistant leads the gear's capsule where a Gemini key is saved, as Google TV's Gemini.
     bool assistant = false;
     float assistantFocus = 0;
+    float saverFocus = 0; // the screen saver's button, before the gear
     std::string clock;
     // After the clock and a divider, as Google TV ends its bar with its name.
     std::string wordmark = "Native Tv";
@@ -90,6 +91,8 @@ struct RoundButton {
     bool avatar = false; // gradient fill instead of `fill`
     Color fill = color::surface3; // opaque: the icon keeps its contrast over bright art
     Color ink = color::onSurface;
+    Color focusFill = color::focusFill;
+    std::string tooltip; // under the button while it has the focus, as on Google TV's bar
     float focus = 0; // fill fades to focus fill, ink to on-focus, scale to 1.12
     Enter enter;
 };
@@ -112,8 +115,16 @@ struct Hero {
     float trailerAlpha = 0;
     // A title: source row, title, and one line of facts, or, in the banner's own carousel, why it
     // is shown and its logline (Google TV's "Trending | ..."). An app: its icon beside the lines,
-    // and the key hint under them. sourceImage: the service's icon on the source row.
-    std::string source, title, facts, description, image, hint, tag, sourceImage;
+    // and the key hint under them. wordmark: the service's wordmark (an icon file, drawn white)
+    // in the source row's place, as Google TV shows it over the banner's title.
+    std::string source, title, facts, description, image, hint, tag, wordmark;
+    // Google TV's banner with the focus (or showing a focused top pick): `more` (its description,
+    // two lines) under the line, fading in with `expand`, and `button` under that with `buttonAlpha`.
+    std::string more, button;
+    float expand = 0, buttonAlpha = 0;
+    float textAlpha = 1; // the text leaves while Your apps or the rows below have the focus
+    float dim = 0;       // 0..1: the art dimmed behind Your apps
+    float lift = 0;      // px the lines move up: Google TV shows a focused top pick's higher
     // Source row, title and the lines under it enter one after another (spec 5.3).
     Enter text[3];
 };
@@ -147,13 +158,17 @@ struct Row {
     std::string label;
     float scrollX = 0; // the row's horizontal spring
     float dim = 0;     // 0..1: focus is in another row
+    bool placed = false; // `y` holds the title's top; else the first screen's place for `index`
+    float y = 0;
+    float px = 24;     // the title's size: 24 over the banner, 29 risen, 52 for the focused row
+    float grow = 0;    // 0..1: the focused row's title, white and large
     Enter enter;
 };
 // The label only; items scroll, the label stays.
 void row(Paint paint, const Row &row);
 // An item's box inside the scrolled row.
 inline Rect rowItem(const Row &row, int index, float width, float gap) {
-    return {canvas::safeX + index * (width + gap) + row.scrollX, geometry::rowItemsY(row.index),
+    return {layout::homeX + index * (width + gap) + row.scrollX, geometry::rowItemsY(row.index),
             width, 0};
 }
 
@@ -175,6 +190,7 @@ struct AppCircle {
     std::string image; // the app's own artwork, masked to the circle
     Color color = color::surface3;
     bool named = false; // the name stays under the circle (the Apps page); else it shows on focus
+    float names = 0;    // 0..1: every name shows, as in Google TV's focused Your apps row
     float nameWidth = 0; // the name's box; 0 is a box a little wider than the circle
     float focus = 0;
     Enter enter;

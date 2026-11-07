@@ -184,7 +184,9 @@ def catalogue(profiles=1, sort="custom"):
 def discover(assistant=False):
     # The banner's own titles (the server's featured row) and the top picks after them.
     return {"ok": True, "enabled": True, "titlesEnabled": True, "assistant": assistant, "rows": [
-        {"key": "featured", "title": "Trending", "items": [item(n) for n in range(6)]},
+        {"key": "featured", "title": "Trending",
+         "items": [dict(item(n), **({"service": service} if service else {}))
+                   for n, service in enumerate(("netflix", "prime", "disney", None, "netflix", None))]},
         {"key": "trending", "items": [item(n) for n in range(6, 14)]},
         {"key": "continue", "items": [dict(item(n), service="prime", progress=p)
                                       for n, p in ((8, .35), (3, .7), (9, .12))]},

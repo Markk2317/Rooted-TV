@@ -27,13 +27,15 @@ enum class Screen {
 struct HeroText {
     // source: the row the card came from; facts: year, rating, length; image and hint: an app's
     // icon and what OK does, in place of a title's description.
-    // tag: why the banner shows the title ("Trending"), before its logline; sourceImage: the icon of
-    // the service that has it, beside the source line.
-    std::string source, title, facts, description, image, hint, tag, sourceImage;
+    // tag: why the banner shows the title ("Trending"), before its logline; wordmark: the icon file
+    // of the service's wordmark ("wordmark-netflix"), drawn in the source line's place.
+    // more: what the banner adds under its line once it has the focus; button: its button then.
+    std::string source, title, facts, description, image, hint, tag, wordmark, more, button;
     bool operator==(const HeroText &other) const {
         return source == other.source && title == other.title && facts == other.facts &&
                description == other.description && image == other.image && hint == other.hint &&
-               tag == other.tag && sourceImage == other.sourceImage;
+               tag == other.tag && wordmark == other.wordmark && more == other.more &&
+               button == other.button;
     }
 };
 struct HeroArt {
@@ -195,6 +197,7 @@ class Application : private ScreenHost {
     bool isRecents() const;
     void homeStart();
     void homeData();
+    void startScreensaver();
     void homeFocus(bool jump = false);
     void homeKeyMoved(Key key);
     void homeSelectTab(size_t tab);

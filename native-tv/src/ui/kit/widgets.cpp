@@ -213,7 +213,7 @@ void tabPill(Paint paint, float left, float right, float hot, float alphaFactor)
     Rect area = geometry::pill(left, right);
     // Google TV's selected tab is a light pill with dark text, focused or not.
     paint.scene.shape(area,
-                      faded(focus::mix(color::tabSelected, color::focusFill, hot), alphaFactor),
+                      faded(focus::mix(color::tabSelected, color::tabFocused, hot), alphaFactor),
                       roundRadius(area));
 }
 void roundButton(Paint paint, const RoundButton &button) {
@@ -229,9 +229,16 @@ void roundButton(Paint paint, const RoundButton &button) {
         base.gradient =
             gradient(135, {{rgb(0xF2B27A), 0}, {rgb(0xB05E8A), .55f}, {rgb(0x5C5AA8), 1}});
     if (button.focus > 0)
-        scene.shape(button.rest, faded(color::focusFill, focus::clamp01(button.focus)), rounding);
+        scene.shape(button.rest, faded(button.focusFill, focus::clamp01(button.focus)), rounding);
     Color ink = focus::inkAt(button.ink, color::onFocus, button.focus);
-    paint.glyphs.icon(scene, centreOf(button.rest, 28), button.icon, ink);
+    paint.glyphs.icon(scene, centreOf(button.rest, std::min(button.rest.h * .5f, 36.0f)), button.icon,
+                      ink);
+    if (!button.tooltip.empty() && button.focus > .004f) {
+        const float width = 360, cx = button.rest.x + button.rest.w / 2;
+        text(paint, {cx - width / 2, button.rest.y + button.rest.h + 24, width, type::labelM.line},
+             button.tooltip, type::labelM, faded(color::onSurface, focus::clamp01(button.focus)),
+             Node::Align::Center);
+    }
     text(paint,
          {button.rest.x, button.rest.y + (button.rest.h - avatarStyle.line) / 2, button.rest.w,
           avatarStyle.line},
@@ -247,13 +254,13 @@ void topBar(Paint paint, const TopBar &bar) {
     const float tabsRight = tabs.empty() ? geometry::tabsLeft(bar.search) : tabs.back().x + tabs.back().w;
     Rect tabCapsule = geometry::capsule(geometry::capsuleLeft(), tabsRight + layout::capsulePad);
     scene.shape(tabCapsule, alpha::capsule, roundRadius(tabCapsule));
-    Rect gear = geometry::settingsButton(tabsRight);
-    const Rect assistantButton = gear;
-    if (bar.assistant)
-        gear.x += layout::circle + 2 * layout::capsulePad;
-    Rect gearCapsule = geometry::capsule(assistantButton.x - 2 * layout::capsulePad,
-                                         gear.x + gear.w + 2 * layout::capsulePad);
-    scene.shape(gearCapsule, alpha::capsule, roundRadius(gearCapsule));
+    // Google TV's second capsule: the assistant where there is one, the screen saver, the gear.
+    const int buttons = bar.assistant ? 3 : 2;
+    const Rect firstIcon = geometry::iconButton(tabsRight, 0),
+               lastIcon = geometry::iconButton(tabsRight, buttons - 1);
+    Rect iconCapsule = geometry::capsule(firstIcon.x - layout::iconPad,
+                                         lastIcon.x + lastIcon.w + layout::iconPad);
+    scene.shape(iconCapsule, alpha::capsule, roundRadius(iconCapsule));
     tabPill(paint, bar.pillLeft, bar.pillRight, bar.pillHot, bar.pillAlpha);
 
     RoundButton avatar;
@@ -265,22 +272,24 @@ void topBar(Paint paint, const TopBar &bar) {
     roundButton(paint, avatar);
 
     if (bar.search) {
-        // Inside the capsule the buttons are its own colour until focused.
+        // Search is a slot of the capsule, lit like a tab when focused.
         RoundButton search;
         search.rest = geometry::searchButton();
         search.id = "tool:2";
         search.icon = "search";
         search.fill = clear;
+        search.focusFill = color::tabFocused;
         search.focus = bar.searchFocus;
         roundButton(paint, search);
     }
 
     for (size_t i = 0; i < tabs.size(); ++i) {
-        // The selected tab's text is dark on its light pill; the others are on the capsule.
+        // The selected tab's text is dark on its light pill; the others are white while the bar
+        // has the focus and dimmer without it.
         Color ink = static_cast<int>(i) == bar.selected
                         ? focus::inkAt(color::onSurface, color::onFocus,
                                        focus::clamp01(bar.pillAlpha))
-                        : color::onSurface2;
+                        : focus::inkAt(alpha::clockInk, color::onSurface, bar.pillHot);
         text(paint,
              {tabs[i].x, layout::navTop + (layout::navH - type::nav.line) / 2, tabs[i].w,
               type::nav.line},
@@ -288,34 +297,38 @@ void topBar(Paint paint, const TopBar &bar) {
         hit(scene, tabs[i], "nav:tab:" + std::to_string(i));
     }
 
-    if (bar.assistant) {
-        RoundButton assistant;
-        assistant.rest = assistantButton;
-        assistant.id = "tool:3";
-        assistant.icon = "sparkle";
-        assistant.fill = clear;
-        assistant.focus = bar.assistantFocus;
-        roundButton(paint, assistant);
-    }
+    auto iconButton = [&](int index, const char *id, const char *icon, const char *tooltip,
+                          float focus) {
+        RoundButton button;
+        button.rest = geometry::iconButton(tabsRight, index);
+        button.id = id;
+        button.icon = icon;
+        button.fill = alpha::iconWell;
+        button.focusFill = color::tabSelected;
+        button.tooltip = tooltip;
+        button.focus = focus;
+        if (button.id == "nav:settings" && bar.settingsSelected) {
+            button.fill = alpha::accentDim;
+            button.ink = color::accent;
+        }
+        roundButton(paint, button);
+    };
+    int index = 0;
+    if (bar.assistant)
+        iconButton(index++, "tool:3", "sparkle", "Gemini", bar.assistantFocus);
+    iconButton(index++, "tool:4", "frame", "Screensaver", bar.saverFocus);
+    iconButton(index, "nav:settings", "settings", "Settings", bar.settingsFocus);
 
-    RoundButton settings;
-    settings.rest = gear;
-    settings.id = "nav:settings";
-    settings.icon = "settings";
-    settings.fill = bar.settingsSelected ? alpha::accentDim : clear;
-    settings.ink = bar.settingsSelected ? color::accent : color::onSurface;
-    settings.focus = bar.settingsFocus;
-    roundButton(paint, settings);
-
-    // The clock, a divider and the wordmark close the bar at the right margin.
+    // The clock, a divider and the wordmark close the bar at the right margin, translucent.
     const float markWidth = paint.glyphs.measure(bar.wordmark, type::clock);
     Rect clockBox = geometry::clock(markWidth);
-    text(paint, clockBox, bar.clock, type::clock, color::onSurface, Node::Align::Right);
+    text(paint, clockBox, bar.clock, type::clock, alpha::clockInk, Node::Align::Right);
     const float dividerX = clockBox.x + clockBox.w + layout::wordmarkGap;
-    scene.shape({dividerX, layout::navTop + (layout::navH - 32) / 2, 2, 32}, color::onSurface3, 1);
+    scene.shape({dividerX, layout::navTop + (layout::navH - 30) / 2, 2, 30},
+                faded(alpha::clockInk, .7f), 1);
     text(paint,
          {dividerX + 2 + layout::wordmarkGap, clockBox.y, markWidth, type::clock.line},
-         bar.wordmark, type::clock, color::onSurface2);
+         bar.wordmark, type::clock, alpha::clockInk);
 }
 
 // ---- Hero and pagination -----------------------------------------------------------------------
@@ -333,11 +346,9 @@ void heroWall(Paint paint, const Hero &hero) {
             for (const HeroSlot &slot : hero.slot) {
                 if (slot.opacity <= .002f)
                     continue;
-                float grow = 1 + .09f * focus::clamp01(slot.kenBurns);
+                // Google TV's banner art holds still (no push-in).
                 scene.pushOpacity(slot.opacity);
-                scene.pushTransform(Transform::scaleAbout(.7f * canvas::width, .5f * canvas::height,
-                                                          grow, grow, -18 * slot.kenBurns,
-                                                          -6 * slot.kenBurns));
+                scene.pushTransform(Transform::translate(0, 0));
                 if (!slot.image.empty()) {
                     if (slot.artAlpha < 1)
                         scene.pushOpacity(slot.artAlpha);
@@ -346,10 +357,12 @@ void heroWall(Paint paint, const Hero &hero) {
                         scene.popOpacity();
                 }
                 scene.popTransform();
-                // The prototype's radial tint, as a linear fade from the bottom-left corner.
+                // Google TV's left scrim: the art's own colour, very dark, solid under the text
+                // and gone by the middle of the screen.
                 Node &tint = scene.shape(screen, clear);
-                tint.gradient =
-                    gradient(55, {{faded(slot.tint, 1), 0}, {faded(slot.tint, 0), .7f}});
+                tint.gradient = gradient(90, {{faded(slot.tint, 1), 0},
+                                              {faded(slot.tint, .9f), .31f},
+                                              {faded(slot.tint, 0), .56f}});
                 scene.popOpacity();
             }
             if (!hero.trailer.empty() && hero.trailerAlpha > .002f) {
@@ -360,23 +373,22 @@ void heroWall(Paint paint, const Hero &hero) {
             scene.popClip();
             scene.popTransform();
         }
-        // Three static layers keep the text legible over any art.
-        Color shade = color::ink;
+        // Under the rows the art fades to the page's near-black (solid from y 850, clear above
+        // y 550, as measured on Google TV), and a light shade at the top keeps the bar legible.
         Node &bottom = scene.shape(screen, clear);
-        bottom.gradient = gradient(0, {{faded(shade, .97f), 0},
-                                       {faded(shade, .78f), .22f},
-                                       {faded(shade, .30f), .46f},
-                                       {faded(shade, 0), .64f}});
-        Node &left = scene.shape(screen, clear);
-        left.gradient = gradient(90, {{faded(shade, .60f), 0}, {faded(shade, 0), .58f}});
+        bottom.gradient = gradient(0, {{color::page, 0},
+                                       {color::page, .213f},
+                                       {faded(color::page, .6f), .34f},
+                                       {faded(color::page, 0), .49f}});
         Node &top = scene.shape(screen, clear);
-        // Strong enough that the search and settings buttons keep 3:1 over bright art.
-        top.gradient = gradient(180, {{faded(shade, .72f), 0}, {faded(shade, 0), .26f}});
+        top.gradient = gradient(180, {{faded(color::ink, .45f), 0}, {faded(color::ink, 0), .2f}});
         scene.popOpacity();
     }
-    // Rises with the rows so cards stay legible once the hero has scrolled away.
-    if (parallax.scrimOpacity > .002f)
-        scene.shape(screen, faded(alpha::scrimStrong, parallax.scrimOpacity));
+    // Rises with the rows so cards stay legible once the hero has scrolled away; behind Your apps
+    // the art stays, dimmed.
+    const float veil = std::max(parallax.scrimOpacity, .55f * focus::clamp01(hero.dim));
+    if (veil > .002f)
+        scene.shape(screen, faded(color::page, veil));
 }
 void ambientWall(Paint paint, float amount, Color tint) {
     if (amount <= .002f)
@@ -392,12 +404,28 @@ void ambientWall(Paint paint, float amount, Color tint) {
     wash.gradient = gradient(45, {{faded(tint, 1), 0}, {faded(tint, 0), .7f}});
     scene.popOpacity();
 }
+namespace {
+struct WordmarkSize {
+    float w, h;
+};
+// The services' wordmarks at the height that gives them about the same weight; each width keeps
+// its SVG's aspect.
+WordmarkSize wordmarkSize(const std::string &name) {
+    if (name == "wordmark-netflix")
+        return {34 * 1024 / 276.742f, 34};
+    if (name == "wordmark-prime")
+        return {46 * 800.3f / 246.3f, 46};
+    if (name == "wordmark-disney")
+        return {56 * 1041 / 565.0f, 56};
+    return {40, 40};
+}
+} // namespace
 void heroText(Paint paint, const Hero &hero) {
     Scene &scene = paint.scene;
     geometry::HeroParallax parallax = geometry::heroParallax(hero.stackY);
-    if (parallax.textAlpha <= .002f)
+    if (parallax.textAlpha * hero.textAlpha <= .002f)
         return;
-    Group page(scene, {parallax.textAlpha, parallax.textY});
+    Group page(scene, {parallax.textAlpha * hero.textAlpha, parallax.textY - hero.lift});
 
     // An app's icon stands left of its lines, so they all move right by its width.
     const float dx = hero.image.empty() ? 0 : layout::heroArt + layout::heroArtGap;
@@ -418,17 +446,19 @@ void heroText(Paint paint, const Hero &hero) {
         picture.shadow = {0, elevation::raised.dy, elevation::raised.blur, 0,
                           {0, 0, 0, elevation::raised.alpha}};
     }
-    if (!invisible(hero.text[0]) && !hero.source.empty()) {
+    if (!invisible(hero.text[0]) && !hero.wordmark.empty()) {
+        // The service's wordmark, white, its foot on the source row's foot.
+        Group group(scene, hero.text[0]);
+        const WordmarkSize size = wordmarkSize(hero.wordmark);
+        paint.glyphs.icon(scene, {source.x, source.y + source.h - size.h, size.w, size.h},
+                          hero.wordmark, color::onSurface);
+    } else if (!invisible(hero.text[0]) && !hero.source.empty()) {
         Group group(scene, hero.text[0]);
         float x = source.x;
         Rect mark = {source.x, source.y + (source.h - layout::heroMark) / 2, layout::heroMark,
                      layout::heroMark};
-        // The service's icon leads the banner's source line, as Google TV shows the service's
-        // logo there; another title's source line has the play mark, an app's none.
-        if (!hero.sourceImage.empty()) {
-            scene.picture(mark, 0, layout::heroMark / 2).value = hero.sourceImage;
-            x += layout::heroMark + layout::heroMarkGap;
-        } else if (hero.image.empty()) {
+        // Another title's source line has the play mark, an app's none.
+        if (hero.image.empty()) {
             scene.shape(mark, alpha::accentDim, layout::heroMark / 2);
             paint.glyphs.icon(scene, centreOf(mark, 22), "play", color::accent);
             x += layout::heroMark + layout::heroMarkGap;
@@ -460,6 +490,20 @@ void heroText(Paint paint, const Hero &hero) {
             Rect body = beside(geometry::heroDescription());
             keyHint(paint, body.x, body.y + 8, "OK", hero.hint);
         }
+        // Google TV's banner with the focus: two lines of description, then its button.
+        Rect more = beside(geometry::heroDescription());
+        if (!hero.more.empty() && hero.expand > .004f)
+            text(paint, {more.x, more.y, layout::heroMoreW, type::body.line * 2}, hero.more,
+                 type::body, faded(color::onSurface2, focus::clamp01(hero.expand)),
+                 Node::Align::Left, 2);
+        if (!hero.button.empty() && hero.buttonAlpha > .004f) {
+            const float width = paint.glyphs.measure(hero.button, type::title) + 2 * 32;
+            Rect button = {more.x, more.y + (hero.more.empty() ? 0 : type::body.line * 2 + 20), width, 64};
+            Group shown(scene, {focus::clamp01(hero.buttonAlpha), 0});
+            scene.shape(button, color::tabFocused, button.h / 2);
+            text(paint, {button.x, button.y + (button.h - type::title.line) / 2, button.w, type::title.line},
+                 hero.button, type::title, color::onFocus, Node::Align::Center);
+        }
     }
 }
 void pagination(Paint paint, const Pagination &dots) {
@@ -467,14 +511,14 @@ void pagination(Paint paint, const Pagination &dots) {
         return;
     Scene &scene = paint.scene;
     Group group(scene, {dots.alpha, dots.y});
-    // Google TV's dots: the title on show has the larger, white one.
+    // Google TV's dots: all one size, the title on show's white and the others faint.
     for (int i = 0; i < dots.count; ++i) {
         Rect slot = geometry::dotSlot(i, dots.count);
         float current =
             i < static_cast<int>(dots.current.size()) ? focus::clamp01(dots.current[i]) : 0;
-        float side = layout::dot + 4 * current;
+        const float side = layout::dot;
         scene.shape({slot.x + (slot.w - side) / 2, slot.y + (slot.h - side) / 2, side, side},
-                    faded(color::onSurface, .42f + .58f * current), side / 2);
+                    faded(color::onSurface, .18f + .82f * current), side / 2);
     }
 }
 
@@ -485,8 +529,18 @@ void row(Paint paint, const Row &row) {
     if (invisible(row.enter))
         return;
     Group group(paint.scene, row.enter);
-    text(paint, geometry::rowLabel(row.index), row.label, type::labelL,
-         faded(color::onSurface2, focus::dimmedRowAlpha(row.dim)));
+    // The title is set at its largest size and scaled down, so it can grow smoothly.
+    Rect box = geometry::rowLabel(row.index);
+    if (row.placed)
+        box.y = row.y;
+    box.h = type::rowTitle.line;
+    const float scale = row.px / type::rowTitle.px;
+    Transform shrink = Transform::scaleAbout(box, 0, 0, scale);
+    paint.scene.pushTransform(shrink);
+    const Color rest = faded(color::onSurface2, focus::dimmedRowAlpha(row.dim * (1 - row.grow)));
+    text(paint, {box.x, box.y, box.w / scale, box.h}, row.label, type::rowTitle,
+         focus::mix(rest, color::rowTitleFocused, focus::clamp01(row.grow)));
+    paint.scene.popTransform();
 }
 void card(Paint paint, const PosterCard &poster) {
     focus::Look look = focus::lookAt(poster.rest, motion::scale::card, poster.focus);
@@ -495,9 +549,18 @@ void card(Paint paint, const PosterCard &poster) {
     Scene &scene = paint.scene;
     Transform scale = focus::transformAt(poster.rest, look.scale);
     Group group(scene, poster.enter, look.scale != 1 ? &scale : nullptr);
-    applyFocus(scene.shape(poster.rest, color::surface2, radius::md), look);
+    // Google TV's focused card: a thin light ring that stands off the card, the page showing in the
+    // gap, and no shadow.
+    if (look.ringAlpha > 0) {
+        const float gap = 4;
+        Rect around = {poster.rest.x - gap, poster.rest.y - gap, poster.rest.w + 2 * gap,
+                       poster.rest.h + 2 * gap};
+        Node &ring = scene.shape(around, clear, layout::cardR + gap);
+        ring.ring = {0, 3, faded(alpha::cardRing, look.ringAlpha)};
+    }
+    scene.shape(poster.rest, color::surface2, layout::cardR);
     if (!poster.image.empty())
-        scene.picture(poster.rest, 0, radius::md).value = poster.image;
+        scene.picture(poster.rest, 0, layout::cardR).value = poster.image;
     if (!poster.title.empty()) {
         // The title sits on a veil over the lower part of the art; on focus it rises to make
         // room for the facts line under it.
@@ -505,7 +568,7 @@ void card(Paint paint, const PosterCard &poster) {
         Rect lower = {poster.rest.x, poster.rest.y + poster.rest.h * .4f, poster.rest.w,
                       poster.rest.h * .6f};
         Node &veil = scene.shape(lower, clear);
-        veil.corners = {0, 0, radius::md, radius::md};
+        veil.corners = {0, 0, layout::cardR, layout::cardR};
         veil.gradient = gradient(180, {{{0, 0, 0, 0}, 0}, {{0, 0, 0, .78f}, 1}});
         float bottom = poster.rest.y + poster.rest.h - 10, left = poster.rest.x + 16,
               width = poster.rest.w - 32;
@@ -527,48 +590,51 @@ void card(Paint paint, const PosterCard &poster) {
     hit(scene, look.rect, poster.id);
 }
 void appCircle(Paint paint, const AppCircle &circle) {
-    focus::Look look = focus::lookAt(circle.rest, motion::scale::app, circle.focus);
-    if (invisible(circle.enter) || offCanvas(look.rect))
+    // Google TV's focused app: the circle grows a little inside a white ring that stands off it.
+    const float amount = focus::clamp01(circle.focus);
+    const Rect art = focus::scaledAbout(circle.rest, focus::scaleAt(motion::scale::app, amount));
+    const float gap = 3, ringWidth = 4;
+    const Rect outer = {art.x - gap - ringWidth, art.y - gap - ringWidth, art.w + 2 * (gap + ringWidth),
+                        art.h + 2 * (gap + ringWidth)};
+    if (invisible(circle.enter) || offCanvas(outer))
         return;
     Scene &scene = paint.scene;
-    Transform scale = focus::transformAt(circle.rest, look.scale);
-    Group group(scene, circle.enter, look.scale != 1 ? &scale : nullptr);
-    float rounding = circle.rest.h / 2;
-    // The ring and the shadow belong to the circle, not to its fill, which is hidden once an
-    // opaque picture covers it (Node::backing).
-    if (look.ringAlpha > 0)
-        applyFocus(scene.shape(circle.rest, clear, rounding), look);
+    Group group(scene, circle.enter);
+    if (amount > 0) {
+        Rect around = {art.x - gap, art.y - gap, art.w + 2 * gap, art.h + 2 * gap};
+        Node &ring = scene.shape(around, clear, around.h / 2);
+        ring.ring = {0, ringWidth, faded(white, amount)};
+    }
+    float rounding = art.h / 2;
     // The fill and the picture share one anti-aliased edge, so a fill in the app's colour shows
     // through the picture's rim as a light outline (LG gives Netflix, YouTube and Alexa white).
     // Under a picture the fill stops short of the edge, which then comes from the picture alone.
     const float tuck = circle.image.empty() ? 0 : rimTuck;
-    Rect fill = {circle.rest.x + tuck, circle.rest.y + tuck, circle.rest.w - 2 * tuck,
-                 circle.rest.h - 2 * tuck};
+    Rect fill = {art.x + tuck, art.y + tuck, art.w - 2 * tuck, art.h - 2 * tuck};
     Node &base = scene.shape(fill, circle.color, rounding - tuck);
     base.gradient = gradient(145, {{circle.color, 0},
                                    {withByteAlpha(circle.color, 0xcc), .55f},
                                    {{0, 0, 0, 0x55 / 255.0f}, 1.4f}});
     base.backing = !circle.image.empty();
     if (!circle.image.empty())
-        scene.picture(circle.rest, 0, rounding).value = circle.image;
+        scene.picture(art, 0, rounding).value = circle.image;
     else
-        paint.glyphs.icon(scene, centreOf(circle.rest, 52), circle.icon, white);
-    // The name appears under the focused circle, rising into place; a named circle keeps it,
-    // and only brightens it on focus.
-    if (circle.named || circle.focus > .004f) {
+        paint.glyphs.icon(scene, centreOf(art, 52 * art.w / circle.rest.w), circle.icon, white);
+    // Names: the focused one's, or every one's in a row that carries them (the Apps page, and
+    // Google TV's focused Your apps row), the focused one lighter.
+    const float shown = circle.named ? 1 : std::max(focus::clamp01(circle.names), amount);
+    if (shown > .004f) {
         float cx = circle.rest.x + circle.rest.w / 2,
               width = circle.nameWidth > 0 ? circle.nameWidth : circle.rest.w + 104;
-        float amount = focus::clamp01(circle.focus);
-        float rise = circle.named ? 0 : focus::labelRise(amount);
-        Color ink = circle.named ? focus::inkAt(color::onSurface2, color::onSurface, amount)
-                                 : faded(color::onSurface, amount);
+        float rise = circle.named || circle.names > .004f ? 0 : focus::labelRise(amount);
+        Color ink = focus::inkAt(color::onSurface3, color::appNameFocused, amount);
         // The gap under the circle is the same at every size: appNameTop is measured for Home's
         // circle (appD), the Apps grid's are 156 px.
         float nameTop = circle.rest.h + (layout::appNameTop - layout::appD);
-        text(paint, {cx - width / 2, circle.rest.y + nameTop + rise, width, type::labelM.line},
-             circle.name, type::labelM, ink, Node::Align::Center);
+        text(paint, {cx - width / 2, circle.rest.y + nameTop + rise, width, type::labelS.line},
+             circle.name, type::labelS, faded(ink, shown), Node::Align::Center);
     }
-    hit(scene, look.rect, circle.id);
+    hit(scene, outer, circle.id);
 }
 void inputTile(Paint paint, const InputTile &tile) {
     focus::Look look = focus::lookAt(tile.rest, motion::scale::input, tile.focus);

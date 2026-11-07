@@ -20,6 +20,7 @@ struct DecodedImage {
     int width = 0, height = 0;
     std::vector<uint8_t> rgba; // empty when decoding failed
     bool opaque = false;       // no pixel is see-through: whatever is drawn under it never shows
+    int tone = -1;             // 0xRRGGBB: the mean of the picture's left third; -1 unknown
 };
 // JPEG or PNG (SDL_image) resampled to the size it will be drawn at, so the GPU never
 // minifies a large texture. Safe to call from any thread.
@@ -32,6 +33,7 @@ struct ImageView {
     bool failed = false;       // the server has none (or the decode failed): nothing more to wait for
     bool opaque = false;       // see DecodedImage; only meaningful once the texture is
     double remainingMs = -1;   // a trailer (graphics/video_player.hpp): until its last picture
+    int tone = -1;             // see DecodedImage
 };
 // Pictures keyed by (id, size) under a texture byte budget. Decoding runs on worker threads;
 // the render thread only copies finished rows into textures, as many bytes per frame as
@@ -56,6 +58,7 @@ class ImageLoader {
         TextureId texture = 0;
         int textureWidth = 0, textureHeight = 0, rowsUploaded = 0;
         bool opaque = false;
+        int tone = -1;
         size_t bytes = 0;
         unsigned usedTick = 0;
         double arrivedMs = 0, retryAtMs = 0;

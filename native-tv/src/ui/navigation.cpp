@@ -249,7 +249,9 @@ void Application::screenKey(Key key) {
             rebuildHome();
             homeStart();
             homeData();
-        } else
+        } else if (home.nav == home.tabs.size() + 4)
+            startScreensaver();
+        else
             route(home.nav == home.tabs.size()       ? "profiles"
                   : home.nav == home.tabs.size() + 1 ? "quick"
                   : home.nav == home.tabs.size() + 2 ? "search"

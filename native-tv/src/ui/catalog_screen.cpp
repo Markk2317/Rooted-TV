@@ -752,8 +752,8 @@ class CatalogScreen final : public ScreenView {
         if (apps_.empty() && !catalogFailed_ && !catalog_.valid()) {
             // The first read: the list is on its way.
             kit::Loading spinner;
-            spinner.area = {kit::canvas::safeX, layout::gridTop,
-                            kit::canvas::width - 2 * kit::canvas::safeX, 560};
+            spinner.area = {kit::layout::homeX, layout::gridTop,
+                            kit::canvas::width - 2 * kit::layout::homeX, 560};
             spinner.label = say::msg("apps.install.loading", "Loading the catalog…");
             spinner.phase = kit::spinnerPhase(motion, "cat:spin");
             kit::loadingIndicator(paint, spinner);
@@ -774,15 +774,15 @@ class CatalogScreen final : public ScreenView {
                     : say::msg("tv.apps.install.loading.hint",
                                "The TV is fetching the list. This needs internet access.");
             paint.glyphs.text(
-                scene, {kit::canvas::safeX, layout::gridTop + 8, 1400, kit::type::headline.line},
+                scene, {kit::layout::homeX, layout::gridTop + 8, 1400, kit::type::headline.line},
                 title, kit::type::headline, kit::color::onSurface);
             paint.glyphs.text(
-                scene, {kit::canvas::safeX, layout::gridTop + 72, 1400, kit::type::body.line * 2},
+                scene, {kit::layout::homeX, layout::gridTop + 72, 1400, kit::type::body.line * 2},
                 hint, kit::type::body, kit::color::onSurface2, Node::Align::Left, 2);
             if (catalogFailed_)
                 paint.glyphs.text(
                     scene,
-                    {kit::canvas::safeX, layout::gridTop + 160, 1400, kit::type::labelM.line},
+                    {kit::layout::homeX, layout::gridTop + 160, 1400, kit::type::labelM.line},
                     say::msg("tv.apps.install.press.retry", "Press OK to try again"),
                     kit::type::labelM, kit::color::onSurface3);
             return;
@@ -847,7 +847,7 @@ class CatalogScreen final : public ScreenView {
     // What the focused app is, under the grid.
     void strip(ScreenHost &, kit::Paint paint, const App &app) {
         Scene &scene = paint.scene;
-        Rect box = {kit::canvas::safeX, kStripY, kit::canvas::width - 2 * kit::canvas::safeX,
+        Rect box = {kit::layout::homeX, kStripY, kit::canvas::width - 2 * kit::layout::homeX,
                     kStripH};
         Node &base = scene.shape(box, kit::color::surface1, kit::radius::lg);
         base.ring = {1, 0, kit::alpha::outline};
@@ -903,7 +903,7 @@ class CatalogScreen final : public ScreenView {
             : state == "verifying"  ? say::msg("apps.install.verifying", "Checking the package…")
             : state == "installing" ? say::msg("apps.install.installing", "Installing…")
                                     : say::msg("apps.install.elevating", "Setting up root access…");
-        Rect box = {kit::canvas::safeX, layout::gridTop, 1000, 300};
+        Rect box = {kit::layout::homeX, layout::gridTop, 1000, 300};
         Node &card = scene.shape(box, kit::color::surface1, kit::radius::xl);
         card.ring = {1, 0, kit::alpha::outline};
         paint.glyphs.text(scene, {box.x + 48, box.y + 48, box.w - 96, kit::type::headline.line},

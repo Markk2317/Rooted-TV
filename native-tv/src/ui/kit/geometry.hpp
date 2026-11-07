@@ -15,28 +15,28 @@ constexpr float clamp(float value, float low, float high) {
 }
 
 // Top bar.
+// Home, its tabs and the bar keep Google TV's margin (layout::homeX, 116 px); Native Tv's own pages
+// (Settings, setup) keep canvas::safeX.
 constexpr Rect avatar() {
-    return {canvas::safeX, layout::navTop + (layout::navH - layout::avatar) / 2, layout::avatar,
+    return {layout::homeX, layout::navTop + (layout::navH - layout::avatar) / 2, layout::avatar,
             layout::avatar};
 }
 // As on Google TV since its 2025 redesign, a capsule after the avatar holds search, where it is
 // offered, and the tabs; the gear has a capsule of its own after it.
 constexpr float capsuleLeft() {
-    return canvas::safeX + layout::avatar + layout::avatarGap;
+    return layout::homeX + layout::avatar + layout::avatarGap;
 }
 // A capsule round the bar's items from `left` to `right`, a little taller than the tab pill.
 constexpr Rect capsule(float left, float right) {
     return {left, layout::navTop - layout::capsuleInset, right - left,
             layout::navH + 2 * layout::capsuleInset};
 }
-// Search sits in the capsule's rounded end, as far from its edge as from its top.
+// Search leads the capsule as a slot of its own, a pill as tall as the tabs'.
 constexpr Rect searchButton() {
-    return {capsuleLeft() + 2 * layout::capsulePad,
-            layout::navTop + (layout::navH - layout::circle) / 2, layout::circle, layout::circle};
+    return {capsuleLeft() + layout::capsulePad, layout::navTop, layout::searchW, layout::navH};
 }
 constexpr float tabsLeft(bool search = false) {
-    return capsuleLeft() + layout::capsulePad +
-           (search ? layout::circle + 2 * layout::capsulePad : 0);
+    return capsuleLeft() + layout::capsulePad + (search ? layout::searchW : 0);
 }
 constexpr float tabWidth(float textWidth) {
     return textWidth + 2 * layout::tabPad;
@@ -55,15 +55,17 @@ inline std::vector<Rect> tabRects(const std::vector<float> &textWidths, bool sea
 constexpr Rect pill(float left, float right) {
     return {left, layout::navTop, right - left, layout::navH};
 }
-// The gear's capsule follows the tabs' capsule, which ends a pad after the last tab.
-constexpr Rect settingsButton(float tabsRight) {
-    return {tabsRight + layout::capsulePad + layout::capsuleGap + 2 * layout::capsulePad,
+// The icon capsule follows the tabs' capsule, which ends a pad after the last tab: its round
+// buttons (the assistant where there is one, the screen saver, the gear) one after another.
+constexpr Rect iconButton(float tabsRight, int index) {
+    return {tabsRight + layout::capsulePad + layout::capsuleGap + layout::iconPad +
+                index * (layout::circle + layout::iconGap),
             layout::navTop + (layout::navH - layout::circle) / 2, layout::circle, layout::circle};
 }
 // The clock ends where the divider before the wordmark begins; `wordmarkWidth` is the
 // wordmark's text, which ends at the right margin.
 constexpr Rect clock(float wordmarkWidth) {
-    return {canvas::width - canvas::safeX - wordmarkWidth - 2 * layout::wordmarkGap - 2 -
+    return {canvas::width - layout::homeX - wordmarkWidth - 2 * layout::wordmarkGap - 2 -
                 layout::clockW,
             layout::navTop + (layout::navH - type::clock.line) / 2, layout::clockW,
             type::clock.line};
@@ -71,24 +73,24 @@ constexpr Rect clock(float wordmarkWidth) {
 
 // Hero block, bottom-left of Home.
 constexpr Rect heroSource() {
-    return {canvas::safeX, layout::heroSourceTop, layout::heroW, layout::heroSourceH};
+    return {layout::homeX, layout::heroSourceTop, layout::heroW, layout::heroSourceH};
 }
 constexpr Rect heroTitle() {
-    return {canvas::safeX, heroSource().y + layout::heroSourceH + layout::heroTitleGap,
+    return {layout::homeX, heroSource().y + layout::heroSourceH + layout::heroTitleGap,
             layout::heroW, layout::heroTitleH};
 }
 constexpr Rect heroSubtitle() {
-    return {canvas::safeX, heroTitle().y + layout::heroTitleH + layout::heroSubGap, layout::heroW,
+    return {layout::homeX, heroTitle().y + layout::heroTitleH + layout::heroSubGap, layout::heroW,
             layout::heroSubH};
 }
 // Two lines of description, or an app's key hint, under the facts.
 constexpr Rect heroDescription() {
-    return {canvas::safeX, heroSubtitle().y + layout::heroSubH + layout::heroDescGap,
+    return {layout::homeX, heroSubtitle().y + layout::heroSubH + layout::heroDescGap,
             layout::heroDescW, layout::heroDescH};
 }
 // Pagination slots end at the right margin.
 constexpr Rect dotSlot(int index, int count = layout::dotSlots) {
-    return {canvas::width - canvas::safeX - count * layout::dotSlotW + index * layout::dotSlotW,
+    return {canvas::width - layout::homeX - count * layout::dotSlotW + index * layout::dotSlotW,
             layout::dotsTop, layout::dotSlotW, layout::dotSlotH};
 }
 
@@ -100,17 +102,17 @@ constexpr float rowItemsY(int row) {
     return rowLabelY(row) + layout::rowLabelH + layout::rowLabelGap;
 }
 constexpr Rect rowLabel(int row) {
-    return {canvas::safeX, rowLabelY(row), canvas::width - canvas::safeX, layout::rowLabelH};
+    return {layout::homeX, rowLabelY(row), canvas::width - layout::homeX, layout::rowLabelH};
 }
 constexpr Rect card(int row, int index) {
-    return {canvas::safeX + index * (layout::cardW + layout::cardGap), rowItemsY(row),
+    return {layout::homeX + index * (layout::cardW + layout::cardGap), rowItemsY(row),
             layout::cardW, layout::cardH};
 }
 constexpr Rect inputTile(int row, int index) {
     return card(row, index);
 }
 constexpr Rect appCircle(int row, int index) {
-    return {canvas::safeX + index * (layout::appD + layout::appGap), rowItemsY(row), layout::appD,
+    return {layout::homeX + index * (layout::appD + layout::appGap), rowItemsY(row), layout::appD,
             layout::appD};
 }
 // Width of a row's content, without the trailing gap.
@@ -121,54 +123,46 @@ constexpr float rowContentWidth(int count, float itemWidth, float gap) {
 inline float rowScrollTarget(int focus, int count, float itemWidth, float gap) {
     float pitch = itemWidth + gap, keep = static_cast<float>(std::min(focus, layout::rowKeep));
     float room = std::max(0.0f, rowContentWidth(count, itemWidth, gap) -
-                                    (canvas::width - 2 * canvas::safeX));
+                                    (canvas::width - 2 * layout::homeX));
     return -clamp((focus - keep) * pitch, 0, room);
 }
 // Vertical snap: the whole stack moves one row pitch per content row; the bar keeps it at 0.
 constexpr float stackTarget(int contentRow) {
     return contentRow <= 0 ? 0 : -layout::rowPitch * contentRow;
 }
-// Off a banner of its own the rows rise over it, as on Google TV: the focused row's label at
-// rowsRisenTop, the bar gone, and the rows before it above, out of view.
-constexpr float risenStackTarget(int contentRow) {
-    return layout::rowsRisenTop - layout::rowsTop - layout::rowPitch * (contentRow < 0 ? 0 : contentRow);
-}
-// How much of a row whose label is at `labelY` shows: one that has risen past the focused row's
-// place fades out over half a row instead of being cut by the screen's edge.
-constexpr float risenRowAlpha(float labelY) {
-    return focus::clamp01(1 - (layout::rowsRisenTop - labelY) / (layout::rowPitch / 2));
-}
 // Everything the stack offset `y` (<= 0) drives while the rows scroll over the hero.
-// scrimOpacity multiplies alpha::scrimStrong, so the veil tops out at .86 * .84.
+// scrimOpacity is the page colour's opacity over the banner once the rows have risen: Google TV's
+// scrolled page is near-black, a trace of the art left.
 struct HeroParallax {
     float textY, textAlpha, artY, scrimOpacity;
 };
-constexpr float scrimMaxOpacity = .84f;
+constexpr float scrimMaxOpacity = .95f;
 constexpr HeroParallax heroParallax(float y) {
-    return {y * .5f, 1 - focus::clamp01(-y / 150), y * .12f,
+    // Only rows that rise move the banner; rows that drop under it leave it in place.
+    return {std::min(y, 0.0f) * .5f, 1 - focus::clamp01(-y / 150), std::min(y, 0.0f) * .12f,
             focus::clamp01(-y / layout::rowPitch) * scrimMaxOpacity};
 }
 
 // Page heads (Live, Settings, the catalogue). The Apps page has none: it starts at layout::appsTop.
 constexpr Rect pageTitle(float textWidth) {
-    return {canvas::safeX, layout::pageTitleTop, textWidth, type::headline.line};
+    return {layout::homeX, layout::pageTitleTop, textWidth, type::headline.line};
 }
 constexpr Rect pageSubtitle(float textWidth) {
-    return {canvas::safeX, layout::pageSubTop, textWidth, type::body.line};
+    return {layout::homeX, layout::pageSubTop, textWidth, type::body.line};
 }
 constexpr Rect appTile(int index) {
-    return {canvas::safeX + (index % layout::tileCols) * layout::tilePitchX,
+    return {layout::homeX + (index % layout::tileCols) * layout::tilePitchX,
             layout::appsTop + (index / layout::tileCols) * layout::tilePitchY, layout::tileW,
             layout::tileH};
 }
 // The Homebrew catalogue's banners: 16:9 tiles, six to a row, three rows above its strip.
 constexpr Rect banner(int index) {
-    return {canvas::safeX + (index % layout::tileCols) * (layout::bannerW + layout::bannerGapX),
+    return {layout::homeX + (index % layout::tileCols) * (layout::bannerW + layout::bannerGapX),
             layout::bannerTop + (index / layout::tileCols) * (layout::bannerH + layout::bannerGapY),
             layout::bannerW, layout::bannerH};
 }
 constexpr Rect statCard(int index) {
-    return {canvas::safeX + (index % layout::statCols) * (layout::statW + layout::statGapX),
+    return {layout::homeX + (index % layout::statCols) * (layout::statW + layout::statGapX),
             layout::gridTop + (index / layout::statCols) * (layout::statH + layout::statGapY),
             layout::statW, layout::statH};
 }

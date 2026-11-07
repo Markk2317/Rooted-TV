@@ -153,15 +153,15 @@ class LiveScreen final : public ScreenView {
             if (!failed_) {
                 // The first reading is on its way.
                 kit::Loading spinner;
-                spinner.area = {kit::canvas::safeX, kit::layout::gridTop,
-                                kit::canvas::width - 2 * kit::canvas::safeX, 560};
+                spinner.area = {kit::layout::homeX, kit::layout::gridTop,
+                                kit::canvas::width - 2 * kit::layout::homeX, 560};
                 spinner.label = say::msg("tv.live.reading", "Reading the TV…");
                 spinner.phase = kit::spinnerPhase(motion, "live:spin");
                 kit::loadingIndicator(paint, spinner);
             } else
                 paint.glyphs.text(
                     paint.scene,
-                    {kit::canvas::safeX, kit::layout::gridTop + 8, 1200, kit::type::body.line},
+                    {kit::layout::homeX, kit::layout::gridTop + 8, 1200, kit::type::body.line},
                     say::msg("tv.live.unreachable",
                              "The TV's server did not answer. Trying again."),
                     kit::type::body, kit::color::onSurface2);

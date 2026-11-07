@@ -148,6 +148,20 @@ DecodedImage decodeImage(const std::string &bytes, int width, int height, ImageF
     result.opaque = true;
     for (size_t i = 3; i < result.rgba.size() && result.opaque; i += 4)
         result.opaque = result.rgba[i] >= 250;
+    // The left third's mean colour, which Google TV's banner extends as its scrim. Every fourth
+    // pixel each way is plenty.
+    double sum[3] = {0, 0, 0};
+    long samples = 0;
+    for (int y = 0; y < result.height; y += 4)
+        for (int x = 0; x < result.width / 3; x += 4) {
+            const uint8_t *pixel = &result.rgba[(static_cast<size_t>(y) * result.width + x) * 4];
+            for (int c = 0; c < 3; ++c)
+                sum[c] += pixel[c];
+            ++samples;
+        }
+    if (samples)
+        result.tone = (static_cast<int>(sum[0] / samples) << 16) |
+                      (static_cast<int>(sum[1] / samples) << 8) | static_cast<int>(sum[2] / samples);
     return result;
 }
 
@@ -219,6 +233,7 @@ ImageView ImageLoader::get(const std::string &id, int width, int height, ImageFi
         view.height = slot->textureHeight;
         view.fade = std::min(1.0f, static_cast<float>(nowMs - slot->arrivedMs) / kFadeMs);
         view.opaque = slot->opaque;
+        view.tone = slot->tone;
     }
     view.failed = slot->state == Slot::State::Failed;
     return view;
@@ -294,6 +309,7 @@ size_t ImageLoader::pump(size_t uploadBudgetBytes, double nowMs) {
         slot.textureWidth = slot.pixels.width;
         slot.textureHeight = slot.pixels.height;
         slot.opaque = slot.pixels.opaque;
+        slot.tone = slot.pixels.tone;
         slot.state = Slot::State::Uploading;
         uploads_.push_back(result.slot);
     }

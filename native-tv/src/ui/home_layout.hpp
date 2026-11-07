@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <vector>
 
 // What Home's controller and view agree on: how wide a row's items are and the ids of the
 // animated values. Ids stay under 16 characters so building one allocates nothing.
@@ -48,12 +49,22 @@ inline unsigned hashOf(const std::string &text) {
 inline bool isApps(const CardRow &row) {
     return row.key == "app";
 }
+// Google TV's rows come in three sizes: the top picks' small cards, Your apps' circles, and the
+// larger cards of every row of titles under them (Continue watching and the rest).
+inline bool largeCards(const CardRow &row) {
+    return !isApps(row) && row.key != "trending" && row.key != "dev" && row.key != "ch";
+}
 inline float itemWidth(const CardRow &row) {
-    return isApps(row) ? kit::layout::appD : kit::layout::cardW;
+    return isApps(row) ? kit::layout::appD : largeCards(row) ? kit::layout::cardLW : kit::layout::cardW;
+}
+inline float itemHeight(const CardRow &row) {
+    return isApps(row) ? kit::layout::appD : largeCards(row) ? kit::layout::cardLH : kit::layout::cardH;
 }
 // `named`: a row of apps that carries every name (the Apps page), so the circles stand wider.
 inline float itemGap(const CardRow &row, bool named = false) {
-    return named && isApps(row) ? kit::layout::appGapNamed : kit::layout::cardGap;
+    return named && isApps(row) ? kit::layout::appGapNamed
+           : largeCards(row)    ? kit::layout::cardLGap
+                                : kit::layout::cardGap;
 }
 inline std::string id(const char *name, size_t row, size_t column) {
     return std::string(name) + ":" + std::to_string(row) + "." + std::to_string(column);
@@ -65,12 +76,44 @@ inline std::string id(const char *name, size_t index) {
 inline std::string hit(size_t row, size_t column) {
     return "card:" + std::to_string(row) + ":" + std::to_string(column);
 }
-// Row n's items on the shared canvas, before the row's own scroll and the stack's offset.
-inline Rect item(const CardRow &row, size_t rowIndex, size_t column, bool named = false) {
+
+// How a row stands, from the animated values: `risen` (0..1) while the rows are over the banner,
+// `grow` (0..1) for the focused row then, `names` (0..1) while every app's name shows under it.
+struct RowLook {
+    float risen = 0, grow = 0, names = 0;
+};
+// The row's title: 24 px over the banner, 29 px once the rows have risen, 52 px for the focused
+// row then (Google TV's sizes at 1080p).
+inline float labelPx(const RowLook &look) {
+    return kit::focus::mix(24, 29, look.risen) + (52 - 29) * look.grow;
+}
+// From the title's top to the items: the title and the gap under it, which grows with it
+// (measured: 55 px at 24 px, 69 at 29, 121 at 52; the line fits them within 2 px).
+inline float labelArea(const RowLook &look) {
+    return 55 + (labelPx(look) - 24) * 2.36f;
+}
+// From the title's top to the next row's title.
+inline float rowSpan(const CardRow &row, const RowLook &look) {
+    float foot = kit::focus::mix(kit::layout::rowGap, kit::layout::rowGapRisen, look.risen);
+    if (isApps(row))
+        foot += kit::layout::appNames * look.names;
+    return labelArea(look) + itemHeight(row) + foot;
+}
+// Each row's title top, the first at `top`.
+inline std::vector<float> rowTops(const std::vector<CardRow> &rows, const std::vector<RowLook> &looks,
+                                  float top = kit::layout::rowsTop) {
+    std::vector<float> tops;
+    for (size_t i = 0; i < rows.size(); ++i) {
+        tops.push_back(top);
+        top += rowSpan(rows[i], i < looks.size() ? looks[i] : RowLook());
+    }
+    return tops;
+}
+// Row n's items, before the row's own scroll and the stack's offset; `itemsY` is the items' top.
+inline Rect item(const CardRow &row, float itemsY, size_t column, bool named = false) {
     float width = itemWidth(row), gap = itemGap(row, named);
-    return {kit::canvas::safeX + static_cast<float>(column) * (width + gap),
-            kit::geometry::rowItemsY(static_cast<int>(rowIndex)), width,
-            isApps(row) ? kit::layout::appD : kit::layout::cardH};
+    return {kit::layout::homeX + static_cast<float>(column) * (width + gap), itemsY, width,
+            itemHeight(row)};
 }
 // The apps grid's scroll target while focus is on `column`: three rows fit under the page
 // title, so the grid follows once focus passes the second row, and stops when the last row is
@@ -82,16 +125,18 @@ inline float gridScrollTarget(size_t column, size_t count) {
     float wanted = at > 1 ? static_cast<float>(at - 1) * kGridPitch : 0;
     return -(wanted > room ? room : wanted);
 }
-// The Apps page by kind starts at layout::appsTop and holds this many rows whole.
-constexpr size_t kKindRowsVisible =
-    static_cast<size_t>((kit::canvas::height - kit::layout::appsTop) / kit::layout::rowPitch);
+// The Apps page by kind: rows of named circles, one after another from layout::appsTop.
+inline float kindPitch() {
+    return labelArea(RowLook()) + kit::layout::appD + kit::layout::rowGap + kit::layout::appNames;
+}
 // Its scroll target while focus is on kind row `row` of `rows`: the rows keep their place until
 // focus passes the second, then the page follows so the next row stays in view, and the last rows
 // end flush with the screen.
 inline float kindStackTarget(size_t row, size_t rows) {
-    size_t last = rows > kKindRowsVisible ? rows - kKindRowsVisible : 0;
+    const size_t visible = static_cast<size_t>((kit::canvas::height - kit::layout::appsTop) / kindPitch());
+    size_t last = rows > visible ? rows - visible : 0;
     size_t first = row > 1 ? row - 1 : 0;
-    return -kit::layout::rowPitch * static_cast<float>(std::min(first, last));
+    return -kindPitch() * static_cast<float>(std::min(first, last));
 }
 } // namespace home
 } // namespace nativetv

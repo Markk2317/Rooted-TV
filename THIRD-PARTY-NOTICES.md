@@ -46,7 +46,9 @@ Google's TV Design Kit. No file of the kit is included; the values were
 re-created in `native-tv/design/` and `native-tv/assets/google-tv/`. Google,
 Android TV, Google TV and Material Design are trademarks of Google LLC. LG and
 webOS are trademarks of LG Electronics. Native Tv is not affiliated with either.
-The brand logos in the app icon set belong to their owners, who do not endorse
-Native Tv; they are shown only to tell the apps apart.
+The brand logos in the app icon set and the streaming services' wordmarks in
+`native-tv/assets/icons/wordmark-*.svg` (from Wikimedia Commons) belong to their
+owners, who do not endorse Native Tv; they are shown only to name the app or the
+service that has a title.
 
 The project the code descends from is credited in the [README](README.md#credits).

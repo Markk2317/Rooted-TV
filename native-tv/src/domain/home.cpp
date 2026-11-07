@@ -157,7 +157,9 @@ CardRow catalogueRow(const std::string &kind, const Json &catalogue, const Json 
             card.image = "app:" + id;
         if (kind == "dev")
             card.subtitle =
-                item["unused"].boolean() ? "Nothing connected" : "HDMI " + item["port"].string();
+                item["unused"].boolean()   ? "Nothing connected"
+                : item["port"].isNumber() ? "HDMI " + compactNumber(item["port"].number())
+                                          : "HDMI " + item["port"].string();
         if (kind == "ch") {
             card.subtitle = item["number"].string();
             Json programme = guide[id][static_cast<size_t>(0)];
