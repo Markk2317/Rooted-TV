@@ -70,8 +70,9 @@ def mix(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def landscape(width, height, index):
-    """A sun over two ridges, from row-sized pieces so it is fast without an imaging library."""
+def landscape(width, height, index, titled=False):
+    """A sun over two ridges, from row-sized pieces so it is fast without an imaging library. Key art
+    (`titled`) has its title on it: two pale bars, lower left."""
     top, glow = PALETTES[index % len(PALETTES)]
     sun_x, sun_y, sun_r = int(width * (.3 + .1 * (index % 5))), int(height * .56), int(height * .11)
     rows = []
@@ -87,6 +88,10 @@ def landscape(width, height, index):
         if y > ridge:
             shade = mix(top, (0, 0, 0), .55 + .3 * (y - ridge) / max(1, height - ridge))
             row[:] = bytes(shade) * width
+        for top_bar, length in ((.62, .46), (.74, .3)):
+            if titled and int(height * top_bar) <= y < int(height * (top_bar + .07)):
+                row[int(width * .07) * 3:int(width * (.07 + length)) * 3] = b"\xf4\xf1\xe8" * (
+                    int(width * (.07 + length)) - int(width * .07))
         rows.append(bytes(row))
     return png(width, height, rows)
 
@@ -109,10 +114,14 @@ def icon(width, color, index):
 
 def item(number):
     title, kind, overview, genre = TITLES[number % len(TITLES)]
-    return {"id": 100 + number, "type": kind, "title": title, "year": str(2021 + number % 5),
-            "rating": round(7.2 + (number % 7) / 10, 1), "runtime": 98 + number * 3 if kind == "movie" else 0,
-            "genres": [genre], "overview": overview, "poster": "/p%d.jpg" % number,
-            "backdrop": "/b%d.jpg" % number}
+    found = {"id": 100 + number, "type": kind, "title": title, "year": str(2021 + number % 5),
+             "rating": round(7.2 + (number % 7) / 10, 1), "runtime": 98 + number * 3 if kind == "movie" else 0,
+             "genres": [genre], "overview": overview, "poster": "/p%d.jpg" % number,
+             "backdrop": "/b%d.jpg" % number}
+    # Key art with the title on it, as TMDB has for most titles; every fourth has none.
+    if number % 4 != 3:
+        found["art"] = "/k%d.jpg" % number
+    return found
 
 
 PROFILES = [("main", "Alex", "#5C5AA8"), ("sara", "Sara", "#B05E8A"), ("guest", "Guest", "#117A65")]
@@ -216,7 +225,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 with open(path, "rb") as file:
                     return self.send(200, file.read(), "image/jpeg")
         width, height = (640, 360) if hero else (224, 140)
-        self.send(200, landscape(width, height, number), "image/png")
+        self.send(200, landscape(width, height, number, name.startswith("k")), "image/png")
 
     def do_GET(self):
         url = urllib.parse.urlsplit(self.path)

@@ -2,6 +2,7 @@
 #include "domain/names.hpp"
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -27,6 +28,7 @@ const int64_t kRetryMs = 10LL * 60 * 1000;
 const int kMorningHour = 5;
 const size_t kPerRow = 16;
 const size_t kMaximumResponseBytes = 4 * 1024 * 1024;
+const int64_t kArtLifetimeMs = 7LL * 24 * 60 * 60 * 1000;
 
 struct RowSpec {
     const char *key;
@@ -245,6 +247,40 @@ std::vector<Json> alternate(const std::vector<Json> &films, const std::vector<Js
     return items;
 }
 
+// The language of the art to prefer after English: the TV's country's own, where it has one.
+std::string artLanguage(const std::string &region) {
+    static const std::map<std::string, std::string> languages = {
+        {"AR", "es"}, {"AT", "de"}, {"BE", "fr"}, {"BR", "pt"}, {"CH", "de"}, {"DE", "de"},
+        {"DK", "da"}, {"ES", "es"}, {"FI", "fi"}, {"FR", "fr"}, {"IT", "it"}, {"JP", "ja"},
+        {"KR", "ko"}, {"MX", "es"}, {"NL", "nl"}, {"NO", "no"}, {"PL", "pl"}, {"PT", "pt"},
+        {"SE", "sv"}, {"TR", "tr"}};
+    const auto found = languages.find(region);
+    return found == languages.end() ? "" : found->second;
+}
+
+// "/abc123.jpg", as the image proxy takes it.
+bool artPath(const std::string &path) {
+    return path.size() >= 15 && path.size() <= 45 && path[0] == '/' &&
+           path.compare(path.size() - 4, 4, ".jpg") == 0 &&
+           std::all_of(path.begin() + 1, path.end() - 4, [](unsigned char value) {
+               return std::isalnum(value) || value == '_' || value == '-';
+           });
+}
+
+// TMDB files the studios' key art, the title on it, under a language and the plain pictures under
+// none: the first backdrop in English, else in `language`; "" when there is neither.
+std::string titledBackdrop(const Json &document, const std::string &language) {
+    for (const std::string &wanted : {std::string("en"), language}) {
+        if (wanted.empty()) continue;
+        for (const Json &image : document["backdrops"].items()) {
+            const Json tag = image["iso_639_1"];
+            const std::string path = jsString(image["file_path"]);
+            if (tag.isString() && tag.string() == wanted && artPath(path)) return path;
+        }
+    }
+    return "";
+}
+
 int64_t systemNow() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
@@ -277,6 +313,11 @@ void HomeDiscover::setLinkCheck(LinkCheck check) {
 void HomeDiscover::setNetflixCheck(LinkCheck check) {
     std::lock_guard<std::mutex> lock(mutex_);
     netflixCheck_ = std::move(check);
+}
+
+void HomeDiscover::setTitledArt(bool on) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    titledArt_ = on;
 }
 
 Json HomeDiscover::feed(const std::string &tmdbKey, const std::string &youtubeKey,
@@ -340,10 +381,12 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     }
 
     LinkCheck linkCheck, netflixCheck;
+    bool titledArt = false;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         linkCheck = linkCheck_;
         netflixCheck = netflixCheck_;
+        titledArt = titledArt_ && !tmdbKey.empty();
     }
     std::map<std::string, bool> linked; // a title is asked about once, whichever rows it is in
     const auto hasLink = [&](const Json &item) {
@@ -355,6 +398,38 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
         try { answer = linkCheck(item["type"].string(), idString(item["id"])); } catch (...) { answer = false; }
         linked[key] = answer;
         return answer;
+    };
+    // A title's art is looked up once a week, whichever rows it is in; a failed lookup is asked
+    // again at the next refresh.
+    const std::string language = artLanguage(region);
+    const Json knownArt = previous["art"];
+    const int64_t startedAt = clock_();
+    Json art = Json::object();
+    const auto addArt = [&](Json &item) {
+        if (!titledArt) return;
+        const std::string type = item["type"].string(), key = type + ":" + idString(item["id"]);
+        if (!art.has(key)) {
+            const Json known = knownArt[key];
+            if (known.isObject() &&
+                startedAt - static_cast<int64_t>(known["at"].number()) < kArtLifetimeMs) {
+                art.set(key, known);
+            } else {
+                const std::string url = "https://api.themoviedb.org/3/" + type + "/" +
+                    idString(item["id"]) + "/images?api_key=" + urlEncode(tmdbKey) +
+                    "&include_image_language=en" + (language.empty() ? "" : "," + language);
+                Json document;
+                std::string error;
+                bool fetched = false;
+                try { fetched = fetch(url, document, error); } catch (...) { fetched = false; }
+                if (!fetched) return;
+                Json entry = Json::object();
+                entry.set("path", Json::text(titledBackdrop(document, language)));
+                entry.set("at", Json::numeric(static_cast<double>(startedAt)));
+                art.set(key, entry);
+            }
+        }
+        const std::string path = art[key]["path"].string();
+        if (!path.empty()) item.set("art", Json::text(path));
     };
     std::vector<Json> rows;
     const bool services = !tmdbKey.empty() && !region.empty();
@@ -378,6 +453,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
                 const std::string key = item["type"].string() + idString(item["id"]);
                 if (!seen.insert(key).second) continue;
                 if (!hasLink(item)) continue;
+                addArt(item);
                 items.push_back(item);
                 if (items.size() == kPerRow) break;
             }
@@ -414,7 +490,8 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
                 lists[which].push_back(item);
             }
         }
-        const std::vector<Json> items = alternate(lists[0], lists[1]);
+        std::vector<Json> items = alternate(lists[0], lists[1]);
+        for (Json &item : items) addArt(item);
         if (!items.empty()) {
             rows.push_back(makeRow("on:" + service.key, items));
             --missed;
@@ -482,6 +559,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     updated.set("tmdbAsked", Json::flag(!tmdbKey.empty()));
     updated.set("youtubeAsked", Json::flag(!youtubeKey.empty()));
     updated.set("region", Json::text(region));
+    if (titledArt) updated.set("art", art);
     {
         std::lock_guard<std::mutex> lock(mutex_);
         cache_ = updated;
@@ -603,6 +681,8 @@ bool HomeDiscover::dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked,
     const bool hadYoutube = cache_["youtubeAsked"].isBoolean() ? cache_["youtubeAsked"].boolean() : youtubeRows;
     const bool hadTmdb = cache_["tmdbAsked"].isBoolean() ? cache_["tmdbAsked"].boolean() : titleRows;
     if ((youtubeAsked && !hadYoutube) || (tmdbAsked && !hadTmdb)) return true;
+    // Rows from before the art was looked up have none to show.
+    if (tmdbAsked && titledArt_ && !cache_["art"].isObject()) return true;
     const int64_t cachedAt = static_cast<int64_t>(cache_["at"].number());
     if (cache_["partial"].boolean() && nowMs - cachedAt >= kRetryMs) return true;
     std::tm nowLocal = {};

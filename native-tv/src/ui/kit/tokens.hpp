@@ -139,6 +139,7 @@ constexpr float dotSlotH = 20;
 constexpr float dot = 10;
 constexpr float rowsTop = 579;
 constexpr float rowPitch = 277;
+constexpr float rowsRisenTop = 96;
 constexpr float rowLabelH = 40;
 constexpr float rowLabelGap = 20;
 constexpr float cardW = 306;

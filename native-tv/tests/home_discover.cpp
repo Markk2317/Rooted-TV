@@ -390,6 +390,99 @@ int main() {
     (void)unlink((regionDir + "/home-discover.json.tmp").c_str());
     (void)rmdir(regionDir.c_str());
 
+    // Each title's art with its name on it, as Google TV's cards have: TMDB's backdrop in English,
+    // else in the country's language, never a plain one. A cache from before the lookups is
+    // refreshed at once; then each title is asked about once a week, and a failed lookup again at
+    // the next refresh.
+    const std::string artDir = directory.path() + "/art";
+    assert(mkdir(artDir.c_str(), 0700) == 0);
+    std::vector<std::string> artUrls;
+    bool artOffline = true;
+    auto artFetcher = [&](const std::string &url, Json &document, std::string &error) {
+        std::lock_guard<std::mutex> lock(askedMutex);
+        artUrls.push_back(url);
+        askedChanged.notify_all();
+        if (url.find("/images?") == std::string::npos) {
+            document = url.find("trending/all/week") != std::string::npos
+                           ? titleReply(1) : Json::parse("{\"results\":[]}");
+            return true;
+        }
+        if (artOffline && url.find("/movie/3/") != std::string::npos) {
+            error = "offline";
+            return false;
+        }
+        const char *plain = R"({"iso_639_1":null,"file_path":"/plain-abcdefghij.jpg"})";
+        const char *italian = R"({"iso_639_1":"it","file_path":"/italian-abcdefg.jpg"})";
+        const char *english = R"({"iso_639_1":"en","file_path":"/english-abcdefg.jpg"})";
+        const std::string backdrops =
+            url.find("/movie/1/") != std::string::npos   ? std::string(plain) + "," + italian + "," + english
+            : url.find("/movie/2/") != std::string::npos ? std::string(plain) + "," + italian
+                                                         : std::string(plain);
+        document = Json::parse("{\"backdrops\":[" + backdrops + "]}");
+        return true;
+    };
+    const auto artLookups = [&]() {
+        size_t count = 0;
+        for (const std::string &url : artUrls)
+            if (url.find("/images?") != std::string::npos) ++count;
+        return count;
+    };
+    const auto waitForArt = [&](size_t urls, size_t lookups) {
+        std::unique_lock<std::mutex> lock(askedMutex);
+        return askedChanged.wait_for(lock, std::chrono::seconds(2), [&] {
+            return artUrls.size() >= urls && artLookups() >= lookups;
+        });
+    };
+    {
+        HomeDiscover plain(artDir, artFetcher, [&clock] { return clock; });
+        (void)plain.feed("tmdb", "", "IT");
+        assert(waitForArt(9, 0)); // three trending rows, two lists for each of three services
+    }
+    assert(artLookups() == 0);
+    {
+        HomeDiscover titled(artDir, artFetcher, [&clock] { return clock; });
+        titled.setTitledArt(true);
+        (void)titled.feed("tmdb", "", "IT");
+        assert(waitForArt(21, 3));
+    }
+    assert(artLookups() == 3);
+    for (const std::string &url : artUrls)
+        if (url.find("/images?") != std::string::npos)
+            assert(url.find("&include_image_language=en,it") != std::string::npos);
+    {
+        HomeDiscover titled(artDir, artFetcher, [&clock] { return clock; });
+        titled.setTitledArt(true);
+        const Json items = titled.feed("tmdb", "", "IT")["rows"][0]["items"];
+        assert(items.size() == 3);
+        assert(items[0]["art"].string() == "/english-abcdefg.jpg");
+        assert(items[1]["art"].string() == "/italian-abcdefg.jpg");
+        assert(!items[2].has("art"));
+    }
+    assert(artUrls.size() == 21);
+    artOffline = false;
+    clock += 24LL * 60 * 60 * 1000;
+    {
+        HomeDiscover nextDay(artDir, artFetcher, [&clock] { return clock; });
+        nextDay.setTitledArt(true);
+        (void)nextDay.feed("tmdb", "", "IT");
+        assert(waitForArt(31, 4));
+    }
+    assert(artLookups() == 4);
+    for (size_t index = 21; index < artUrls.size(); ++index)
+        if (artUrls[index].find("/images?") != std::string::npos)
+            assert(artUrls[index].find("/movie/3/images?") != std::string::npos);
+    clock += 8LL * 24 * 60 * 60 * 1000;
+    {
+        HomeDiscover nextWeek(artDir, artFetcher, [&clock] { return clock; });
+        nextWeek.setTitledArt(true);
+        (void)nextWeek.feed("tmdb", "", "IT");
+        assert(waitForArt(43, 7));
+    }
+    assert(artLookups() == 7);
+    (void)unlink((artDir + "/home-discover.json").c_str());
+    (void)unlink((artDir + "/home-discover.json.tmp").c_str());
+    (void)rmdir(artDir.c_str());
+
     (void)unlink((addedDir + "/home-discover.json").c_str());
     (void)unlink((addedDir + "/home-discover.json.tmp").c_str());
     (void)rmdir(addedDir.c_str());

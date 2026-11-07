@@ -26,6 +26,8 @@ constexpr uint32_t kHeroWaitMs = 1200;  // longest wait for the incoming art
 constexpr uint32_t kIconWaitMs = 300;   // longest wait for the apps' icons before their row enters
 // The hero's art is asked for at the screen's size (application.cpp asks a full-width picture so).
 constexpr int kHeroWidth = 1920, kHeroHeight = 1080;
+// The rows' offset past which they cover the banner: its text has faded out (heroParallax).
+constexpr double kBannerCoveredY = -150;
 
 bool due(uint32_t now, uint32_t at) {
     return static_cast<int32_t>(now - at) >= 0;
@@ -414,19 +416,23 @@ void Application::homeFocus(bool jump) {
                 motion_.spring(name, target, springParams(kit::motion::spring::row));
         }
     }
-    // The banner, the top picks and Your apps share the first screen, as on Google TV; past it the
-    // focused row takes the first row's place, the ones before it above.
+    // Google TV's banner holds the focus until Down: then the rows rise over it, the focused one at
+    // the top. Without a banner of its own (the Live tab, an older server) the hero follows the
+    // focus, so the first rows stay under it, and past them the focused row takes the first row's
+    // place, the ones before it above.
     const bool kindRows = home.tabs[home.tab].key == "apps" && !grid;
+    const bool overBanner = homeHeroOffered();
     const int firstScreenRows = home.tabs[home.tab].key == "home" ? 1 : 0;
     const int contentRow = static_cast<int>(home.row) - static_cast<int>(defaultRow(home));
     double stack = home.navigation || home.heroFocus || grid ? 0
-                   : kindRows ? home::kindStackTarget(home.row, home.rows.size())
-                              : kit::geometry::stackTarget(contentRow <= firstScreenRows ? 0
-                                                                                         : contentRow);
+                   : kindRows   ? home::kindStackTarget(home.row, home.rows.size())
+                   : overBanner ? kit::geometry::risenStackTarget(contentRow)
+                                : kit::geometry::stackTarget(contentRow <= firstScreenRows ? 0
+                                                                                           : contentRow);
     // A row of the first screen that reaches past the bottom (Your apps, with the focused app's
     // name under it) rises just enough to show it whole.
-    if (!home.navigation && !home.heroFocus && !grid && !kindRows && contentRow >= 0 &&
-        contentRow <= firstScreenRows && home.row < home.rows.size()) {
+    if (!home.navigation && !home.heroFocus && !grid && !kindRows && !overBanner &&
+        contentRow >= 0 && contentRow <= firstScreenRows && home.row < home.rows.size()) {
         const CardRow &row = home.rows[home.row];
         const float bottom = kit::geometry::rowItemsY(static_cast<int>(home.row)) +
                              (home::isApps(row) ? kit::layout::appNameTop + kit::type::labelM.line
@@ -589,9 +595,9 @@ void Application::homeUpdate() {
         if (!home.navigation && !home.heroFocus && home.row < home.rows.size() &&
             home.column < home.rows[home.row].cards.size())
             focus = &home.rows[home.row].cards[home.column];
-        // Google TV's banner keeps its own titles while the first screen is in view (the banner
-        // itself, the bar, the top picks and Your apps) and moves on by itself there; further down,
-        // where the rows have scrolled over it, its art follows the focused title.
+        // Google TV's banner keeps its own titles while the focus is on it, the bar, the top picks
+        // or Your apps, and moves on by itself while it is in view; further down its art, dimmed
+        // under the rows, follows the focused title.
         // Without titles of its own (an older server) the banner shows the top picks and follows
         // the focused title, as it did.
         const bool picks = !home.spotlight.empty();
@@ -633,7 +639,7 @@ void Application::homeUpdate() {
         }
         // The slideshow: with nobody pressing keys the hero moves on when its progress is full.
         if (home.spotlight.size() > 1 && onSpotlight && !motion_.moving("hp") &&
-            !shownId.empty()) {
+            !shownId.empty() && motion_.value("sy") > kBannerCoveredY) {
             if (!flow_.idle && due(now_, flow_.lastKeyAt + static_cast<uint32_t>(ms::heroAdvance)))
                 home.spotIndex = (home.spotIndex + 1) % home.spotlight.size();
             motion_.play("hp", Tween(0, 1, ms::heroAdvance, Easing::linear()));
@@ -641,7 +647,7 @@ void Application::homeUpdate() {
     }
     // The trailer plays while the hero is on screen: Home's page, rows not scrolled past it.
     homeTrailer(heroTab && flow_.entered && !screen_ && state_.screen == Screen::Home &&
-                motion_.value("wall") > .5 && motion_.value("sy") > -150);
+                motion_.value("wall") > .5 && motion_.value("sy") > kBannerCoveredY);
     if (flow_.textPending && due(now_, flow_.textSwapAt))
         homeSwapText();
     // The Ken Burns of a layer that has been replaced stops once it is invisible.

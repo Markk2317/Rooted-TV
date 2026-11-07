@@ -35,6 +35,9 @@ class HomeDiscover {
     // Whether a title has a Netflix link: the feed's "Available on Netflix" row lists the titles trending this
     // week that it says yes to. Without one, there is no such row.
     void setNetflixCheck(LinkCheck check);
+    // Each title's art with its name on it, as Google TV's cards have, in the items' "art": one
+    // TMDB images call per title new to the feed, kept for a week. Off, the feed asks one call a row.
+    void setTitledArt(bool on);
 
   private:
     void workerLoop();
@@ -50,6 +53,7 @@ class HomeDiscover {
     Clock clock_;
     LinkCheck linkCheck_;
     LinkCheck netflixCheck_;
+    bool titledArt_ = false;
     std::mutex mutex_;
     std::condition_variable changed_;
     std::thread worker_;

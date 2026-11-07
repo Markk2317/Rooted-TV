@@ -244,9 +244,14 @@ Card feedCard(const Json &item, const std::string &rowKey) {
     card.data = item;
     card.title = item["title"].string();
     card.subtitle = titleFacts(item);
-    // Every card is landscape, so the backdrop is preferred over the portrait poster.
+    // Every card is landscape, so the backdrop is preferred over the portrait poster, and the key art
+    // with the title on it, as on Google TV's cards, over both.
     card.image = artwork(item);
     card.backdrop = artwork(item, true);
+    if (!item["art"].string().empty()) {
+        card.image = "tmdb:w500:" + item["art"].string();
+        card.titled = true;
+    }
     if (card.kind == "netflix") {
         // OK opens the title in Netflix itself, as a YouTube card opens YouTube.
         card.command = post(Operation::OpenHomeItem,

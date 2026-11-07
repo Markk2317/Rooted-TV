@@ -1879,12 +1879,28 @@ titles leave it as they leave the other rows. The client's spotlight is that row
 (`featuredCards`), or the first top picks from a server without it. `HomeState::heroFocus` is
 the banner's focus: it starts there on Home when the spotlight is the server's own, Up from the
 first row and Down from the bar reach it, Left and Right change `spotIndex`, OK opens the
-details, and Back goes rows, banner, bar. While the first screen (the banner, Top picks for you
-and Your apps) is in view the hero shows the spotlight; further down it follows the focused
-title. The first screen keeps the stack at 0, except that a row whose items and the focused
-app's name would run past the bottom rises just enough; past it the focused row takes the first
-row's place. The hero's art is TMDB's `w1920_and_h1080_bestv2` cut (`kHeroArtSize`), which the
-image proxy allows and warms for the featured row, decoded at 1920 × 1080.
+details, and Back goes rows, banner, bar. Off the banner the rows rise over it
+(`geometry::risenStackTarget`): the focused row's label at `rowsRisenTop`, the bar gone, and
+the rows before it fading out above (`risenRowAlpha`). While the focus is on the banner, the
+bar, Top picks for you or Your apps the hero shows the spotlight, and the slideshow and its
+trailer run only while the rows have not covered it (`kBannerCoveredY`); further down the
+hero, dimmed under the rows, follows the focused title. Without a banner of its own (the Live
+tab, an older server) the first screen keeps the stack at 0, except that a row whose items and
+the focused app's name would run past the bottom rises just enough, and past it the focused
+row takes the first row's place. The hero's art is TMDB's `w1920_and_h1080_bestv2` cut
+(`kHeroArtSize`), which the image proxy allows and warms for the featured row, decoded at
+1920 × 1080.
+
+Key art: Google TV's cards are the studios' art with the title on it, and print no title.
+TMDB files such art under a language and the plain pictures under none, so with
+`setTitledArt` (on in the daemon) `HomeDiscover` asks `/{type}/{id}/images` with
+`include_image_language=en,<the TV's country's language>` for each title it lists and puts the
+first English backdrop, else the local one, in the item's `art`. Each answer is kept in the
+cache's `art` map for a week (a failed lookup is asked again at the next refresh), and a cache
+from before the lookups is refreshed at once. `withArt` gives the profile's own rows the feed's
+art for the same titles. The client draws a card with `art` from it (`Card::titled`) and
+without its title; the image proxy warms that art at `w500`, else the backdrop, else the
+poster. The banner keeps the plain backdrop, under its own title.
 
 Trailers: `HomeContent::trailer` finds a film's preview (Wikidata `P6398` and the iTunes
 lookup in the TV's country, then `us`; else Apple's top-movies RSS chart matched by title

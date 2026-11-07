@@ -1812,6 +1812,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
         const Json lookup = homeContent_.netflix(key, netflixOn, type, id);
         return lookup["ok"].boolean(true) && !lookup["netflixId"].string().empty();
     });
+    homeDiscover_.setTitledArt(true);
     // The Available on Netflix row is the feed's titles that have a Netflix link (the lookup is kept for then, too).
     homeDiscover_.setNetflixCheck([this](const std::string &type, const std::string &id) {
         const Json document = currentConfigDocument();
@@ -2519,6 +2520,41 @@ Json withFeatured(const Json &rows) {
     Json result = Json::array();
     result.add(banner);
     for (const Json &row : others.items()) result.add(row);
+    return result;
+}
+
+// The profile's own rows are made from what it saved, without the feed's art with the title on it
+// ("art"): a title the feed has too gets the feed's.
+Json withArt(const Json &rows) {
+    std::map<std::string, std::string> art;
+    for (const Json &row : rows.items())
+        for (const Json &item : row["items"].items())
+            if (!item["art"].string().empty())
+                art.emplace(item["type"].string() + ":" + item["id"].string(), item["art"].string());
+    if (art.empty()) return rows;
+    Json result = Json::array();
+    for (const Json &row : rows.items()) {
+        Json items = Json::array();
+        bool changed = false;
+        for (const Json &item : row["items"].items()) {
+            const auto found = art.find(item["type"].string() + ":" + item["id"].string());
+            if (found == art.end() || !item["art"].string().empty()) {
+                items.add(item);
+                continue;
+            }
+            Json copy = Json::parse(item.dump());
+            copy.set("art", Json::text(found->second));
+            items.add(copy);
+            changed = true;
+        }
+        if (!changed) {
+            result.add(row);
+            continue;
+        }
+        Json copy = Json::parse(row.dump());
+        copy.set("items", items);
+        result.add(copy);
+    }
     return result;
 }
 } // namespace
@@ -16708,7 +16744,7 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         Json rows = service::HomeTitles::personalRows(result["rows"], titles);
         const Json watching = homeWatching_.row(profile, homeNowMilliseconds());
         if (watching.isObject()) rows.add(watching);
-        result.set("rows", rows);
+        result.set("rows", withArt(rows));
         result.set("profileTitles", service::HomeTitles::summary(titles));
     }
     // The bar offers the assistant where a Gemini key is saved.

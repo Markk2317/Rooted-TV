@@ -437,7 +437,7 @@ int main() {
         // Left and Right change its title, and the top picks hold still while it moves on.
         {
             const char *bannerFeed =
-                R"({"ok":true,"enabled":true,"titlesEnabled":true,"rows":[{"key":"featured","items":[{"id":11,"type":"movie","title":"Banner One","overview":"A first film. And more.","service":"netflix"},{"id":12,"type":"movie","title":"Banner Two","overview":"Second."},{"id":13,"type":"tv","title":"Banner Three","overview":"Third."}]},{"key":"trending","items":[{"id":1,"type":"movie","title":"One"},{"id":2,"type":"movie","title":"Two"},{"id":3,"type":"movie","title":"Three"}]}]})";
+                R"({"ok":true,"enabled":true,"titlesEnabled":true,"rows":[{"key":"featured","items":[{"id":11,"type":"movie","title":"Banner One","overview":"A first film. And more.","service":"netflix"},{"id":12,"type":"movie","title":"Banner Two","overview":"Second."},{"id":13,"type":"tv","title":"Banner Three","overview":"Third."}]},{"key":"trending","items":[{"id":1,"type":"movie","title":"Keyart","art":"/titled-abcdefgh.jpg"},{"id":2,"type":"movie","title":"Plain"},{"id":3,"type":"movie","title":"Three"}]}]})";
             FakeTransport bannerTransport;
             Application banner(bannerTransport);
             banner.update(0);
@@ -458,13 +458,25 @@ int main() {
                       banner.snapshot()["column"].number() == 0 &&
                       banner.snapshot()["heroTitle"].string() == "Banner Two",
                   "Down reaches the top picks, and the banner keeps its own title over them");
+            check(std::fabs(banner.animation().value("sy") - kit::geometry::risenStackTarget(0)) < 1,
+                  "Down raises the rows over the banner, the top picks at the top");
+            bool keyArt = false;
+            for (const auto &node : banner.scene().nodes)
+                keyArt = keyArt || (node.kind == Node::Kind::Image &&
+                                    node.value == "tmdb:w500:/titled-abcdefgh.jpg");
+            check(keyArt && !banner.shows("Keyart") && banner.shows("Plain"),
+                  "A card drawn with key art prints no title; one without it keeps its title");
             at = run(banner, at, 2 * kit::motion::ms::heroAdvance + 3000);
-            check(banner.snapshot()["heroTitle"].string() == "Banner Three" &&
+            check(banner.snapshot()["heroTitle"].string() == "Banner Two" &&
                       banner.snapshot()["column"].number() == 0,
-                  "The banner moves on by itself while the top picks keep their focus");
+                  "The banner holds still under the rows, and the top picks keep their focus");
             banner.key(Key::Up);
             check(banner.snapshot()["heroFocus"].boolean() && !banner.snapshot()["navigation"].boolean(),
                   "Up from the top picks reaches the banner");
+            at = run(banner, at, kit::motion::ms::heroAdvance + 3000);
+            check(std::fabs(banner.animation().value("sy")) < 1 &&
+                      banner.snapshot()["heroTitle"].string() == "Banner Three",
+                  "The rows go back under the banner, which moves on by itself again");
             banner.key(Key::Up);
             check(!banner.snapshot()["heroFocus"].boolean() && banner.snapshot()["navigation"].boolean(),
                   "Up from the banner reaches the bar");

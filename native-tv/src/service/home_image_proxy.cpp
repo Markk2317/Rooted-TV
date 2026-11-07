@@ -81,15 +81,15 @@ int64_t systemNow() {
         std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-std::string imageUrlFor(const Json &row, const Json &item) {
+std::string imageUrlFor(const Json &item) {
     const Json explicitImage = item["image"];
     if (explicitImage.isString() && !explicitImage.string().empty())
         return explicitImage.string();
-    if (row["key"].string() == "trending") {
-        const std::string backdrop = item["backdrop"].string();
-        return backdrop.empty() ? "" :
-            "https://image.tmdb.org/t/p/w500" + backdrop;
-    }
+    // The card's art, as the client asks for it: the art with the title on it, else the plain
+    // backdrop, else the poster.
+    const std::string art = item["art"].string();
+    const std::string backdrop = art.empty() ? item["backdrop"].string() : art;
+    if (!backdrop.empty()) return "https://image.tmdb.org/t/p/w500" + backdrop;
     const std::string poster = item["poster"].string();
     return poster.empty() ? "" : "https://image.tmdb.org/t/p/w342" + poster;
 }
@@ -185,7 +185,7 @@ void HomeImageProxy::retainAndWarm(const Json &rows) {
     std::set<std::string> used;
     for (const Json &row : rows.items()) {
         for (const Json &item : row["items"].items()) {
-            const std::string url = imageUrlFor(row, item);
+            const std::string url = imageUrlFor(item);
             if (allowedUrl(url)) {
                 const std::string filename = cacheFilename(url);
                 if (used.insert(filename).second) {

@@ -184,6 +184,12 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         // The next row's name is not shown cut by the screen's edge: it fades in as it rises.
         label.enter.alpha *=
             kit::focus::clamp01((kit::canvas::height - 40 - labelY) / 48);
+        // On Home the rows that rose past the focused one fade out above it; the Apps page clips
+        // them under its head instead.
+        const float risen = namedApps ? 1 : kit::geometry::risenRowAlpha(labelY);
+        if (risen <= 0)
+            continue;
+        label.enter.alpha *= risen;
         paint.scene.pushTransform(Transform::translate(0, stack));
         kit::row(paint, label);
         paint.scene.popTransform();
@@ -198,6 +204,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
             std::string id = home::hit(ri, ci);
             float focus = static_cast<float>(motion.value(home::id("f", ri, ci)));
             kit::Enter enter = enterOf(motion, home::id("EC", ri, ci));
+            enter.alpha *= risen;
             if (row.key == "app") {
                 kit::AppCircle circle;
                 circle.rest = rest;
@@ -238,8 +245,11 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 poster.rest = rest;
                 poster.id = id;
                 poster.image = card.image;
-                poster.title = card.title;
-                poster.subtitle = card.subtitle;
+                // Key art carries the title, so the card prints none, as on Google TV.
+                if (!card.titled) {
+                    poster.title = card.title;
+                    poster.subtitle = card.subtitle;
+                }
                 if (card.data["progress"].isNumber())
                     poster.progress = static_cast<float>(card.data["progress"].number());
                 poster.focus = focus;

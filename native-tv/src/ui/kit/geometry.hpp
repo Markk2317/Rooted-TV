@@ -128,6 +128,16 @@ inline float rowScrollTarget(int focus, int count, float itemWidth, float gap) {
 constexpr float stackTarget(int contentRow) {
     return contentRow <= 0 ? 0 : -layout::rowPitch * contentRow;
 }
+// Off a banner of its own the rows rise over it, as on Google TV: the focused row's label at
+// rowsRisenTop, the bar gone, and the rows before it above, out of view.
+constexpr float risenStackTarget(int contentRow) {
+    return layout::rowsRisenTop - layout::rowsTop - layout::rowPitch * (contentRow < 0 ? 0 : contentRow);
+}
+// How much of a row whose label is at `labelY` shows: one that has risen past the focused row's
+// place fades out over half a row instead of being cut by the screen's edge.
+constexpr float risenRowAlpha(float labelY) {
+    return focus::clamp01(1 - (layout::rowsRisenTop - labelY) / (layout::rowPitch / 2));
+}
 // Everything the stack offset `y` (<= 0) drives while the rows scroll over the hero.
 // scrimOpacity multiplies alpha::scrimStrong, so the veil tops out at .86 * .84.
 struct HeroParallax {
