@@ -48,6 +48,10 @@ void testCache() {
     const size_t beforeSameNumber = changes.size();
     require(!cache.update(numericFloat), "equivalent JSON numbers should compare equally");
     require(changes.size() == beforeSameNumber, "equal values should not notify listeners");
+    // The TV's json-c gives a double's text as "968.0": an id from a feed must still read "968".
+    require(parse(R"({"id":968.0,"rating":7.5})")["id"].string() == "968" &&
+                parse(R"({"id":968.0,"rating":7.5})")["rating"].string() == "7.5",
+            "a whole number read as a double should read as an integer");
 
     Json snapshot = cache.snapshot();
     require(snapshot["application"]["app_id"].string() == "hdmi2",

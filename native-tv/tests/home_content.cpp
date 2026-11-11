@@ -127,7 +127,8 @@ nativetv::Json responseFor(const std::string &url) {
     else document.set("episode_run_time", Json::parse("[44]"));
     document.set("genres", Json::parse("[{\"name\":\"Drama\"}]"));
     document.set("credits", Json::parse(
-        "{\"cast\":[{\"name\":\"<Actor>\",\"character\":\"A role\"}]}"));
+        "{\"cast\":[{\"name\":\"<Actor>\",\"character\":\"A role\",\"profile_path\":\"/actor.jpg\"}],"
+        "\"crew\":[{\"name\":\"Writer\",\"job\":\"Writer\"},{\"name\":\"Maker\",\"job\":\"Director\"}]}"));
     document.set("external_ids", Json::parse("{\"wikidata_id\":\"Q42\"}"));
     document.set("videos", Json::parse(
         "{\"results\":[{\"site\":\"YouTube\",\"type\":\"Trailer\",\"key\":\"bad\"},"
@@ -185,7 +186,12 @@ int main() {
     assert(item["runtime"].number() == 121);
     assert(item["rating"].number() == 8.0);
     assert(item["genres"][0].string() == "Drama");
-    assert(item["cast"][0]["name"].string() == "<Actor>");
+    // The director first, as Google TV's Cast & crew lists them, then the cast with their photos.
+    assert(item["cast"][0]["name"].string() == "Maker" &&
+           item["cast"][0]["character"].string() == "Director" &&
+           item["cast"][0]["photo"].string().empty());
+    assert(item["cast"][1]["name"].string() == "<Actor>" &&
+           item["cast"][1]["photo"].string() == "/actor.jpg");
     assert(item["trailer"].string() == "dQw4w9WgXcQ");
     assert(item["wikidataId"].string() == "Q42");
     assert(item["similar"].size() == 2 && item["similar"][0]["id"].number() == 20);
@@ -255,7 +261,7 @@ int main() {
         std::string saved((std::istreambuf_iterator<char>(input)),
                           std::istreambuf_iterator<char>());
         const Json cache = Json::parse(saved);
-        assert(cache["version"].number() == 1);
+        assert(cache["version"].number() == 2);
         assert(cache["entries"].size() == 40);
     }
     // With the TV's country, a title's details say which services have it there, in TMDB's order,

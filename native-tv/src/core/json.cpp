@@ -1,4 +1,5 @@
 #include "core/json.hpp"
+#include <cmath>
 #include <cstdio>
 #include <mutex>
 #include <stdexcept>
@@ -133,7 +134,16 @@ double Json::number(double fallback) const {
 }
 std::string Json::string(const std::string &fallback) const {
     std::lock_guard<std::recursive_mutex> lock(objectLock());
-    return value_ ? json_object_get_string(value_) : fallback;
+    if (!value_)
+        return fallback;
+    // A whole number read as a double ("968.0" in the TV's json-c) reads as the number it is: an id
+    // from a feed is "968" wherever it went.
+    if (json_object_get_type(value_) == json_type_double) {
+        const double number = json_object_get_double(value_);
+        if (std::isfinite(number) && number == std::floor(number) && std::fabs(number) < 1e15)
+            return compactNumber(number);
+    }
+    return json_object_get_string(value_);
 }
 std::string Json::dump(bool escapeSlashes) const {
     // json-c writes the text into a buffer kept inside the object: dumps take turns.

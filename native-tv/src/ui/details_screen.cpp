@@ -21,8 +21,10 @@ using kit::easing;
 using say::msg;
 
 constexpr size_t kMaxDepth = 8;
-constexpr float kTextWidth = 1100, kSimilarW = layout::cardW, kSimilarH = layout::cardH,
-                kSimilarGap = layout::cardGap, kSimilarTop = 784, kActionH = 64;
+constexpr float kSimilarW = layout::cardLW, kSimilarH = layout::cardLH, kSimilarGap = layout::cardLGap;
+// Under a row's items: a cast member's name and part, a title's two lines.
+constexpr float kCastH = layout::castD + layout::castNameGap + 2 * layout::cardCaptionLine,
+                kSimilarItemH = layout::cardLH + layout::cardCaptionGap + 2 * layout::cardCaptionLine;
 constexpr size_t kOverviewPageBytes = 1100;
 constexpr const char *kDetails = "title:details", *kNetflix = "title:netflix";
 
@@ -48,17 +50,6 @@ std::vector<std::string> pagesOf(const std::string &text) {
             break;
     }
     return pages;
-}
-std::string castOf(const Json &item) {
-    std::string names;
-    size_t count = 0;
-    for (const auto &person : item["cast"].items()) {
-        if (++count > 8)
-            break;
-        names += (names.empty() ? "" : ", ") + person["name"].string();
-    }
-    return names.empty() ? "" : msg("tv.details.cast", "Cast: {names}",
-                                    fields({{"names", Json::text(names)}}));
 }
 // "movie:42", as Home's feed lists the profile's titles.
 std::string titleKey(const Json &item) {
@@ -117,6 +108,8 @@ void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
     title.actions.clear();
     if (!item["netflixId"].string().empty())
         title.actions.push_back({Action::Kind::Netflix, msg("tv.details.netflix", "Open on Netflix")});
+    if (!title.actions.empty())
+        title.actions.back().icon = "play";
     // As Google TV's watch options: each service that has the title in the TV's country and whose
     // app is installed, the row the title came from first. On Netflix, the Netflix link above
     // opens it already.
@@ -135,10 +128,13 @@ void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
                     msg("tv.details.service", "Open on {service}",
                         fields({{"service", Json::text(service->name)}}))};
         open.service = key;
+        open.icon = "play";
         title.actions.push_back(open);
     }
-    if (!item["trailer"].string().empty())
+    if (!item["trailer"].string().empty()) {
         title.actions.push_back({Action::Kind::Trailer, msg("tv.details.trailer", "Trailer")});
+        title.actions.back().icon = "movie";
+    }
     // The profile's own marks, as on Google TV's details: the watchlist, then thumbs up and down.
     if (view.discover["titlesEnabled"].boolean() && !title.error) {
         const Marks marks = marksOf(host, item);
@@ -159,8 +155,10 @@ void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
         dislike.iconOnly = true;
         title.actions.push_back(dislike);
     }
-    if (!item["overview"].string().empty())
+    if (!item["overview"].string().empty()) {
         title.actions.push_back({Action::Kind::Overview, msg("tv.details.overview", "Full overview")});
+        title.actions.back().icon = "info";
+    }
     if (title.error)
         title.actions.push_back({Action::Kind::Retry, msg("tv.details.retry", "Retry")});
     // Until the focus is moved it stays on the first action, which a late Netflix link or the
@@ -185,8 +183,8 @@ void DetailsScreen::push(ScreenHost &host, const Json &item) {
     stack_.push_back(title);
     host.services().cancel(kNetflix);
     load(host);
-    host.motion().erasePrefix("details:a:");
-    host.motion().erasePrefix("details:s");
+    for (const char *prefix : {"details:a:", "details:s", "details:c", "details:rg:", "details:vy"})
+        host.motion().erasePrefix(prefix);
     focusMoved(host, true);
     playEntrance(host);
     host.invalidate();
@@ -255,6 +253,47 @@ void DetailsScreen::response(ScreenHost &host, const Response &response) {
 
 // ---- Keys ------------------------------------------------------------------------------------
 
+std::vector<DetailsScreen::Section> DetailsScreen::sectionsOf(const Json &item) {
+    std::vector<Section> sections;
+    if (item["cast"].size())
+        sections.push_back(Section::Cast);
+    if (item["similar"].size())
+        sections.push_back(Section::Similar);
+    return sections;
+}
+bool DetailsScreen::on(const Title &title, Section section) const {
+    const std::vector<Section> sections = sectionsOf(title.item);
+    return title.row > 0 && title.row <= sections.size() && sections[title.row - 1] == section;
+}
+namespace {
+// The rows' looks with the focus on `row` (0 the actions): their titles at 36 px, the focused
+// row's grown, and each row's title top on the page.
+std::vector<home::RowLook> rowLooks(size_t count, size_t row) {
+    std::vector<home::RowLook> looks(count);
+    for (size_t i = 0; i < count; ++i) {
+        looks[i].up = 1;
+        looks[i].risen = 1;
+        looks[i].grow = row == i + 1 ? 1 : 0;
+    }
+    return looks;
+}
+std::vector<float> rowTopsOf(const std::vector<float> &heights, const std::vector<home::RowLook> &looks) {
+    std::vector<float> tops;
+    float top = layout::detailsRowsTop;
+    for (size_t i = 0; i < heights.size(); ++i) {
+        tops.push_back(top);
+        top += home::labelArea(looks[i]) + heights[i] + layout::rowGapRisen;
+    }
+    return tops;
+}
+std::vector<float> sectionHeights(const std::vector<DetailsScreen::Section> &sections) {
+    std::vector<float> heights;
+    for (const auto section : sections)
+        heights.push_back(section == DetailsScreen::Section::Cast ? kCastH : kSimilarItemH);
+    return heights;
+}
+} // namespace
+
 void DetailsScreen::focusMoved(ScreenHost &host, bool jump) {
     Motion &motion = host.motion();
     const Title &title = top();
@@ -264,17 +303,38 @@ void DetailsScreen::focusMoved(ScreenHost &host, bool jump) {
         else
             motion.tween(id, to, kit::motion::ms::focus, easing(kit::motion::ease::out));
     };
+    auto slide = [&](const std::string &id, double to, const kit::SpringTuning &spring) {
+        if (jump)
+            motion.set(id, to);
+        else
+            motion.spring(id, to, kit::springParams(spring));
+    };
     for (size_t i = 0; i < title.actions.size(); ++i)
-        glide("details:a:" + std::to_string(i), !title.onSimilar && i == title.action ? 1 : 0);
-    size_t count = title.item["similar"].size();
-    for (size_t i = 0; i < count; ++i)
-        glide("details:s:" + std::to_string(i), title.onSimilar && i == title.similar ? 1 : 0);
-    double scroll = kit::geometry::rowScrollTarget(static_cast<int>(title.similar),
-                                                   static_cast<int>(count), kSimilarW, kSimilarGap);
-    if (jump)
-        motion.set("details:sx", scroll);
-    else
-        motion.spring("details:sx", scroll, kit::springParams(kit::motion::spring::row));
+        glide("details:a:" + std::to_string(i), title.row == 0 && i == title.action ? 1 : 0);
+    const size_t cast = title.item["cast"].size(), similar = title.item["similar"].size();
+    const bool onCast = on(title, Section::Cast), onSimilar = on(title, Section::Similar);
+    for (size_t i = 0; i < cast; ++i)
+        glide("details:c:" + std::to_string(i), onCast && i == title.cast ? 1 : 0);
+    for (size_t i = 0; i < similar; ++i)
+        glide("details:s:" + std::to_string(i), onSimilar && i == title.similar ? 1 : 0);
+    slide("details:cx",
+          kit::geometry::rowScrollTarget(static_cast<int>(title.cast), static_cast<int>(cast),
+                                         layout::castD, layout::castGap),
+          kit::motion::spring::row);
+    slide("details:sx",
+          kit::geometry::rowScrollTarget(static_cast<int>(title.similar), static_cast<int>(similar),
+                                         kSimilarW, kSimilarGap),
+          kit::motion::spring::row);
+    // Google TV's details rise as the focus goes down: the focused row's title at the top,
+    // large, and the page's head gone above it.
+    const std::vector<Section> sections = sectionsOf(title.item);
+    const std::vector<home::RowLook> looks = rowLooks(sections.size(), title.row);
+    const std::vector<float> tops = rowTopsOf(sectionHeights(sections), looks);
+    for (size_t i = 0; i < sections.size(); ++i)
+        glide("details:rg:" + std::to_string(i), looks[i].grow);
+    slide("details:vy",
+          title.row == 0 || title.row > tops.size() ? 0 : layout::rowsRisenTop - tops[title.row - 1],
+          kit::motion::spring::page);
 }
 void DetailsScreen::playEntrance(ScreenHost &host) {
     Timeline timeline;
@@ -298,11 +358,12 @@ void DetailsScreen::toggleOverview(ScreenHost &host, bool open) {
 }
 void DetailsScreen::activate(ScreenHost &host) {
     Title &title = top();
-    if (title.onSimilar) {
+    if (on(title, Section::Similar)) {
         push(host, title.item["similar"][title.similar]);
         return;
     }
-    if (title.action >= title.actions.size())
+    // A person has no page here.
+    if (title.row > 0 || title.action >= title.actions.size())
         return;
     switch (title.actions[title.action].kind) {
     case Action::Kind::Retry:
@@ -407,30 +468,32 @@ bool DetailsScreen::key(ScreenHost &host, Key key) {
         return true;
     }
     Title &title = top();
-    size_t similar = title.item["similar"].size();
+    const size_t rows = sectionsOf(title.item).size();
+    size_t &index = on(title, Section::Cast)      ? title.cast
+                    : on(title, Section::Similar) ? title.similar
+                                                  : title.action;
+    const size_t count = on(title, Section::Cast)      ? title.item["cast"].size()
+                         : on(title, Section::Similar) ? title.item["similar"].size()
+                                                       : title.actions.size();
     bool moved = true;
     switch (key) {
     case Key::Up:
-        title.onSimilar = false;
+        if (title.row)
+            --title.row;
         break;
     case Key::Down:
-        title.onSimilar = similar > 0;
+        if (title.row < rows)
+            ++title.row;
         break;
     case Key::Left:
-        if (title.onSimilar && title.similar)
-            --title.similar;
-        else if (!title.onSimilar && title.action) {
-            --title.action;
-            title.moved = true;
-        }
+        if (index)
+            --index;
+        title.moved = title.moved || title.row == 0;
         break;
     case Key::Right:
-        if (title.onSimilar && title.similar + 1 < similar)
-            ++title.similar;
-        else if (!title.onSimilar && title.action + 1 < title.actions.size()) {
-            ++title.action;
-            title.moved = true;
-        }
+        if (index + 1 < count)
+            ++index;
+        title.moved = title.moved || title.row == 0;
         break;
     case Key::Ok:
         activate(host);
@@ -467,8 +530,8 @@ bool DetailsScreen::back(ScreenHost &host) {
         title.loading = false;
         load(host);
     }
-    host.motion().erasePrefix("details:a:");
-    host.motion().erasePrefix("details:s");
+    for (const char *prefix : {"details:a:", "details:s", "details:c", "details:rg:", "details:vy"})
+        host.motion().erasePrefix(prefix);
     focusMoved(host, true);
     playEntrance(host);
     host.invalidate();
@@ -482,16 +545,27 @@ void DetailsScreen::click(ScreenHost &host, const std::string &id) {
         return;
     }
     Title &title = top();
+    const std::vector<Section> sections = sectionsOf(title.item);
+    const auto rowOf = [&sections](Section section) {
+        return static_cast<size_t>(std::find(sections.begin(), sections.end(), section) -
+                                   sections.begin()) + 1;
+    };
     if (id.compare(0, 15, "details:action:") == 0) {
-        title.onSimilar = false;
+        title.row = 0;
         title.action = std::min(static_cast<size_t>(std::atoi(id.c_str() + 15)),
                                 title.actions.size() - 1);
     } else if (id.compare(0, 16, "details:similar:") == 0) {
         size_t index = static_cast<size_t>(std::atoi(id.c_str() + 16));
         if (index >= title.item["similar"].size())
             return;
-        title.onSimilar = true;
+        title.row = rowOf(Section::Similar);
         title.similar = index;
+    } else if (id.compare(0, 13, "details:cast:") == 0) {
+        size_t index = static_cast<size_t>(std::atoi(id.c_str() + 13));
+        if (index >= title.item["cast"].size())
+            return;
+        title.row = rowOf(Section::Cast);
+        title.cast = index;
     } else
         return;
     focusMoved(host, false);
@@ -502,8 +576,10 @@ Json DetailsScreen::snapshot() const {
     if (stack_.empty())
         return value;
     const Title &title = top();
-    if (title.onSimilar)
+    if (on(title, Section::Similar))
         value.set("focus", Json::text(title.item["similar"][title.similar]["title"].string()));
+    else if (on(title, Section::Cast))
+        value.set("focus", Json::text(title.item["cast"][title.cast]["name"].string()));
     else if (title.action < title.actions.size())
         value.set("focus", Json::text(title.actions[title.action].label));
     value.set("titleId", title.item["id"]);
@@ -574,6 +650,63 @@ void overviewSheet(kit::Paint paint, const std::string &title, const std::string
 }
 } // namespace
 
+namespace {
+// "2 h 25 min", "98 min".
+std::string durationOf(double minutes) {
+    const long total = std::lround(minutes);
+    if (total < 60)
+        return std::to_string(total) + " min";
+    return std::to_string(total / 60) + " h" +
+           (total % 60 ? " " + std::to_string(total % 60) + " min" : std::string());
+}
+// Google TV's line of facts under the title: its rating, genre, year and length, each apart.
+std::vector<std::string> factsOf(const Json &item) {
+    std::vector<std::string> facts;
+    if (item["rating"].number() > 0)
+        facts.push_back("★ " + compactNumber(item["rating"].number(), 1));
+    if (item["genres"].size())
+        facts.push_back(item["genres"][0].string());
+    if (!item["year"].string().empty())
+        facts.push_back(item["year"].string());
+    if (item["runtime"].number() > 0)
+        facts.push_back(durationOf(item["runtime"].number()));
+    else if (item["seasons"].number() > 0)
+        facts.push_back(msg("tv.details.seasons", "{count} seasons",
+                            fields({{"count", Json::text(compactNumber(item["seasons"].number()))}})));
+    return facts;
+}
+// A cast member: their photo in a circle that grows with the focus inside a white ring, their
+// name and part under it.
+void castMember(kit::Paint paint, Rect rest, const Json &person, float focus, const std::string &id) {
+    Scene &scene = paint.scene;
+    const float amount = kit::focus::clamp01(focus);
+    const Rect art = kit::focus::scaledAbout(rest, 1 + .06f * amount);
+    if (amount > 0) {
+        Node &ring = scene.shape({art.x - 3, art.y - 3, art.w + 6, art.h + 6}, {0, 0, 0, 0},
+                                 art.w / 2 + 3);
+        ring.ring = {0, 4, kit::focus::withAlpha({1, 1, 1, 1}, amount)};
+    }
+    scene.shape(art, kit::color::surface3, art.w / 2);
+    const std::string photo = person["photo"].string();
+    if (!photo.empty())
+        scene.picture(art, 0, art.w / 2).value = "tmdb:w185:" + photo;
+    else
+        paint.glyphs.icon(scene, {art.x + art.w / 2 - 36, art.y + art.h / 2 - 36, 72, 72}, "profile",
+                          kit::color::onSurface3);
+    const float y = rest.y + rest.h + layout::castNameGap;
+    paint.glyphs.text(scene, {rest.x - 20, y, rest.w + 40, layout::cardCaptionLine},
+                      person["name"].string(), kit::type::cardCaption, kit::color::onSurface,
+                      Node::Align::Center, 1);
+    paint.glyphs.text(scene, {rest.x - 20, y + layout::cardCaptionLine, rest.w + 40,
+                              layout::cardCaptionLine},
+                      person["character"].string() == "Director"
+                          ? msg("tv.details.director", "Director")
+                          : person["character"].string(),
+                      kit::type::cardCaption, kit::color::onSurface2, Node::Align::Center, 1);
+    scene.hits.push_back({art, id});
+}
+} // namespace
+
 void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
     if (stack_.empty())
         return;
@@ -586,108 +719,159 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
     scene.background = kit::color::ink;
     backdrop(paint, item);
 
-    float y = 190;
-    auto group = [&](int block) {
+    // The page rises as the focus goes down its rows; its head fades as it leaves.
+    const float rise = static_cast<float>(motion.value("details:vy"));
+    const float head = kit::focus::clamp01(1 + rise / 500);
+    scene.pushTransform(Transform::translate(0, rise));
+    auto group = [&](int block, float alpha = 1) {
         kit::Enter enter = enterOf(motion, block);
-        scene.pushOpacity(enter.alpha);
+        scene.pushOpacity(enter.alpha * alpha);
         scene.pushTransform(Transform::translate(0, enter.dy));
     };
     auto endGroup = [&] {
         scene.popTransform();
         scene.popOpacity();
     };
-    // Block 0: what it is.
-    group(0);
-    Rect mark = {kit::canvas::safeX, y + (layout::heroSourceH - layout::heroMark) / 2,
-                 layout::heroMark, layout::heroMark};
-    scene.shape(mark, kit::alpha::accentDim, layout::heroMark / 2);
-    paint.glyphs.icon(scene, {mark.x + 5, mark.y + 5, 18, 18}, "play", kit::color::accent);
-    paint.glyphs.text(scene,
-                      {mark.x + mark.w + layout::heroMarkGap, y,
-                       kTextWidth - mark.w - layout::heroMarkGap, layout::heroSourceH},
-                      item["type"].string() == "tv" ? msg("tv.details.series", "Series")
-                                                    : msg("tv.details.film", "Film"),
-                      kit::type::heroSource, kit::color::onSurface2);
-    y += layout::heroSourceH + 12;
+    // Block 0: the title, as large as Google TV sets it, and its facts.
+    group(0, head);
     const std::string name = item["title"].string();
-    bool longTitle = paint.glyphs.measure(name, kit::type::display) > kTextWidth;
-    const kit::TypeStyle &titleStyle = longTitle ? kit::type::headline : kit::type::display;
-    float titleHeight = longTitle ? titleStyle.line * 2 : titleStyle.line;
-    paint.glyphs.text(scene, {kit::canvas::safeX, y, kTextWidth, titleHeight}, name, titleStyle,
-                      kit::color::onSurface, Node::Align::Left, longTitle ? 2 : 1);
-    y += titleHeight + 12;
-    kit::factsLine(paint, {kit::canvas::safeX, y, kTextWidth, kit::type::bodyL.line}, titleFacts(item, false),
-                   kit::type::bodyL, kit::color::onSurface2);
-    y += kit::type::bodyL.line + 20;
+    const kit::TypeStyle &titleStyle = kit::type::detailsTitle;
+    const bool twoLines = paint.glyphs.measure(name, titleStyle) > layout::detailsTitleW;
+    const float titleBox = 2 * titleStyle.line;
+    paint.glyphs.text(scene,
+                      {layout::homeX, layout::detailsTitleTop + (twoLines ? 0 : (titleBox - titleStyle.line) / 2),
+                       layout::detailsTitleW, twoLines ? titleBox : titleStyle.line},
+                      name, titleStyle, kit::color::onSurface, Node::Align::Left, twoLines ? 2 : 1);
+    float x = layout::homeX;
+    const kit::TypeStyle &factStyle = kit::type::detailsFacts;
+    for (const std::string &fact : factsOf(item)) {
+        // The rating's star is an icon (kit::factsLine draws it so), as wide as the type is tall.
+        const bool rated = fact.compare(0, 4, "\xe2\x98\x85 ") == 0;
+        const float width = rated ? factStyle.px * 1.18f + paint.glyphs.measure(fact.substr(4), factStyle)
+                                  : paint.glyphs.measure(fact, factStyle);
+        kit::factsLine(paint, {x, layout::detailsFactsTop, width + 4, factStyle.line}, fact, factStyle,
+                       kit::color::onSurface);
+        x += width + layout::detailsFactsGap;
+    }
     endGroup();
-    // Block 1: the story.
-    group(1);
+    // Block 1: the story, two lines.
+    group(1, head);
     std::string overview = item["overview"].string();
-    paint.glyphs.text(scene, {kit::canvas::safeX, y, kTextWidth - 40, kit::type::body.line * 3},
+    paint.glyphs.text(scene, {layout::homeX, layout::detailsPlotTop, layout::detailsPlotW,
+                              kit::type::body.line * 2},
                       overview.empty() ? msg("tv.details.noOverview", "No overview available")
                                        : overview,
                       kit::type::body, overview.empty() ? kit::color::onSurface3 : kit::color::onSurface2,
-                      Node::Align::Left, 3);
-    y += kit::type::body.line * 3 + 12;
-    std::string cast = castOf(item);
-    if (!cast.empty())
-        paint.glyphs.text(scene, {kit::canvas::safeX, y, kTextWidth - 40, kit::type::labelM.line}, cast,
-                          kit::type::labelM, kit::color::onSurface3);
-    y += kit::type::labelM.line + 28;
+                      Node::Align::Left, 2);
     endGroup();
-    // Block 2: what can be done.
-    group(2);
-    float x = kit::canvas::safeX;
+    // Block 2: what can be done, Google TV's pills: dark at rest, light and a tenth larger with the
+    // focus.
+    group(2, head);
+    x = layout::homeX;
+    const float actionsY = layout::detailsActionsTop, actionH = layout::detailsActionH;
     for (size_t i = 0; i < title.actions.size(); ++i) {
-        kit::PillButton button;
         const Action &action = title.actions[i];
-        button.label = action.iconOnly ? "" : action.label;
-        button.icon = action.icon;
-        float width = action.iconOnly
-                          ? kActionH
-                          : std::max(160.0f, paint.glyphs.measure(button.label, kit::type::title) +
-                                                 72 + (action.icon.empty() ? 0 : 40));
-        button.rest = {x, y, width, kActionH};
-        button.id = "details:action:" + std::to_string(i);
-        button.primary = i == 0 && (title.actions[i].kind == Action::Kind::Netflix ||
-                                    title.actions[i].kind == Action::Kind::Service ||
-                                    title.actions[i].kind == Action::Kind::Trailer);
-        button.focus = static_cast<float>(motion.value("details:a:" + std::to_string(i)));
-        kit::pillButton(paint, button);
-        x += width + 16;
+        const float focus = kit::focus::clamp01(
+            static_cast<float>(motion.value("details:a:" + std::to_string(i))));
+        const std::string label = action.iconOnly ? "" : action.label;
+        const float textWidth = label.empty() ? 0 : paint.glyphs.measure(label, kit::type::bodyL);
+        const float iconWidth = action.icon.empty()
+                                    ? 0
+                                    : layout::detailsActionIcon + (label.empty() ? 0 : layout::detailsActionIconGap);
+        const float width = action.iconOnly ? layout::detailsIconActionW
+                                            : textWidth + iconWidth + 2 * layout::detailsActionPad;
+        const Rect rest = {x, actionsY, width, actionH};
+        const Color ink = kit::focus::mix(kit::color::onSurface2, kit::color::onFocus, focus);
+        scene.pushTransform(Transform::scaleAbout(rest, .5f, .5f, 1 + .1f * focus));
+        scene.shape(rest, kit::focus::mix({1, 1, 1, .1f}, kit::color::focusFill, focus), actionH / 2);
+        float content = action.iconOnly ? rest.x + (width - layout::detailsActionIcon) / 2
+                                        : rest.x + layout::detailsActionPad;
+        if (!action.icon.empty()) {
+            paint.glyphs.icon(scene, {content, rest.y + (actionH - layout::detailsActionIcon) / 2,
+                                      layout::detailsActionIcon, layout::detailsActionIcon},
+                              action.icon, ink);
+            content += iconWidth;
+        }
+        if (!label.empty())
+            paint.glyphs.text(scene, {content, rest.y + (actionH - kit::type::bodyL.line) / 2,
+                                      textWidth + 4, kit::type::bodyL.line},
+                              label, kit::type::bodyL, ink);
+        scene.popTransform();
+        scene.hits.push_back({rest, "details:action:" + std::to_string(i)});
+        x += width + layout::detailsActionGap;
     }
-    y += kActionH + 16;
     if (!title.status.empty())
-        paint.glyphs.text(scene, {kit::canvas::safeX, y, kTextWidth, kit::type::labelM.line},
+        paint.glyphs.text(scene, {layout::homeX, actionsY + actionH + 12, layout::detailsTitleW,
+                                  kit::type::labelM.line},
                           title.status, kit::type::labelM,
                           title.error ? kit::color::bad : kit::color::onSurface3);
     endGroup();
-    // Block 3: more like this.
-    size_t count = item["similar"].size();
-    if (count) {
-        group(3);
-        paint.glyphs.text(scene, {kit::canvas::safeX, kSimilarTop - 36, 600, kit::type::labelM.line},
-                          msg("tv.details.more", "More like this"), kit::type::labelM,
-                          kit::color::onSurface2);
-        float scroll = static_cast<float>(motion.value("details:sx"));
-        for (size_t i = 0; i < count; ++i) {
-            Rect rest = {kit::canvas::safeX + static_cast<float>(i) * (kSimilarW + kSimilarGap) + scroll,
-                         kSimilarTop, kSimilarW, kSimilarH};
+    scene.popTransform();
+    // Block 3: the rows under them, Google TV's: the cast and crew, then the titles like it. They
+    // are placed on the screen, risen, since the cards leave out what is off it.
+    const std::vector<Section> sections = sectionsOf(item);
+    std::vector<home::RowLook> looks(sections.size());
+    for (size_t i = 0; i < sections.size(); ++i) {
+        looks[i].up = 1;
+        looks[i].risen = 1;
+        looks[i].grow = static_cast<float>(motion.value("details:rg:" + std::to_string(i)));
+    }
+    const std::vector<float> tops = rowTopsOf(sectionHeights(sections), looks);
+    group(3);
+    for (size_t r = 0; r < sections.size(); ++r) {
+        const float labelY = tops[r] + rise, itemsY = labelY + home::labelArea(looks[r]);
+        if (labelY > kit::canvas::height + 40 || itemsY + 400 < 0)
+            continue;
+        kit::Row label;
+        label.index = static_cast<int>(r);
+        label.placed = true;
+        label.y = labelY;
+        label.px = home::labelPx(looks[r]);
+        label.grow = looks[r].grow;
+        label.label = sections[r] == Section::Cast
+                          ? msg("tv.details.cast", "Cast & crew")
+                          : msg("tv.details.ifYouLiked", "If you liked {title}",
+                                fields({{"title", Json::text(name)}}));
+        kit::row(paint, label);
+        if (sections[r] == Section::Cast) {
+            const float scroll = static_cast<float>(motion.value("details:cx"));
+            for (size_t i = 0; i < item["cast"].size(); ++i) {
+                const Rect rest = {layout::homeX + static_cast<float>(i) * (layout::castD + layout::castGap) + scroll,
+                                   itemsY, layout::castD, layout::castD};
+                if (rest.x + rest.w < -140 || rest.x > kit::canvas::width + 140)
+                    continue;
+                castMember(paint, rest, item["cast"][i],
+                           static_cast<float>(motion.value("details:c:" + std::to_string(i))),
+                           "details:cast:" + std::to_string(i));
+            }
+            continue;
+        }
+        const float scroll = static_cast<float>(motion.value("details:sx"));
+        for (size_t i = 0; i < item["similar"].size(); ++i) {
+            const Rect rest = {layout::homeX + static_cast<float>(i) * (kSimilarW + kSimilarGap) + scroll,
+                               itemsY, kSimilarW, kSimilarH};
             if (rest.x + rest.w < -140 || rest.x > kit::canvas::width + 140)
                 continue;
-            Json similar = item["similar"][i];
+            const Json similar = item["similar"][i];
             kit::PosterCard card;
             card.rest = rest;
             card.id = "details:similar:" + std::to_string(i);
             card.image = artwork(similar);
             card.title = similar["title"].string();
             card.focus = static_cast<float>(motion.value("details:s:" + std::to_string(i)));
+            // Google TV names the focused title under its card; every card has its line of facts.
+            if (card.focus > .5f)
+                card.caption = card.title;
+            card.captionLine = titleFacts(similar, false);
             kit::card(paint, card);
         }
-        endGroup();
     }
-    kit::keyHint(paint, kit::canvas::safeX, 1002, "Back", msg("tv.details.return", "Return"),
-                 "details:back");
+    endGroup();
+    // A page with nothing to press yet (its details on the way, no trailer, no marks) shows how
+    // to leave, which the pointer can click.
+    if (title.actions.empty())
+        kit::keyHint(paint, layout::homeX, 1002, "Back", msg("tv.details.return", "Return"),
+                     "details:back");
     float open = static_cast<float>(motion.value("details:ov"));
     if (open > .002f)
         overviewSheet(paint, item["title"].string(),

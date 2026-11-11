@@ -1145,6 +1145,48 @@
       ]
     },
     {
+      "name": "details-cast",
+      "time": 4600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "details-similar",
+      "time": 5600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        },
+        {
+          "at": 4000,
+          "key": "down"
+        }
+      ]
+    },
+    {
       "name": "details-overview",
       "time": 4200,
       "fixture": "home",

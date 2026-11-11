@@ -113,9 +113,9 @@ void detailsChecks() {
     world.reply("title:details", detailsJson);
     world.settle(600);
     check(world.snapshot()["contentState"].string() == "ready" && world.snapshot()["focus"].string() == "Trailer" &&
-              world.app.shows("A journey across the water.") && world.app.shows("Cast: Ada, Ben") &&
-              world.app.shows("More like this"),
-          "A reply fills the page, with Trailer focused (the only deep links are Netflix and YouTube) and the similar titles below");
+              world.app.shows("A journey across the water.") && world.app.shows("Cast & crew"),
+          "A reply fills the page, with Trailer focused (the only deep links are Netflix and YouTube) "
+          "and the cast and crew below");
     check(!world.app.shows("Open"), "There is no Open button: a title opens on Netflix or as a trailer");
     world.reply("title:netflix", R"({"ok":true,"netflixId":"80057281"})");
     check(world.snapshot()["focus"].string() == "Open on Netflix",
@@ -136,9 +136,17 @@ void detailsChecks() {
               world.on("w:details.open").back().body["id"].string() == "dQw4w9WgXcQ",
           "Trailer opens the video");
 
-    // Similar titles open on top of this one; Back peels them off.
+    // As on Google TV the cast and crew come first under the actions, then the similar titles,
+    // which open on top of this one; Back peels them off.
     world.press(Key::Down);
-    check(world.snapshot()["focus"].string() == "Horizon", "Down moves to the similar titles");
+    world.settle(600);
+    check(world.snapshot()["focus"].string() == "Ada" && world.app.shows("Ada") &&
+              world.app.shows("Ben") && world.app.shows("If you liked Coast"),
+          "Down raises the cast and crew to the top, the similar titles under them");
+    world.press(Key::Ok);
+    check(world.snapshot()["depth"].number() == 1, "OK on a person opens nothing");
+    world.press(Key::Down);
+    check(world.snapshot()["focus"].string() == "Horizon", "Down again moves to the similar titles");
     world.press(Key::Right);
     world.press(Key::Ok);
     check(world.snapshot()["depth"].number() == 2 && world.transport.last("title:details").body["id"].string() == "21",
@@ -284,12 +292,12 @@ void detailsDepthChecks() {
     World world;
     world.openDetails();
     for (int i = 0; i < 7; ++i) {
-        world.press(Key::Down);
+        world.press({Key::Down, Key::Down}); // past the cast and crew to the similar titles
         world.press(Key::Ok);
         world.reply("title:details", detailsJson);
     }
     check(world.snapshot()["depth"].number() == 8, "Titles open up to eight deep");
-    world.press(Key::Down);
+    world.press({Key::Down, Key::Down});
     world.press(Key::Ok);
     check(world.snapshot()["depth"].number() == 8 && world.toasted("Go back before opening another title"),
           "A ninth title is refused with a message");

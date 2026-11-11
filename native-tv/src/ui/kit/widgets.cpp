@@ -607,17 +607,20 @@ void card(Paint paint, const PosterCard &poster) {
     if (invisible(poster.enter) || offCanvas(look.rect))
         return;
     Scene &scene = paint.scene;
-    const bool captioned = !poster.caption.empty();
+    const bool captioned = !poster.caption.empty() || !poster.captionLine.empty();
     if (captioned) {
-        // Under the card, outside the focus's scale: the lines stay where they are.
+        // Under the card, outside the focus's scale: the lines stay where they are. Without a
+        // caption its line takes the first place.
         Group lines(scene, poster.enter);
-        const float y = poster.rest.y + poster.rest.h + layout::cardCaptionGap;
-        text(paint, {poster.rest.x, y, poster.rest.w, layout::cardCaptionLine}, poster.caption,
-             type::cardCaption, color::onSurface, Node::Align::Left, 1);
+        float y = poster.rest.y + poster.rest.h + layout::cardCaptionGap;
+        if (!poster.caption.empty()) {
+            text(paint, {poster.rest.x, y, poster.rest.w, layout::cardCaptionLine}, poster.caption,
+                 type::cardCaption, color::onSurface, Node::Align::Left, 1);
+            y += layout::cardCaptionLine;
+        }
         if (!poster.captionLine.empty())
-            text(paint, {poster.rest.x, y + layout::cardCaptionLine, poster.rest.w,
-                         layout::cardCaptionLine},
-                 poster.captionLine, type::cardCaption, color::onSurface2, Node::Align::Left, 1);
+            factsText(paint, {poster.rest.x, y, poster.rest.w, layout::cardCaptionLine},
+                      poster.captionLine, type::cardCaption, color::onSurface2);
     }
     Transform scale = focus::transformAt(poster.rest, look.scale);
     Group group(scene, poster.enter, look.scale != 1 ? &scale : nullptr);

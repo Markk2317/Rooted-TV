@@ -1842,3 +1842,8 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   video plane, so the UI cannot be drawn at 3840 × 2160; what keeps it sharp is
   drawing every picture at its 1080p size (TMDB's `w1920_and_h1080_bestv2` cut
   for full-screen art).
+- The system json-c writes a double that holds a whole number as `968.0`, and
+  `json_object_get_string` on a parsed double gives that text back, where the
+  host's json-c answers `968`. A TMDB id passed through the feed came back as
+  `968.0` and the details lookup refused it, so `Json::string()` reads a whole
+  double as the integer it is.

@@ -4,9 +4,10 @@
 #include <utility>
 
 namespace nativetv {
-// Title details: the backdrop, the lines about the film or series, its actions, a row of similar
-// titles and the full overview. A similar title opens on top of this one (up to eight deep) and
-// Back peels them off again, as the page did in JavaScript.
+// Title details, as Google TV's: the backdrop, the title, its facts and story, its actions, and
+// under them rows that rise to the top as the focus goes down (the cast and crew, the titles like
+// it), and the full overview. A similar title opens on top of this one (up to eight deep) and Back
+// peels them off again, as the page did in JavaScript.
 //
 // Reached from Home as "details:<type>:<id>"; the search editor hosts one as a child
 // (`embedded`) so the search it sits on keeps its query and results while it is open.
@@ -35,6 +36,8 @@ class DetailsScreen final : public ScreenView {
     bool finished() const {
         return finished_;
     }
+    // The rows under the actions, those the title has.
+    enum class Section { Cast, Similar };
 
   private:
     struct Action {
@@ -48,11 +51,15 @@ class DetailsScreen final : public ScreenView {
     struct Title {
         Json item;
         std::string status;
-        bool loading = false, error = false, stale = false, onSimilar = false, moved = false;
+        bool loading = false, error = false, stale = false, moved = false;
         unsigned detailsGeneration = 0, netflixGeneration = 0;
-        size_t action = 0, similar = 0;
+        // row: 0 for the actions, else the section's place plus one.
+        size_t row = 0, action = 0, cast = 0, similar = 0;
         std::vector<Action> actions;
     };
+    static std::vector<Section> sectionsOf(const Json &item);
+    // The focused row's section; the actions have none.
+    bool on(const Title &title, Section section) const;
     void push(ScreenHost &host, const Json &item);
     void load(ScreenHost &host);
     void rebuildActions(ScreenHost &host, Title &title);

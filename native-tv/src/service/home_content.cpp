@@ -434,24 +434,27 @@ Json detailsValue(const Json &document, const std::string &type,
     }
     item.set("genres", genres);
 
+    // Google TV's Cast & crew: the director first, then the cast, each with their TMDB photo.
     Json cast = Json::array();
-    const Json rawCast = document["credits"]["cast"];
-    if (rawCast.isArray()) {
-        const std::vector<Json> people = rawCast.items();
-        const size_t count = std::min<size_t>(12, people.size());
-        for (size_t index = 0; index < count; ++index) {
-            const Json &person = people[index];
-            Json credit = Json::object();
-            const std::string name = utf16Prefix(
-                jsString(truthy(person["name"]) ? person["name"] : Json()), 100);
-            const std::string character = utf16Prefix(
-                jsString(truthy(person["character"]) ? person["character"] : Json()), 100);
-            if (name.empty()) continue;
-            credit.set("name", Json::text(name));
-            credit.set("character", Json::text(character));
-            cast.add(credit);
+    const auto addCredit = [&cast](const Json &person, const std::string &role) {
+        const std::string name = utf16Prefix(
+            jsString(truthy(person["name"]) ? person["name"] : Json()), 100);
+        if (name.empty() || cast.size() >= 12) return;
+        Json credit = Json::object();
+        credit.set("name", Json::text(name));
+        credit.set("character", Json::text(utf16Prefix(role, 100)));
+        const std::string photo = jsString(person["profile_path"]);
+        credit.set("photo", Json::text(photo.size() > 5 && photo.size() < 40 && photo[0] == '/'
+                                           ? photo : ""));
+        cast.add(credit);
+    };
+    for (const Json &person : document["credits"]["crew"].items())
+        if (person["job"].string() == "Director") {
+            addCredit(person, "Director");
+            break;
         }
-    }
+    for (const Json &person : document["credits"]["cast"].items())
+        addCredit(person, jsString(truthy(person["character"]) ? person["character"] : Json()));
     item.set("cast", cast);
 
     std::vector<Json> videos;
@@ -920,7 +923,8 @@ void HomeContent::loadCacheLocked() {
     close(input);
     if (!ok) return;
     const Json saved = Json::parse(contents);
-    if (!saved.isObject() || saved["version"].number() != 1 ||
+    // Version 2: a title's cast carries its photos and director; older details are fetched again.
+    if (!saved.isObject() || saved["version"].number() != 2 ||
         !saved["entries"].isArray()) return;
     for (const Json &item : saved["entries"].items()) {
         const std::string key = item["key"].string();
@@ -957,7 +961,7 @@ void HomeContent::saveCacheLocked() {
             cache_[entries[index].first] = entries[index].second;
     }
     Json document = Json::object();
-    document.set("version", Json::numeric(1));
+    document.set("version", Json::numeric(2));
     Json values = Json::array();
     for (const auto &pair : cache_) {
         Json entry = Json::object();
