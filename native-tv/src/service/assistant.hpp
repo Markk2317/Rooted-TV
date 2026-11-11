@@ -33,6 +33,8 @@ class Assistant {
 
     // The function declarations Gemini is given.
     static Json tools();
+    // The HTTPS POST every request to Gemini goes through.
+    static Transport https();
 
   private:
     Transport transport_;

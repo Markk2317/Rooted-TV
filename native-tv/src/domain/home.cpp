@@ -254,6 +254,8 @@ Card feedCard(const Json &item, const std::string &rowKey) {
         card.image = "tmdb:w500:" + item["art"].string();
         card.titled = true;
     }
+    if (!item["logo"].string().empty())
+        card.logo = "tmdb:w500:" + item["logo"].string();
     if (card.kind == "netflix") {
         // OK opens the title in Netflix itself, as a YouTube card opens YouTube.
         card.command = post(Operation::OpenHomeItem,

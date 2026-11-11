@@ -100,6 +100,7 @@ kit::Hero heroOf(const Frame &frame) {
     hero.hint = home.art.text.hint;
     hero.tag = home.art.text.tag;
     hero.wordmark = home.art.text.wordmark;
+    hero.logo = home.art.text.logo;
     hero.more = home.art.text.more;
     hero.button = home.art.text.button;
     hero.expand = static_cast<float>(motion.value("he"));

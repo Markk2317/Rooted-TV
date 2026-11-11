@@ -148,6 +148,7 @@ add_library(nativetv_tv_services src/service/control_commands.cpp
   src/service/home_image_proxy.cpp src/service/youtube_accounts.cpp
   src/service/home_titles.cpp src/service/home_watching.cpp
   src/service/screensaver_photos.cpp src/service/weather.cpp src/service/assistant.cpp
+  src/service/home_picks.cpp src/service/screen_title.cpp
   src/service/home_trailers.cpp)
 target_link_libraries(nativetv_tv_services PUBLIC nativetv_core nativetv_names
   PkgConfig::CURL ZLIB::ZLIB)
@@ -416,6 +417,14 @@ if(BUILD_TESTING)
   target_link_libraries(native-assistant-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-assistant-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
   add_test(NAME native-assistant COMMAND native-assistant-tests)
+  add_executable(native-home-picks-tests tests/home_picks.cpp)
+  target_link_libraries(native-home-picks-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-home-picks-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+  add_test(NAME native-home-picks COMMAND native-home-picks-tests)
+  add_executable(native-screen-title-tests tests/screen_title.cpp)
+  target_link_libraries(native-screen-title-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-screen-title-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+  add_test(NAME native-screen-title COMMAND native-screen-title-tests)
   add_executable(native-screensaver-photos-tests tests/screensaver_photos.cpp)
   target_link_libraries(native-screensaver-photos-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-screensaver-photos-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)

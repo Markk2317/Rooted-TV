@@ -111,6 +111,35 @@ void HomeWatching::opened(const std::string &profile, const Json &item, const st
     saveLocked();
 }
 
+void HomeWatching::seen(const std::string &profile, const Json &item, const std::string &service,
+                        const std::string &appId, int64_t watchedMs, int64_t nowMs) {
+    const Json title = HomeTitles::trimmed(item);
+    const std::string key = HomeTitles::keyOf(item);
+    if (!title.valid() || key.empty() || profile.empty() || watchedMs <= 0) return;
+    std::lock_guard<std::mutex> lock(mutex_);
+    loadLocked();
+    if (key == activeKey_ && profile == activeProfile_) return;
+    Json previous;
+    Json rest = Json::array();
+    for (const Json &entry : profiles_[profile].items()) {
+        if (HomeTitles::keyOf(entry["item"]) == key) previous = entry;
+        else if (rest.size() < kKeptMax - 1) rest.add(copyOf(entry));
+    }
+    Json entry = Json::object();
+    entry.set("item", previous.valid() && previous["item"]["runtime"].isNumber() ? previous["item"] : title);
+    entry.set("service", Json::text(service));
+    entry.set("appId", Json::text(appId));
+    entry.set("openedAt", Json::numeric(static_cast<double>(nowMs - watchedMs)));
+    entry.set("watchedMs", Json::numeric((previous.valid() ? previous["watchedMs"].number() : 0) +
+                                         static_cast<double>(std::min(kSessionMaxMs, watchedMs))));
+    entry.set("seenAt", Json::numeric(static_cast<double>(nowMs)));
+    Json list = Json::array();
+    list.add(entry);
+    for (const Json &other : rest.items()) list.add(other);
+    profiles_.set(profile, list);
+    saveLocked();
+}
+
 void HomeWatching::foreground(const std::string &appId, int64_t nowMs) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (activeKey_.empty()) return;
@@ -139,6 +168,16 @@ void HomeWatching::foreground(const std::string &appId, int64_t nowMs) {
     // Another app, or the screen off: the title stays the one Home opened last until it opens
     // another, so coming back to its app goes on counting.
     saveLocked();
+}
+
+Json HomeWatching::watched(const std::string &profile, size_t limit) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    loadLocked();
+    Json items = Json::array();
+    for (const Json &entry : profiles_[profile].items())
+        if (items.size() < limit && entry["watchedMs"].number() >= 2 * kMinuteMs)
+            items.add(entry["item"]);
+    return items;
 }
 
 Json HomeWatching::row(const std::string &profile, int64_t nowMs) {

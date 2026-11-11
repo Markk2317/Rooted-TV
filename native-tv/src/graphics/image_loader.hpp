@@ -20,7 +20,9 @@ struct DecodedImage {
     int width = 0, height = 0;
     std::vector<uint8_t> rgba; // empty when decoding failed
     bool opaque = false;       // no pixel is see-through: whatever is drawn under it never shows
-    int tone = -1;             // 0xRRGGBB: the mean of the picture's left third; -1 unknown
+    // 0xRRGGBB: the mean of the picture's left third, or for one with see-through parts (a title's
+    // logo) the mean of what is drawn; -1 unknown.
+    int tone = -1;
 };
 // JPEG or PNG (SDL_image) resampled to the size it will be drawn at, so the GPU never
 // minifies a large texture. Safe to call from any thread.

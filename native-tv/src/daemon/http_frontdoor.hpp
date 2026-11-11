@@ -9,6 +9,7 @@
 #include "daemon/hostname_cache.hpp"
 #include "daemon/http_proxy.hpp"
 #include "daemon/http_static_assets.hpp"
+#include "service/home_picks.hpp"
 #include "service/admin_pin.hpp"
 #include "service/app_catalog.hpp"
 #include "service/app_package_inspector.hpp"
@@ -181,6 +182,10 @@ class HttpFrontDoor {
     // The app now in front ("" with the screen off), for Continue watching, and to close the TV app
     // behind an app that needs its memory (webOS 3.4, see closeClientBehind).
     void foregroundChanged(const std::string &appId);
+    // Playback in the app in front changed ("playing", "paused", "idle"...): with
+    // `continueFromScreen` on, a title played in a streaming app's own player is read off the screen
+    // for Continue watching (service::screen_title).
+    void mediaChanged(const std::string &state);
     // Whether GitHub has a newer release: the Server tab's Check button, and
     // the opt-in daily check (checkReleaseIfDue, run hourly).
     void setReleaseChecker(service::ReleaseChecker *checker) { releaseChecker_ = checker; }
@@ -466,6 +471,9 @@ class HttpFrontDoor {
     mutable service::YoutubeAccounts youtubeAccounts_;
     mutable service::HomeTitles homeTitles_;
     mutable service::HomeWatching homeWatching_;
+    mutable service::HomePicks homePicks_;
+    // Top picks for you starting with the ones Gemini chose for the profile (service::HomePicks).
+    Json withGeminiPicks(const Json &rows, const std::string &profile, const Json &document) const;
     mutable service::Weather weather_;
     mutable service::Assistant assistant_;
     mutable std::atomic<bool> screensaverPhotoUploadActive_{false};
@@ -618,6 +626,18 @@ class HttpFrontDoor {
     void closeClientBehind(const std::string &appId);
     mutable std::mutex foregroundMutex_;
     std::string foregroundApp_;
+    // The streaming app in front's playback: how long it played, and the title once read.
+    struct ScreenSession {
+        std::string appId, service;
+        int64_t playingSince = 0, playedMs = 0, recordedMs = 0;
+        Json item;
+        unsigned long long token = 0;
+    };
+    std::mutex screenMutex_;
+    ScreenSession screenSession_;
+    void readTitleOffScreen(const std::string &appId, const std::string &service, int64_t playedMs,
+                            unsigned long long token);
+    void endScreenSession(int64_t nowMs);
     // 1 where logo dimming is the server's own (an OLED whose picture settings lack
     // logoLuminanceAdjust), 0 where it is not, -1 until known.
     mutable std::atomic<int> logoDimmingInSoftware_{-1};

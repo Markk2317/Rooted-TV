@@ -541,10 +541,10 @@ void Batcher::add(const Node &node, TextureId texture) {
                 if (node.contain) {
                     if (ratio > target) {
                         content.h = box.w / ratio;
-                        content.y += (box.h - content.h) / 2;
+                        content.y += (box.h - content.h) * (node.containAtFoot ? 1 : .5f);
                     } else {
                         content.w = box.h * ratio;
-                        content.x += (box.w - content.w) / 2;
+                        content.x += node.containAtFoot ? 0 : (box.w - content.w) / 2;
                     }
                 } else if (!node.stretch) {
                     if (ratio > target) {

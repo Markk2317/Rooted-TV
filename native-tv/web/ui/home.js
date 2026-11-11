@@ -72,6 +72,9 @@ let homeButtonOn = null;
 // The same for opening Home as the TV comes on, and for the activity that starts the server after a reboot.
 let powerOnOn = null;
 let rebootOn = null;
+// Top picks chosen by Gemini (on unless switched off) and Continue watching read off the screen (off).
+let picksOn = null;
+let screenOn = null;
 // The Google account of the profile in use: {clientSet, linked, name, pending, error}.
 let googleAccount = null;
 let googleWatch = null;
@@ -85,6 +88,8 @@ async function loadHomeKeys() {
     homeButtonOn = typeof status.homeButton === 'boolean' ? status.homeButton : null;
     powerOnOn = typeof status.homeOnPowerOn === 'boolean' ? status.homeOnPowerOn : null;
     rebootOn = typeof status.startAfterReboot === 'boolean' ? status.startAfterReboot : null;
+    picksOn = typeof status.geminiPicks === 'boolean' ? status.geminiPicks : null;
+    screenOn = typeof status.continueFromScreen === 'boolean' ? status.continueFromScreen : null;
     googleAccount = status.youtubeAccount || null;
     geminiKeySet = status.geminiKeySet === true;
     homeTrailersOn = status.homeTrailers !== false;
@@ -111,7 +116,7 @@ async function homeButtonToggle() {
   if (r && r.ok) { homeButtonOn = r.homeButton === true; renderHomeButton(); }
 }
 function renderStartSwitches() {
-  [['power-on', powerOnOn], ['reboot', rebootOn]].forEach(([key, on]) => {
+  [['power-on', powerOnOn], ['reboot', rebootOn], ['picks', picksOn], ['screen', screenOn]].forEach(([key, on]) => {
     const row = q('home-' + key + '-row'), btn = q('home-' + key);
     if (!row || !btn) return;
     row.hidden = on === null;
@@ -124,6 +129,16 @@ async function powerOnToggle() {
   if (powerOnOn === null) return;
   const r = await sendCommand('setHomeOnPowerOn', !powerOnOn);
   if (r && r.ok) { powerOnOn = r.homeOnPowerOn === true; renderStartSwitches(); }
+}
+async function picksToggle() {
+  if (picksOn === null) return;
+  const r = await sendCommand('setGeminiPicks', !picksOn);
+  if (r && r.ok) { picksOn = r.geminiPicks === true; renderStartSwitches(); }
+}
+async function screenToggle() {
+  if (screenOn === null) return;
+  const r = await sendCommand('setContinueFromScreen', !screenOn);
+  if (r && r.ok) { screenOn = r.continueFromScreen === true; renderStartSwitches(); }
 }
 async function rebootToggle() {
   if (rebootOn === null) return;

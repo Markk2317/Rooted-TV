@@ -30,9 +30,11 @@ struct HeroText {
     // tag: why the banner shows the title ("Trending"), before its logline; wordmark: the icon file
     // of the service's wordmark ("wordmark-netflix"), drawn in the source line's place.
     // more: what the banner adds under its line once it has the focus; button: its button then.
-    std::string source, title, facts, description, image, hint, tag, wordmark, more, button;
+    // logo: the title's logo, drawn in place of its name once it has arrived and reads on the art.
+    std::string source, title, facts, description, image, hint, tag, wordmark, more, button, logo;
     bool operator==(const HeroText &other) const {
-        return source == other.source && title == other.title && facts == other.facts &&
+        return source == other.source && title == other.title && logo == other.logo &&
+               facts == other.facts &&
                description == other.description && image == other.image && hint == other.hint &&
                tag == other.tag && wordmark == other.wordmark && more == other.more &&
                button == other.button;
@@ -209,6 +211,10 @@ class Application : private ScreenHost {
     void homeHeroKey(Key key);
     bool homeHeroOffered() const;
     void homeSwapText();
+    // The card's lines, with its logo where that has arrived and reads on the art.
+    HeroText heroLinesOf(const Card &card);
+    // Asks for the card's logo at the size the hero draws it: true once it is there or will not be.
+    bool logoSettled(const Card &card);
     // Idle dimming, for every screen but the splash (application.cpp).
     void idleUpdate();
     bool wake();

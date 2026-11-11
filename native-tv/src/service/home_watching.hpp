@@ -20,12 +20,20 @@ class HomeWatching {
     // `appId` for `service` ("netflix", "prime", "disney") for `profile`, at `nowMs`.
     void opened(const std::string &profile, const Json &item, const std::string &service,
                 const std::string &appId, int64_t nowMs);
+    // A title read off the screen once it had played `watchedMs` in a service's own app
+    // (service::screen_title): put first, its time added to what it had. Nothing for the title
+    // Home opened last, whose time the app in front already counts.
+    void seen(const std::string &profile, const Json &item, const std::string &service,
+              const std::string &appId, int64_t watchedMs, int64_t nowMs);
     // The app in front changed, or the screen went off (""): the title opened last stops counting
     // once its app has left the front.
     void foreground(const std::string &appId, int64_t nowMs);
     // {"key": "continue", "items": [title + "service" + "progress" (0 to 1)]}, newest first, or null:
     // the titles watched for two minutes or more, not to their end, in the last 30 days.
     Json row(const std::string &profile, int64_t nowMs);
+    // Every title the profile has watched for two minutes or more, finished or not, newest first:
+    // [item], at most `limit`.
+    Json watched(const std::string &profile, size_t limit);
 
   private:
     void loadLocked();

@@ -158,8 +158,14 @@ HeroText linesOf(const ViewState &state, const Card &card) {
             }
         text.facts = card.subtitle.empty() && card.kind == "youtube" ? "YouTube" : card.subtitle;
         text.more = card.data["overview"].string();
+        // A pick Gemini chose says why, before its facts: "Because you watched Heat | Film · 2026".
+        if (!card.data["because"].string().empty()) {
+            text.tag = card.data["because"].string();
+            text.description = text.facts;
+        }
     } else if (isTitle(card)) {
-        text.source = rowTitleOf(state, card);
+        text.source = card.data["because"].string().empty() ? rowTitleOf(state, card)
+                                                            : card.data["because"].string();
         if (text.source.empty())
             text.source = card.kind == "youtube" ? "YouTube" : "Top picks for you";
         text.facts = card.subtitle.empty() && card.kind == "youtube" ? "YouTube" : card.subtitle;
@@ -708,9 +714,12 @@ void Application::homeUpdate() {
             flow_.heroWaiting = false;
         else if (flow_.heroWaiting && (shownId.empty() || due(now_, flow_.wantSince + kHeroSettleMs))) {
             std::string art = artOf(flow_.want);
+            // The title's logo is waited for with its picture, so the name does not change to it
+            // once on screen.
+            const bool logo = logoSettled(flow_.want);
             bool ready =
                 art.empty() || !pictures_ ||
-                pictures_->view(art, kHeroWidth, kHeroHeight, ImageFit::Cover, now_).texture != 0 ||
+                (logo && pictures_->view(art, kHeroWidth, kHeroHeight, ImageFit::Cover, now_).texture != 0) ||
                 due(now_, flow_.wantSince + kHeroSettleMs + kHeroWaitMs);
             if (ready) {
                 flow_.heroWaiting = false;
@@ -892,7 +901,7 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
         else
             motion_.tween(home::id("dot", i), current ? 1 : 0, ms::fast, easing(ease::out));
     }
-    HeroText next = linesOf(state_, card);
+    HeroText next = heroLinesOf(card);
     if (instant || art.text == HeroText() || art.text == next) {
         art.text = next;
         if (instant)
@@ -909,10 +918,33 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
     flow_.textSwapAt = now_ + 170;
     flow_.textPending = true;
 }
+bool Application::logoSettled(const Card &card) {
+    if (card.logo.empty() || !pictures_)
+        return true;
+    const ImageView view = pictures_->view(card.logo, pictureTexels(kit::layout::heroLogoW),
+                                           pictureTexels(kit::layout::heroLogoH),
+                                           ImageFit::Contain, now_);
+    return view.texture != 0 || view.failed;
+}
+HeroText Application::heroLinesOf(const Card &card) {
+    HeroText text = linesOf(state_, card);
+    if (card.logo.empty() || !pictures_ || !isTitle(card))
+        return text;
+    const ImageView view = pictures_->view(card.logo, pictureTexels(kit::layout::heroLogoW),
+                                           pictureTexels(kit::layout::heroLogoH),
+                                           ImageFit::Contain, now_);
+    // A dark logo (black lettering) would not read over the dimmed art: the name stays.
+    const int luma = view.tone < 0 ? 0
+                                   : (((view.tone >> 16) & 0xff) * 54 + ((view.tone >> 8) & 0xff) * 183 +
+                                      (view.tone & 0xff) * 19) >> 8;
+    if (view.texture && luma >= 90)
+        text.logo = card.logo;
+    return text;
+}
 void Application::homeSwapText() {
     auto &home = state_.home;
     flow_.textPending = false;
-    home.art.text = linesOf(state_, home.hero);
+    home.art.text = heroLinesOf(home.hero);
     for (int i = 0; i < 3; ++i)
         motion_.play(home::id("hx", i),
                      Tween(1, 0, ms::heroText, easing(ease::out), stagger::heroText[i]));

@@ -162,6 +162,10 @@ int main() {
     assert(HomeImageProxy::allowedUrl(valid));
     assert(HomeImageProxy::allowedUrl(
         "https://image.tmdb.org/t/p/w1280/abcdefghij.jpg"));
+    // A title's logo: a PNG at 500 wide, and no other size.
+    assert(HomeImageProxy::allowedUrl("https://image.tmdb.org/t/p/w500/abcdefghij.png"));
+    assert(!HomeImageProxy::allowedUrl("https://image.tmdb.org/t/p/w1280/abcdefghij.png"));
+    assert(!HomeImageProxy::allowedUrl("https://image.tmdb.org/t/p/w500/abcdefghij.svg"));
     assert(HomeImageProxy::allowedUrl(
         "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg"));
     assert(!HomeImageProxy::allowedUrl(

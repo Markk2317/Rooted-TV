@@ -118,6 +118,7 @@ struct Hero {
     // and the key hint under them. wordmark: the service's wordmark (an icon file, drawn white)
     // in the source row's place, as Google TV shows it over the banner's title.
     std::string source, title, facts, description, image, hint, tag, wordmark;
+    std::string logo; // the title's logo, drawn in the title's place, its foot on the title's foot
     // Google TV's banner with the focus (or showing a focused top pick): `more` (its description,
     // two lines) under the line, fading in with `expand`, and `button` under that with `buttonAlpha`.
     std::string more, button;

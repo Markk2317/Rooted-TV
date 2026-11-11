@@ -281,6 +281,25 @@ std::string titledBackdrop(const Json &document, const std::string &language) {
     return "";
 }
 
+// TMDB's logos, the title's lettering on a transparent ground, as Google TV draws over its banner:
+// the first PNG in English, else in `language`; "" when there is neither (an SVG is not drawn).
+std::string titleLogo(const Json &document, const std::string &language) {
+    for (const std::string &wanted : {std::string("en"), language}) {
+        if (wanted.empty()) continue;
+        for (const Json &image : document["logos"].items()) {
+            const Json tag = image["iso_639_1"];
+            const std::string path = jsString(image["file_path"]);
+            if (tag.isString() && tag.string() == wanted && path.size() >= 15 && path.size() <= 45 &&
+                path[0] == '/' && path.compare(path.size() - 4, 4, ".png") == 0 &&
+                std::all_of(path.begin() + 1, path.end() - 4, [](unsigned char value) {
+                    return std::isalnum(value) || value == '_' || value == '-';
+                }))
+                return path;
+        }
+    }
+    return "";
+}
+
 int64_t systemNow() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
@@ -410,7 +429,8 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
         const std::string type = item["type"].string(), key = type + ":" + idString(item["id"]);
         if (!art.has(key)) {
             const Json known = knownArt[key];
-            if (known.isObject() &&
+            // Entries from before the logos were kept are looked up again.
+            if (known.isObject() && known.has("logo") &&
                 startedAt - static_cast<int64_t>(known["at"].number()) < kArtLifetimeMs) {
                 art.set(key, known);
             } else {
@@ -424,12 +444,15 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
                 if (!fetched) return;
                 Json entry = Json::object();
                 entry.set("path", Json::text(titledBackdrop(document, language)));
+                entry.set("logo", Json::text(titleLogo(document, language)));
                 entry.set("at", Json::numeric(static_cast<double>(startedAt)));
                 art.set(key, entry);
             }
         }
         const std::string path = art[key]["path"].string();
         if (!path.empty()) item.set("art", Json::text(path));
+        const std::string logo = art[key]["logo"].string();
+        if (!logo.empty()) item.set("logo", Json::text(logo));
     };
     std::vector<Json> rows;
     const bool services = !tmdbKey.empty() && !region.empty();
@@ -683,6 +706,13 @@ bool HomeDiscover::dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked,
     if ((youtubeAsked && !hadYoutube) || (tmdbAsked && !hadTmdb)) return true;
     // Rows from before the art was looked up have none to show.
     if (tmdbAsked && titledArt_ && !cache_["art"].isObject()) return true;
+    // Art kept from before the titles' logos were: looked up again once, for them.
+    if (tmdbAsked && titledArt_) {
+        bool logos = false;
+        for (const std::string &key : cache_["art"].keys())
+            logos = logos || cache_["art"][key].has("logo");
+        if (!logos && cache_["art"].keys().size()) return true;
+    }
     const int64_t cachedAt = static_cast<int64_t>(cache_["at"].number());
     if (cache_["partial"].boolean() && nowMs - cachedAt >= kRetryMs) return true;
     std::tm nowLocal = {};

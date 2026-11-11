@@ -1554,6 +1554,72 @@
               </button>
             </div>
           </div>
+          <div class="prot-row" id="home-picks-row" hidden>
+            <div class="prot-main">
+              <div
+                class="prot-title"
+                id="home-picks-title"
+                data-t="home.picks"
+              >
+                Top picks with Gemini
+              </div>
+              <div
+                class="prot-desc"
+                id="home-picks-desc"
+                data-t="home.picksDesc"
+              >
+                With a Gemini key saved, Gemini chooses Top picks for you among the titles on offer, from what
+                the profile watched from Home, liked and saved, and says why. Only titles, years and kinds are
+                sent.
+              </div>
+            </div>
+            <div class="prot-status">
+              <button
+                type="button"
+                class="pill idle"
+                id="home-picks"
+                onclick="picksToggle()"
+                aria-labelledby="home-picks-title"
+                aria-describedby="home-picks-desc"
+                aria-pressed="false"
+              >
+                &mdash;
+              </button>
+            </div>
+          </div>
+          <div class="prot-row" id="home-screen-row" hidden>
+            <div class="prot-main">
+              <div
+                class="prot-title"
+                id="home-screen-title"
+                data-t="home.screen"
+              >
+                Continue watching from the screen
+              </div>
+              <div
+                class="prot-desc"
+                id="home-screen-desc"
+                data-t="home.screenDesc"
+              >
+                When playback in Netflix, Prime Video or Disney+ is paused or stopped after two minutes, a
+                screenshot of the TV goes to Gemini with the saved key, which reads the title off it for
+                Continue watching. Needs a Gemini key and a TMDB key.
+              </div>
+            </div>
+            <div class="prot-status">
+              <button
+                type="button"
+                class="pill idle"
+                id="home-screen"
+                onclick="screenToggle()"
+                aria-labelledby="home-screen-title"
+                aria-describedby="home-screen-desc"
+                aria-pressed="false"
+              >
+                &mdash;
+              </button>
+            </div>
+          </div>
           <div class="prot-row" id="home-startup-row" hidden>
             <div class="prot-main">
               <div

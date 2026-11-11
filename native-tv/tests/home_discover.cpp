@@ -418,7 +418,12 @@ int main() {
             url.find("/movie/1/") != std::string::npos   ? std::string(plain) + "," + italian + "," + english
             : url.find("/movie/2/") != std::string::npos ? std::string(plain) + "," + italian
                                                          : std::string(plain);
-        document = Json::parse("{\"backdrops\":[" + backdrops + "]}");
+        // Logos: an SVG first, which is not drawn, then the English PNG, for the first film only.
+        const std::string logos = url.find("/movie/1/") != std::string::npos
+            ? R"({"iso_639_1":"en","file_path":"/logo-abcdefghij.svg"},)"
+              R"({"iso_639_1":"en","file_path":"/logo-abcdefghij.png"})"
+            : "";
+        document = Json::parse("{\"backdrops\":[" + backdrops + "],\"logos\":[" + logos + "]}");
         return true;
     };
     const auto artLookups = [&]() {
@@ -457,6 +462,7 @@ int main() {
         assert(items[0]["art"].string() == "/english-abcdefg.jpg");
         assert(items[1]["art"].string() == "/italian-abcdefg.jpg");
         assert(!items[2].has("art"));
+        assert(items[0]["logo"].string() == "/logo-abcdefghij.png" && !items[1].has("logo"));
     }
     assert(artUrls.size() == 21);
     artOffline = false;

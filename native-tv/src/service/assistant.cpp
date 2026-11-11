@@ -90,6 +90,10 @@ Json function(const std::string &name, const std::string &description, const Jso
 }
 } // namespace
 
+Assistant::Transport Assistant::https() {
+    return curlPost;
+}
+
 Assistant::Assistant(Transport transport) : transport_(std::move(transport)) {
     if (!transport_) transport_ = curlPost;
 }

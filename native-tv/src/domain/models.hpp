@@ -44,6 +44,7 @@ struct Card {
     Command command;
     bool hidden = false; // an app hidden from Home, listed (dimmed, last) only while Home's apps are edited
     bool titled = false; // the art has the title on it (the studio's key art), so the card prints none
+    std::string logo;    // the title's logo (TMDB's, on a transparent ground), for the banner
 };
 struct CardRow {
     std::string key, title;

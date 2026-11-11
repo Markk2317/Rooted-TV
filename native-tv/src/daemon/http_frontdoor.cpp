@@ -41,6 +41,7 @@
 #include <map>
 #include "domain/say.hpp"
 #include "domain/say_translation.hpp"
+#include "service/screen_title.hpp"
 #include "service/hdmi_inputs.hpp"
 #include "service/ntp.hpp"
 #include "service/release_check.hpp"
@@ -1769,6 +1770,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       homeDiscover_(dataRoot_),
       homeImageProxy_(dataRoot_),
       youtubeAccounts_(dataRoot_), homeTitles_(dataRoot_), homeWatching_(dataRoot_),
+      homePicks_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
       hiddenAppsPath_(dataFilePath(dataRoot_, "hidden_apps")),
@@ -2605,13 +2607,13 @@ Json withFeatured(const Json &rows) {
 }
 
 // The profile's own rows are made from what it saved, without the feed's art with the title on it
-// ("art"): a title the feed has too gets the feed's.
+// ("art") or the title's logo ("logo"): a title the feed has too gets the feed's.
 Json withArt(const Json &rows) {
-    std::map<std::string, std::string> art;
+    std::map<std::string, Json> art;
     for (const Json &row : rows.items())
         for (const Json &item : row["items"].items())
-            if (!item["art"].string().empty())
-                art.emplace(item["type"].string() + ":" + item["id"].string(), item["art"].string());
+            if (!item["art"].string().empty() || !item["logo"].string().empty())
+                art.emplace(item["type"].string() + ":" + item["id"].string(), item);
     if (art.empty()) return rows;
     Json result = Json::array();
     for (const Json &row : rows.items()) {
@@ -2619,12 +2621,17 @@ Json withArt(const Json &rows) {
         bool changed = false;
         for (const Json &item : row["items"].items()) {
             const auto found = art.find(item["type"].string() + ":" + item["id"].string());
-            if (found == art.end() || !item["art"].string().empty()) {
+            const bool needsArt = item["art"].string().empty() && found != art.end() &&
+                                  !found->second["art"].string().empty();
+            const bool needsLogo = item["logo"].string().empty() && found != art.end() &&
+                                   !found->second["logo"].string().empty();
+            if (!needsArt && !needsLogo) {
                 items.add(item);
                 continue;
             }
             Json copy = Json::parse(item.dump());
-            copy.set("art", Json::text(found->second));
+            if (needsArt) copy.set("art", found->second["art"]);
+            if (needsLogo) copy.set("logo", found->second["logo"]);
             items.add(copy);
             changed = true;
         }
@@ -2707,6 +2714,8 @@ Json HttpFrontDoor::serverStatus() const {
         ? Json::flag(document["homeOnPowerOn"].boolean(true)) : Json());
     status.set("startAfterReboot", homeKeyWatcher_
         ? Json::flag(document["startAfterReboot"].boolean()) : Json());
+    status.set("continueFromScreen", Json::flag(document["continueFromScreen"].boolean()));
+    status.set("geminiPicks", Json::flag(document["homeGeminiPicks"].boolean(true)));
     status.set("watchHistory", historyRecorder_ ? historyRecorder_->status() : Json());
 
     Json backupDaily = Json::object();
@@ -2830,6 +2839,17 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         if (!value.isBoolean()) return fail("setHomeButton takes true or false");
         Json change = Json::object();
         change.set("homeButtonOpensNativeHome", Json::flag(value.boolean()));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
+        return answer();
+    }
+    if (action == "setContinueFromScreen" || action == "setGeminiPicks") {
+        if (!value.isBoolean()) return fail(action + " takes true or false");
+        Json change = Json::object();
+        change.set(action == "setGeminiPicks" ? "homeGeminiPicks" : "continueFromScreen",
+                   Json::flag(value.boolean()));
         std::string error;
         if (!ConfigStore(configPath_).setTopLevel(change, &error))
             return fail("could not save setting: " + error);
@@ -16861,7 +16881,160 @@ void HttpFrontDoor::foregroundChanged(const std::string &appId) {
         std::lock_guard<std::mutex> lock(foregroundMutex_);
         foregroundApp_ = appId;
     }
+    {
+        std::lock_guard<std::mutex> lock(screenMutex_);
+        if (!screenSession_.appId.empty() && appId != screenSession_.appId)
+            endScreenSession(homeNowMilliseconds());
+    }
     closeClientBehind(appId);
+}
+
+namespace {
+const int64_t kScreenTitleAfterMs = 2 * 60 * 1000; // played less, nothing is read
+
+std::string serviceOfApp(const std::string &appId) {
+    for (const auto &service : names::streamingServices())
+        for (const std::string &app : service.apps)
+            if (app == appId) return service.key;
+    return "";
+}
+} // namespace
+
+// The session's time not yet counted goes to the title read, and the session ends. Called with
+// screenMutex_ held.
+void HttpFrontDoor::endScreenSession(int64_t nowMs) {
+    ScreenSession &session = screenSession_;
+    if (session.playingSince) session.playedMs += nowMs - session.playingSince;
+    if (session.item.isObject() && session.playedMs > session.recordedMs)
+        homeWatching_.seen(activeHomeProfile(dataRoot_), session.item, session.service,
+                           session.appId, session.playedMs - session.recordedMs, nowMs);
+    const unsigned long long token = session.token + 1;
+    session = ScreenSession();
+    session.token = token;
+}
+
+void HttpFrontDoor::mediaChanged(const std::string &state) {
+    const Json document = currentConfigDocument();
+    if (!document["continueFromScreen"].boolean() || document["geminiKey"].string().empty() ||
+        document["tmdbKey"].string().empty())
+        return;
+    std::string app;
+    {
+        std::lock_guard<std::mutex> lock(foregroundMutex_);
+        app = foregroundApp_;
+    }
+    const std::string service = serviceOfApp(app);
+    const int64_t now = homeNowMilliseconds();
+    std::lock_guard<std::mutex> lock(screenMutex_);
+    ScreenSession &session = screenSession_;
+    if (session.appId != app) endScreenSession(now);
+    if (service.empty()) return;
+    session.appId = app;
+    session.service = service;
+    if (state == "playing") {
+        if (!session.playingSince) session.playingSince = now;
+        return;
+    }
+    if (session.playingSince) {
+        session.playedMs += now - session.playingSince;
+        session.playingSince = 0;
+    }
+    if (session.item.isObject()) {
+        // Read already: the time since goes to it.
+        if (session.playedMs > session.recordedMs) {
+            homeWatching_.seen(activeHomeProfile(dataRoot_), session.item, service, app,
+                               session.playedMs - session.recordedMs, now);
+            session.recordedMs = session.playedMs;
+        }
+        return;
+    }
+    if (session.playedMs < kScreenTitleAfterMs) return;
+    // Paused, the app shows its pause screen after a moment; stopped, the title's page.
+    const unsigned long long token = ++session.token;
+    const int64_t playedMs = session.playedMs;
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(state == "paused" ? 4000 : 2500),
+                              [this, app, service, playedMs, token]() {
+        (void)eventLoop_->submitBlocking([this, app, service, playedMs, token]() {
+            readTitleOffScreen(app, service, playedMs, token);
+        });
+    });
+}
+
+void HttpFrontDoor::readTitleOffScreen(const std::string &appId, const std::string &service,
+                                       int64_t playedMs, unsigned long long token) {
+    {
+        std::lock_guard<std::mutex> lock(screenMutex_);
+        if (token != screenSession_.token || screenSession_.appId != appId) return;
+    }
+    const Json document = currentConfigDocument();
+    const std::string path = "/tmp/nativetv-screen-title.jpg";
+    const Json request = Json::parse("{\"path\":\"" + path +
+                                     "\",\"method\":\"DISPLAY\",\"width\":960,\"height\":540,"
+                                     "\"format\":\"JPEG\"}");
+    LunaReply captured;
+    if (!waitForLuna(luna_, "com.webos.service.tv.capture/executeOneShot", request, captured) ||
+        !captured.response["returnValue"].boolean())
+        return;
+    std::string bytes;
+    {
+        std::ifstream input(path.c_str(), std::ios::binary);
+        bytes.assign(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+    }
+    std::remove(path.c_str());
+    if (bytes.empty()) return;
+    std::string serviceName = service;
+    for (const auto &candidate : names::streamingServices())
+        if (candidate.key == service) serviceName = candidate.name;
+    Json image = Json::object();
+    image.set("mimeType", Json::text("image/jpeg"));
+    image.set("data", Json::text(service::screen_title::base64(bytes)));
+    Json imagePart = Json::object();
+    imagePart.set("inlineData", image);
+    Json textPart = Json::object();
+    textPart.set("text", Json::text(service::screen_title::prompt(serviceName)));
+    Json parts = Json::array();
+    parts.add(imagePart);
+    parts.add(textPart);
+    Json user = Json::object();
+    user.set("role", Json::text("user"));
+    user.set("parts", parts);
+    Json contents = Json::array();
+    contents.add(user);
+    Json generation = Json::object();
+    generation.set("temperature", Json::numeric(0));
+    generation.set("responseMimeType", Json::text("application/json"));
+    Json body = Json::object();
+    body.set("contents", contents);
+    body.set("generationConfig", generation);
+    const std::string model = document["geminiModel"].string();
+    service::Assistant::Reply reply;
+    std::string error;
+    if (!service::Assistant::https()(
+            "https://generativelanguage.googleapis.com/v1beta/models/" +
+                (model.empty() ? std::string("gemini-flash-latest") : model) + ":generateContent",
+            document["geminiKey"].string(), body.dump(), reply, error) ||
+        reply.status != 200) {
+        if (logger_) logger_->warning("continue watching: Gemini did not answer: " +
+                                      (error.empty() ? "HTTP " + std::to_string(reply.status) : error));
+        return;
+    }
+    std::string answer;
+    for (const Json &part : reply.body["candidates"][0]["content"]["parts"].items())
+        if (part["text"].isString() && !part["thought"].boolean()) answer += part["text"].string();
+    const Json seen = service::screen_title::parse(answer);
+    if (!seen.isObject()) return;
+    const Json found = homeContent_.search(document["tmdbKey"].string(), seen["title"].string());
+    const Json item = service::screen_title::match(found["items"], seen);
+    if (!item.isObject()) return;
+    std::lock_guard<std::mutex> lock(screenMutex_);
+    if (token != screenSession_.token || screenSession_.appId != appId) return;
+    screenSession_.item = item;
+    screenSession_.recordedMs = playedMs;
+    homeWatching_.seen(activeHomeProfile(dataRoot_), item, service, appId, playedMs,
+                       homeNowMilliseconds());
+    if (logger_)
+        logger_->info("continue watching: read " + item["title"].string() + " off " + serviceName +
+                      "'s screen");
 }
 
 bool HttpFrontDoor::logoDimmingInSoftware() const {
@@ -17043,6 +17216,70 @@ void HttpFrontDoor::closeClientBehind(const std::string &appId) {
     });
 }
 
+Json HttpFrontDoor::withGeminiPicks(const Json &rows, const std::string &profile,
+                                    const Json &document) const {
+    // The profile's titles: what it watched from Home, liked and saved.
+    Json history = Json::array();
+    std::set<std::string> have;
+    const auto add = [&](const Json &item, const char *why) {
+        if (item["title"].string().empty() || history.size() >= 30) return;
+        Json entry = Json::object();
+        entry.set("title", item["title"]);
+        entry.set("type", item["type"]);
+        entry.set("year", item["year"]);
+        entry.set("why", Json::text(why));
+        history.add(entry);
+        have.insert(service::HomePicks::keyOf(item));
+    };
+    for (const Json &item : homeWatching_.watched(profile, 15).items()) add(item, "watched");
+    const Json titles = homeTitles_.state(profile);
+    for (const Json &item : titles["liked"].items()) add(item, "liked");
+    for (const Json &item : titles["watchlist"].items()) add(item, "saved to watch");
+    // The offer: the trending, film, series and services' rows, each title once, none of the
+    // profile's own.
+    Json candidates = Json::array();
+    std::map<std::string, Json> offered;
+    for (const Json &row : rows.items()) {
+        const std::string key = row["key"].string();
+        if (key != "trending" && key != "movies" && key != "series" && key.compare(0, 3, "on:") != 0)
+            continue;
+        for (const Json &item : row["items"].items()) {
+            const std::string itemKey = service::HomePicks::keyOf(item);
+            if (have.count(itemKey) || offered.count(itemKey)) continue;
+            offered.emplace(itemKey, item);
+            candidates.add(item);
+        }
+    }
+    const Json picks = homePicks_.picks(document["geminiKey"].string(),
+                                        document["geminiModel"].string(), profile, history,
+                                        candidates, tvRegion(dataRoot_));
+    if (!picks.size()) return rows;
+    // Home shows the feed's "trending" row as Top picks for you: the picks lead it.
+    Json result = Json::array();
+    for (const Json &row : rows.items()) {
+        if (row["key"].string() != "trending") {
+            result.add(row);
+            continue;
+        }
+        Json items = Json::array();
+        std::set<std::string> placed;
+        for (const Json &pick : picks.items()) {
+            const auto found = offered.find(pick["key"].string());
+            if (found == offered.end()) continue;
+            Json item = Json::parse(found->second.dump());
+            if (!pick["because"].string().empty()) item.set("because", pick["because"]);
+            items.add(item);
+            placed.insert(found->first);
+        }
+        for (const Json &item : row["items"].items())
+            if (items.size() < 15 && !placed.count(service::HomePicks::keyOf(item))) items.add(item);
+        Json copy = Json::parse(row.dump());
+        copy.set("items", items);
+        result.add(copy);
+    }
+    return result;
+}
+
 void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     const Json document = currentConfigDocument();
     homeContent_.setRegion(tvRegion(dataRoot_));
@@ -17071,6 +17308,10 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         result.set("rows", withArt(rows));
         result.set("profileTitles", service::HomeTitles::summary(titles));
     }
+    // Top picks chosen by Gemini for the profile, where a Gemini key is saved.
+    if (!document["geminiKey"].string().empty() && document["homeGeminiPicks"].boolean(true) &&
+        result["rows"].isArray())
+        result.set("rows", withGeminiPicks(result["rows"], profile, document));
     // The bar offers the assistant where a Gemini key is saved.
     if (!document["geminiKey"].string().empty())
         result.set("assistant", Json::flag(true));

@@ -467,7 +467,16 @@ void heroText(Paint paint, const Hero &hero) {
                      type::heroSource.line},
              hero.source, type::heroSource, color::onSurface);
     }
-    if (!invisible(hero.text[1])) {
+    if (!invisible(hero.text[1]) && !hero.logo.empty()) {
+        // Google TV draws the title's own lettering over its banner.
+        Group group(scene, hero.text[1]);
+        const Rect title = beside(geometry::heroTitle());
+        Node &logo = scene.picture({title.x, title.y + title.h - layout::heroLogoH, layout::heroLogoW,
+                                    layout::heroLogoH},
+                                   0, 0, true);
+        logo.value = hero.logo;
+        logo.containAtFoot = true;
+    } else if (!invisible(hero.text[1])) {
         Group group(scene, hero.text[1]);
         text(paint, beside(geometry::heroTitle()), hero.title, type::heroTitle, color::onSurface);
     }

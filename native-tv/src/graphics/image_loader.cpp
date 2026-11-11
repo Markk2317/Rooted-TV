@@ -148,13 +148,17 @@ DecodedImage decodeImage(const std::string &bytes, int width, int height, ImageF
     result.opaque = true;
     for (size_t i = 3; i < result.rgba.size() && result.opaque; i += 4)
         result.opaque = result.rgba[i] >= 250;
-    // The left third's mean colour, which Google TV's banner extends as its scrim. Every fourth
-    // pixel each way is plenty.
+    // The left third's mean colour, which Google TV's banner extends as its scrim; for a picture
+    // with see-through parts, the mean of what it draws, all across (a dark logo reads as dark).
+    // Every fourth pixel each way is plenty.
     double sum[3] = {0, 0, 0};
     long samples = 0;
+    const int sampledWidth = result.opaque ? result.width / 3 : result.width;
     for (int y = 0; y < result.height; y += 4)
-        for (int x = 0; x < result.width / 3; x += 4) {
+        for (int x = 0; x < sampledWidth; x += 4) {
             const uint8_t *pixel = &result.rgba[(static_cast<size_t>(y) * result.width + x) * 4];
+            if (!result.opaque && pixel[3] < 128)
+                continue;
             for (int c = 0; c < 3; ++c)
                 sum[c] += pixel[c];
             ++samples;

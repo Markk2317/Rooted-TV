@@ -140,8 +140,11 @@ bool HomeImageProxy::allowedUrl(const std::string &url) {
         if (width != "185" && width != "342" && width != "500" &&
             width != "780" && width != "1280" && width != "1920_and_h1080_bestv2") return false;
         const std::string path = url.substr(slash + 1);
+        // A title's logo is a PNG, at 500 wide.
+        const bool logo = width == "500" && path.size() >= 14 &&
+                          path.compare(path.size() - 4, 4, ".png") == 0;
         if (path.size() < 14 || path.size() > 44 ||
-            path.compare(path.size() - 4, 4, ".jpg") != 0) return false;
+            (!logo && path.compare(path.size() - 4, 4, ".jpg") != 0)) return false;
         return isName(path.substr(0, path.size() - 4));
     }
     if (url.compare(0, youtube.size(), youtube) == 0) {
@@ -205,6 +208,18 @@ void HomeImageProxy::retainAndWarm(const Json &rows) {
                             usedFiles.push_back(filename);
                             warmUrl(url);
                         }
+                    }
+                }
+            }
+            // Its logo, drawn over the banner in the title's place, wherever the title shows.
+            const std::string logo = item["logo"].string();
+            if (!logo.empty()) {
+                const std::string url = "https://image.tmdb.org/t/p/w500" + logo;
+                if (allowedUrl(url)) {
+                    const std::string filename = cacheFilename(url);
+                    if (used.insert(filename).second) {
+                        usedFiles.push_back(filename);
+                        warmUrl(url);
                     }
                 }
             }
