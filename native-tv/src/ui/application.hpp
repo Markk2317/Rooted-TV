@@ -46,8 +46,7 @@ struct HeroText {
 };
 struct HeroArt {
     std::string image[2];
-    float artAlpha[2] = {1, 1}; // a focused app keeps the pick's picture, dimmed, under its tint
-    Color tint[2] = {{0.07f, 0.19f, 0.24f, 1}, {0.07f, 0.19f, 0.24f, 1}};
+    float artAlpha[2] = {1, 1}; // a focused app keeps the pick's picture, dimmed
     int newest = 0;       // the layer that took the latest picture
     std::string shownId;  // card the layers are showing
     HeroText text;        // the lines on screen; changes after the old ones have left

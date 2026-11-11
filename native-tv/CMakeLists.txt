@@ -934,7 +934,7 @@ if(NATIVETV_BUILD_CLIENT)
   target_compile_options(nativetv_http PRIVATE -Wall -Wextra -Werror)
   add_library(nativetv_raster src/graphics/svg.cpp src/graphics/text.cpp
     src/graphics/a8_atlas.cpp src/graphics/glyph_atlas.cpp src/graphics/icon_atlas.cpp
-    src/graphics/image_loader.cpp)
+    src/graphics/image_loader.cpp src/graphics/palette.cpp)
   target_link_libraries(nativetv_raster PUBLIC nativetv_models nanosvg PkgConfig::SDL PkgConfig::FREETYPE Threads::Threads)
   target_compile_options(nativetv_raster PRIVATE -Wall -Wextra -Werror)
   # Trailers: the MP4 reader, H.264 through the system's libavcodec (dlopen) and the player.

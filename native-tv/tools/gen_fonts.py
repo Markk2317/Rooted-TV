@@ -6,12 +6,11 @@
 """Cut the TV client's fonts from Google Sans Flex into native-tv/assets/fonts.
 
 The client draws text with FreeType from static TTFs (src/graphics/glyph_atlas.cpp), so the
-variable font Google Fonts publishes is instanced here into three Latin cuts on the type scale
-the kit uses at 1080p (design/tokens.json, dp x 2): a display cut at optical size 36 for the
-titles of 48 px and more, and regular and medium text cuts at optical size 18. Each cut is
-about 58 KB. The source is the google/fonts repository at a pinned commit, with its licence.
+variable font Google Fonts publishes is instanced here into two Latin cuts on the type scale
+the kit uses at 1080p (design/tokens.json, dp x 2): regular and medium, both at optical size 18,
+which Google TV's launcher uses for all of its text, titles included. Each cut is about 58 KB. The source is the google/fonts repository at a pinned commit, with its licence.
 
-    tools/gen_fonts.py            # writes the three TTFs and LICENSE-GoogleSansFlex-OFL.txt
+    tools/gen_fonts.py            # writes the two TTFs and LICENSE-GoogleSansFlex-OFL.txt
 """
 import sys
 import tempfile
@@ -31,7 +30,6 @@ COMMIT = "bd8f81ddb5c74d5c8897b36ad88b440266245103"
 SOURCE = "https://raw.githubusercontent.com/google/fonts/%s/ofl/googlesansflex/" % COMMIT
 VARIABLE = "GoogleSansFlex[ROND,opsz,slnt,wdth,wght].ttf"
 CUTS = {
-    "GoogleSansFlex-Display.ttf": {"opsz": 36, "wght": 400},
     "GoogleSansFlex-Regular.ttf": {"opsz": 18, "wght": 400},
     "GoogleSansFlex-Medium.ttf": {"opsz": 18, "wght": 500},
 }

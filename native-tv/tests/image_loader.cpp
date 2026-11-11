@@ -1,4 +1,5 @@
 #include "graphics/image_loader.hpp"
+#include "graphics/palette.hpp"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <atomic>
@@ -116,6 +117,32 @@ void testDecode() {
               decodeImage("", 10, 10, ImageFit::Cover).rgba.empty() &&
               decodeImage(halves, 0, 10, ImageFit::Cover).rgba.empty(),
           "Bad input fails cleanly");
+}
+
+// Google TV's focus glow: the palette colour nearest saturation 0.67 and value 1 per pixel of
+// population, at that saturation and value; white (-1) for a grey picture.
+void testGlowColour() {
+    auto picture = [](int width, int height, int split, uint32_t first, uint32_t second) {
+        std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4);
+        for (int y = 0; y < height; ++y)
+            for (int x = 0; x < width; ++x) {
+                const uint32_t colour = x < split ? first : second;
+                uint8_t *pixel = &rgba[(static_cast<size_t>(y) * width + x) * 4];
+                pixel[0] = colour >> 16, pixel[1] = colour >> 8, pixel[2] = colour, pixel[3] = 255;
+            }
+        return rgba;
+    };
+    std::vector<uint8_t> red = picture(300, 170, 300, 0xD01010, 0);
+    check(glowColour(red.data(), 300, 170) == 0xFF5454, "A red picture glows red at S 0.67, V 1");
+    std::vector<uint8_t> grey = picture(300, 170, 300, 0x808080, 0);
+    check(glowColour(grey.data(), 300, 170) == -1, "A grey picture keeps the white glow");
+    // A sliver of strong orange loses to the blue that covers most of the picture.
+    std::vector<uint8_t> blue = picture(300, 170, 280, 0x1F5FA0, 0xFF8000);
+    const int glow = glowColour(blue.data(), 300, 170);
+    check(glow >= 0 && (glow & 0xff) == 0xff && (glow >> 16) < 0x60, "The picture's main colour wins");
+    // Near-black and near-white are left out, as androidx Palette's default filter does.
+    std::vector<uint8_t> mono = picture(300, 170, 150, 0x050505, 0xFAFAFA);
+    check(glowColour(mono.data(), 300, 170) == -1, "Black and white give no colour");
 }
 
 // Calls `step` until `done` or two seconds pass; each call is one frame.
@@ -388,6 +415,7 @@ void testShutdownWithBusyWorkers() {
 int main() {
     try {
         testDecode();
+        testGlowColour();
         testOffThreadAndFade();
         testUploadOrderAndBudget();
         testLeastRecentlyUsedEviction();

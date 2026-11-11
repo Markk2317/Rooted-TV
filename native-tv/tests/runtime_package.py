@@ -301,7 +301,7 @@ class RuntimeTests(unittest.TestCase):
                 self.assertEqual(listed["assets/" + relative]["sha256"],
                                  hashlib.sha256(staged.read_bytes()).hexdigest())
                 self.assertEqual(listed["assets/" + relative]["mode"], "0644")
-            for required in ("fonts/GoogleSansFlex-Display.ttf", "fonts/GoogleSansFlex-Regular.ttf",
+            for required in ("fonts/GoogleSansFlex-Regular.ttf",
                              "fonts/GoogleSansFlex-Medium.ttf", "fonts/LICENSE-GoogleSansFlex-OFL.txt",
                              "icons/material/LICENSE-MaterialDesignIcons.txt",
                              "icons/splash-mark.svg", "icons/logo.svg", "carousel-scrim.svg",

@@ -306,6 +306,16 @@ void Application::resolvePictures() {
     const double now = static_cast<double>(now_);
     for (size_t index = 0; index < scene_.nodes.size(); ++index) {
         Node &node = scene_.nodes[index];
+        if (node.kind == Node::Kind::Rectangle && !node.value.empty()) {
+            // A focus glow takes its picture's colour, asked at the size the picture is drawn.
+            const ImageView view = pictures_->view(node.value, pictureTexels(node.rect.w),
+                                                   pictureTexels(node.rect.h), ImageFit::Cover, now);
+            node.value.clear();
+            if (view.glow >= 0)
+                node.shadow.color = {((view.glow >> 16) & 0xff) / 255.0f, ((view.glow >> 8) & 0xff) / 255.0f,
+                                     (view.glow & 0xff) / 255.0f, node.shadow.color.a};
+            continue;
+        }
         if (node.kind != Node::Kind::Image || node.texture || node.value.empty() ||
             node.value.compare(0, 6, "local:") == 0 || node.value.compare(0, 3, "qr:") == 0)
             continue;

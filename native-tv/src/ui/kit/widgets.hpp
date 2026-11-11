@@ -103,11 +103,10 @@ Gradient avatarGradient();
 // ---- Hero and pagination ---------------------------------------------------------------------
 
 struct HeroSlot {
-    std::string image;  // art; empty draws only the tint
+    std::string image;  // art; empty draws only the washes
     float opacity = 0;  // crossfade
     float kenBurns = 0; // 0..1 over the 14 s push
     float artAlpha = 1; // the picture alone: dimmed to a wallpaper behind a focused app
-    Color tint = color::ink;
 };
 struct Hero {
     HeroSlot slot[2];    // outgoing and incoming art
@@ -129,6 +128,7 @@ struct Hero {
     // service, `more` (its overview, two lines) and its facts.
     bool preview = false;
     float textAlpha = 1; // the text leaves while the rows below have the focus
+    float rowsFocus = 0; // 1 while a row under the banner has the focus: the art's washes change
     // Source row, title and the lines under it enter one after another (spec 5.3).
     Enter text[3];
 };

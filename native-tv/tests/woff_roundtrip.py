@@ -32,7 +32,7 @@ def pack_woff(ttf):
 
 def main():
     fonts = sorted((ROOT / "assets" / "fonts").glob("GoogleSansFlex-*.ttf"))
-    assert len(fonts) == 3, "expected the three Google Sans Flex cuts"
+    assert len(fonts) == 2, "expected the two Google Sans Flex cuts"
     for font in fonts:
         original = font.read_bytes()
         assert struct.unpack(">I", original[:4])[0] == 0x00010000, font.name + " is not TrueType"

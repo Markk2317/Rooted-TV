@@ -72,7 +72,6 @@ constexpr Color clockInk = rgb(0xFFFFFF, 0.6f);
 constexpr Color artDim = rgb(0x000000, 0.18f);
 constexpr Color barDim = rgb(0x000000, 0.32f);
 constexpr Color cardRing = rgb(0xE8E6F4, 0.62f);
-constexpr Color cardGlow = rgb(0xB9B4F0, 0.22f);
 constexpr Color quickInk = rgb(0xDFF3FF, 0.54f);
 constexpr Color quickDate = rgb(0xDFF3FF, 0.39f);
 constexpr Color quickTile = rgb(0xCFDEED, 0.047f);
@@ -145,6 +144,7 @@ constexpr float focusRingWidth = 3;
 constexpr Color focusRingColor = rgb(0xF1EEF4);
 constexpr ShadowRecipe focusShadow = {22, 56, 0.62f};
 constexpr ShadowRecipe raised = {14, 36, 0.5f};
+constexpr ShadowRecipe focusGlow = {0, 106, 0.44f};
 } // namespace elevation
 namespace layout {
 constexpr float navTop = 72;

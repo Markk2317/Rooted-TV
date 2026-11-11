@@ -91,7 +91,7 @@ assets/splash-app/assets/icon80.png assets/splash-app/assets/icon130.png \
 assets/early-service/install.sh assets/early-service/early-start.sh \
 assets/i18n/es.json \
 assets/fonts/Roboto-Regular.woff assets/fonts/Roboto-Medium.woff assets/fonts/LICENSE-Roboto.txt \
-assets/fonts/GoogleSansFlex-Display.ttf assets/fonts/GoogleSansFlex-Regular.ttf assets/fonts/GoogleSansFlex-Medium.ttf assets/fonts/LICENSE-GoogleSansFlex-OFL.txt \
+assets/fonts/GoogleSansFlex-Regular.ttf assets/fonts/GoogleSansFlex-Medium.ttf assets/fonts/LICENSE-GoogleSansFlex-OFL.txt \
 assets/app-icons/app-icons.pack assets/app-icons/LICENSE-DashboardIcons.txt \
 assets/google-tv/shared/common.css assets/google-tv/shared/common.js assets/google-tv/shared/qr.js \
 assets/google-tv/pages/dashboard/index.html assets/google-tv/pages/dashboard/dashboard.css assets/google-tv/pages/dashboard/dashboard.js \

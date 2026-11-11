@@ -353,12 +353,19 @@ void cards() {
     Fixture lifted;
     poster.focus = 1;
     kit::card(lifted.paint(), poster);
-    // The ring stands 4 px off the card, the page showing in the gap; the card follows it.
-    const Node &ring = lifted.scene.nodes[0], &focused = lifted.scene.nodes[1];
+    // Under it Google TV's glow, the card's shape blurred 106 px at 44%, in its picture's colour
+    // (white until Application::resolvePictures has it). The ring stands 4 px off the card, the
+    // page showing in the gap; the card follows it.
+    const Node &glow = lifted.scene.nodes[0], &ring = lifted.scene.nodes[1],
+               &focused = lifted.scene.nodes[2];
     const Rect grown = {116 - 306 * .025f, 655 - 172 * .025f, 306 * 1.05f, 172 * 1.05f};
+    check(sameRect(glow.rect, {116, 655, 306, 172}) && glow.color.a == 0 && glow.radius == 24 &&
+              near(glow.shadow.blur, 106) && glow.shadow.dy == 0 && near(glow.shadow.color.a, .44f) &&
+              glow.value == "image:one" && sameRect(glow.group.apply(glow.rect), grown),
+          "A focused card glows in its picture's colour, 44% blurred over 106 px");
     bool shadowed = false;
-    for (const auto &node : lifted.scene.nodes)
-        shadowed = shadowed || node.shadow.color.a > 0;
+    for (size_t i = 1; i < lifted.scene.nodes.size(); ++i)
+        shadowed = shadowed || lifted.scene.nodes[i].shadow.color.a > 0;
     check(near(focused.group.sx, 1.05f, 1e-5f) && near(focused.group.sy, 1.05f, 1e-5f) &&
               sameRect(focused.group.apply(focused.rect), grown) && focused.ring.outer == 0 &&
               sameRect(ring.rect, {112, 651, 314, 180}) && ring.radius == 28 &&
@@ -368,7 +375,7 @@ void cards() {
                        kit::focus::scaledAbout({112, 651, 314, 180}, 1.05f)) &&
               !shadowed && sameRect(hitFor(lifted.scene, "card:0")->rect, grown),
           "A focused card scales 1.05 about its centre with a 3 px ring standing 4 px off it, and "
-          "no shadow");
+          "no other shadow");
 
     Fixture after;
     kit::card(after.paint(), poster);
@@ -420,19 +427,24 @@ void circlesAndTiles() {
     Fixture named;
     app.focus = 1;
     kit::appCircle(named.paint(), app);
-    // Google TV's focused app: the disc grows 6% inside a 4 px white ring 3 px off it, no shadow.
+    // Google TV's focused app: the disc grows 6% inside a 4 px white ring 3 px off it, over its
+    // glow.
     const Rect grownDisc = kit::focus::scaledAbout({116, 906, 152, 152}, 1.06f);
-    const Node &appRing = named.scene.nodes[0], &grownFill = named.scene.nodes[1];
+    const Node &appGlow = named.scene.nodes[0], &appRing = named.scene.nodes[1],
+               &grownFill = named.scene.nodes[2];
+    check(sameRect(appGlow.rect, grownDisc) && near(appGlow.radius, grownDisc.h / 2) &&
+              near(appGlow.shadow.color.a, .44f) && appGlow.value.empty(),
+          "A focused app circle glows round the grown disc, white without a picture");
     bool appShadow = false;
-    for (const auto &node : named.scene.nodes)
-        appShadow = appShadow || node.shadow.color.a > 0;
+    for (size_t i = 1; i < named.scene.nodes.size(); ++i)
+        appShadow = appShadow || named.scene.nodes[i].shadow.color.a > 0;
     check(sameRect(grownFill.rect, grownDisc) && grownFill.group.identity() &&
               sameRect(appRing.rect, {grownDisc.x - 3, grownDisc.y - 3, grownDisc.w + 6,
                                       grownDisc.h + 6}) &&
               near(appRing.ring.outer, 4) && sameColor(appRing.ring.color, kit::rgb(0xFFFFFF)) &&
               appRing.color.a == 0 && !appShadow,
-          "A focused app circle grows 6% inside a 4 px white ring standing 3 px off it, without a "
-          "shadow");
+          "A focused app circle grows 6% inside a 4 px white ring standing 3 px off it, without "
+          "another shadow");
     check(textAt(named.scene, "Netflix") &&
               sameRect(textAt(named.scene, "Netflix")->rect, {64, 1080, 256, 32}) &&
               sameColor(textAt(named.scene, "Netflix")->color, kit::color::appNameFocused),
@@ -473,12 +485,14 @@ void circlesAndTiles() {
     Fixture artFocused;
     app.focus = 1;
     kit::appCircle(artFocused.paint(), app);
-    check(!artFocused.scene.nodes[0].backing && artFocused.scene.nodes[0].ring.outer > 0 &&
-              sameRect(artFocused.scene.nodes[0].rect, {grownDisc.x - 3, grownDisc.y - 3,
+    check(artFocused.scene.nodes[0].value == "app:netflix" &&
+              !artFocused.scene.nodes[1].backing && artFocused.scene.nodes[1].ring.outer > 0 &&
+              sameRect(artFocused.scene.nodes[1].rect, {grownDisc.x - 3, grownDisc.y - 3,
                                                         grownDisc.w + 6, grownDisc.h + 6}) &&
-              artFocused.scene.nodes[1].backing &&
-              sameRect(artFocused.scene.nodes[2].rect, grownDisc),
-          "The focus ring stands off the grown circle, under the backing and the picture");
+              artFocused.scene.nodes[2].backing &&
+              sameRect(artFocused.scene.nodes[3].rect, grownDisc),
+          "The glow takes the icon's colour; the focus ring stands off the grown circle, under the "
+          "backing and the picture");
     app.focus = 0;
     app.image.clear();
 
@@ -730,18 +744,33 @@ void barAndHero() {
     check(art && art->value == "art:1" && sameRect(art->rect, {0, 0, 1920, 1080}) &&
               art->group.identity() && art->clipped,
           "The art covers the canvas and holds still, clipped to the screen");
-    size_t gradients = 0;
-    const Node *bottomScrim = nullptr;
+    // Google TV's feature scrims over art that fills the screen: the page colour from 60% at the
+    // left edge to none, and from none at the top to 40% at the foot.
+    std::vector<const Node *> washes;
     for (const auto &node : wall.scene.nodes)
-        if (node.gradient.stops == 4) {
-            ++gradients;
-            bottomScrim = &node;
-        }
-    check(gradients == 1 && bottomScrim->gradient.angle == 0 &&
-              sameColor(bottomScrim->gradient.color[0], kit::color::page) &&
-              sameColor(bottomScrim->gradient.color[1], kit::color::page) &&
-              bottomScrim->gradient.color[3].a == 0,
-          "The bottom scrim has four stops, from the page colour to clear");
+        if (node.gradient.stops == 2 && sameRect(node.rect, {0, 0, 1920, 1080}))
+            washes.push_back(&node);
+    check(washes.size() == 2 && washes[0]->gradient.angle == 90 &&
+              near(washes[0]->gradient.color[0].a, .6f) && washes[0]->gradient.color[1].a == 0 &&
+              washes[1]->gradient.angle == 180 && washes[1]->gradient.color[0].a == 0 &&
+              near(washes[1]->gradient.color[1].a, .4f) &&
+              near(washes[1]->gradient.color[1].r, kit::color::page.r) &&
+              near(washes[1]->gradient.color[1].b, kit::color::page.b),
+          "The banner's art lies under the page colour, 60% at the left and 40% at the foot");
+    Fixture rowsFocused;
+    kit::Hero below = hero;
+    below.rowsFocus = 1;
+    kit::heroWall(rowsFocused.paint(), below);
+    std::vector<const Node *> backdrop;
+    for (const auto &node : rowsFocused.scene.nodes)
+        if (node.gradient.stops == 2 && sameRect(node.rect, {0, 0, 1920, 1080}))
+            backdrop.push_back(&node);
+    check(backdrop.size() == 2 && backdrop[0]->gradient.angle > 225 &&
+              near(backdrop[0]->gradient.color[0].a, .38f) && backdrop[0]->gradient.color[1].a == 1 &&
+              near(backdrop[1]->gradient.color[0].a, .1f) &&
+              backdrop[1]->gradient.color[0].r == 1 && backdrop[1]->gradient.color[0].b == 1,
+          "With a row focused the art lies under the page backdrop: 38% at the top right to all of "
+          "the page at the bottom left, under a 10% white sheen");
 
     Fixture scrolled;
     hero.stackY = -kit::layout::rowPitch;

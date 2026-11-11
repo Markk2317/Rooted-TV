@@ -86,7 +86,6 @@ kit::Hero heroOf(const Frame &frame) {
         hero.slot[i].opacity = static_cast<float>(motion.value(home::id("ha", layer)));
         hero.slot[i].kenBurns = static_cast<float>(motion.value(home::id("hk", layer)));
         hero.slot[i].artAlpha = home.art.artAlpha[layer];
-        hero.slot[i].tint = home.art.tint[layer];
     }
     hero.wallAlpha = static_cast<float>(motion.value("wall"));
     hero.stackY = static_cast<float>(motion.value("sy"));
@@ -106,6 +105,7 @@ kit::Hero heroOf(const Frame &frame) {
     hero.expand = static_cast<float>(motion.value("he"));
     hero.buttonAlpha = static_cast<float>(motion.value("hb"));
     hero.textAlpha = static_cast<float>(motion.value("ht"));
+    hero.rowsFocus = static_cast<float>(motion.value("ba"));
     hero.drop = kit::layout::bannerTextDrop * static_cast<float>(motion.value("hn"));
     hero.preview = home.art.text.preview;
     for (int i = 0; i < 3; ++i)

@@ -125,7 +125,9 @@ struct Gradient {
 };
 
 struct Node {
-    // Rectangle: rounded fill (+ ring, shadow, gradient). Image: legacy path in `value`, or
+    // Rectangle: rounded fill (+ ring, shadow, gradient); a picture id in `value` gives the shadow
+    // that picture's glow colour (kit's focusGlow, Application::resolvePictures). Image: legacy
+    // path in `value`, or
     // `texture` (v2). Mask: Alpha8 `texture` tinted by `color` (icons). Run: `run` glyphs tinted
     // by `color`. Text: legacy string in `value`. Scrim: legacy, kept for compatibility.
     enum class Kind { Rectangle, Text, Image, Scrim, Run, Mask };

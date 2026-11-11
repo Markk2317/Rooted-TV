@@ -79,6 +79,17 @@ void focusRing(Scene &scene, Rect area, float rounding, float amount) {
     Node &overlay = scene.shape(area, clear, rounding);
     overlay.ring = {0, elevation::focusRingWidth, faded(elevation::focusRingColor, amount)};
 }
+// Google TV's focus glow (its launcher's GlowDrawable behind a focused card): the shape blurred
+// past its edge, 44% at full focus, in the colour its palette picks from the picture
+// (graphics/palette.hpp), which Application::resolvePictures puts in; white without a picture.
+void focusGlow(Scene &scene, Rect area, float rounding, const std::string &picture, float amount) {
+    if (amount <= 0)
+        return;
+    Node &glow = scene.shape(area, clear, rounding);
+    glow.shadow = {0, elevation::focusGlow.dy, elevation::focusGlow.blur, 0,
+                   faded(white, elevation::focusGlow.alpha * amount)};
+    glow.value = picture;
+}
 void restOutline(Node &node) {
     node.ring = {1, 0, alpha::outline};
 }
@@ -359,12 +370,6 @@ void heroWall(Paint paint, const Hero &hero) {
                         scene.popOpacity();
                 }
                 scene.popTransform();
-                // Google TV's left scrim: the art's own colour, very dark, solid under the text
-                // and gone by the middle of the screen.
-                Node &tint = scene.shape(screen, clear);
-                tint.gradient = gradient(90, {{faded(slot.tint, 1), 0},
-                                              {faded(slot.tint, .9f), .31f},
-                                              {faded(slot.tint, 0), .56f}});
                 scene.popOpacity();
             }
             if (!hero.trailer.empty() && hero.trailerAlpha > .002f) {
@@ -375,15 +380,28 @@ void heroWall(Paint paint, const Hero &hero) {
             scene.popClip();
             scene.popTransform();
         }
-        // Under the rows the art fades to the page's near-black (solid from y 850, clear above
-        // y 550, as measured on Google TV), and a light shade at the top keeps the bar legible.
-        Node &bottom = scene.shape(screen, clear);
-        bottom.gradient = gradient(0, {{color::page, 0},
-                                       {color::page, .213f},
-                                       {faded(color::page, .6f), .34f},
-                                       {faded(color::page, 0), .49f}});
-        Node &top = scene.shape(screen, clear);
-        top.gradient = gradient(180, {{faded(color::ink, .45f), 0}, {faded(color::ink, 0), .2f}});
+        // The art fills the screen under washes of the page's colour, Google TV's launcher's
+        // layer styles: with the bar or the banner focused 60% at the left edge to none at the
+        // right, and none at the top to 40% at the foot; once a row has the focus its page
+        // backdrop, 38% at the top right to all of it at the bottom left, under a 10% white
+        // sheen from the top right.
+        const float rows = focus::clamp01(hero.rowsFocus);
+        if (rows < 1) {
+            scene.pushOpacity(1 - rows);
+            Node &side = scene.shape(screen, clear);
+            side.gradient = gradient(90, {{faded(color::page, .6f), 0}, {faded(color::page, 0), 1}});
+            Node &foot = scene.shape(screen, clear);
+            foot.gradient = gradient(180, {{faded(color::page, 0), 0}, {faded(color::page, .4f), 1}});
+            scene.popOpacity();
+        }
+        if (rows > 0) {
+            scene.pushOpacity(rows);
+            Node &backdrop = scene.shape(screen, clear);
+            backdrop.gradient = gradient(239, {{faded(color::page, .38f), 0}, {color::page, 1}});
+            Node &sheen = scene.shape(screen, clear);
+            sheen.gradient = gradient(240, {{faded(white, .1f), 0}, {faded(white, 0), 1}});
+            scene.popOpacity();
+        }
         scene.popOpacity();
     }
     // Rises with the rows so cards stay legible once the hero has scrolled away.
@@ -626,8 +644,10 @@ void card(Paint paint, const PosterCard &poster) {
     }
     Transform scale = focus::transformAt(poster.rest, look.scale);
     Group group(scene, poster.enter, look.scale != 1 ? &scale : nullptr);
-    // Google TV's focused card: a thin light ring that stands off the card, the page showing in the
-    // gap, and no shadow.
+    // Google TV's focused card: its glow, and a thin light ring that stands off the card, the page
+    // showing in the gap. Continue watching's cards (the launcher's ImageWithProgressBarCard)
+    // keep the glow white.
+    focusGlow(scene, poster.rest, layout::cardR, poster.progress < 0 ? poster.image : "", look.ringAlpha);
     if (look.ringAlpha > 0) {
         const float gap = 4;
         Rect around = {poster.rest.x - gap, poster.rest.y - gap, poster.rest.w + 2 * gap,
@@ -678,7 +698,8 @@ void card(Paint paint, const PosterCard &poster) {
     hit(scene, look.rect, poster.id);
 }
 void appCircle(Paint paint, const AppCircle &circle) {
-    // Google TV's focused app: the circle grows a little inside a white ring that stands off it.
+    // Google TV's focused app: the circle grows a little inside a white ring that stands off it,
+    // over the glow in its icon's colour.
     const float amount = focus::clamp01(circle.focus);
     const Rect art = focus::scaledAbout(circle.rest, focus::scaleAt(motion::scale::app, amount));
     const float gap = 3, ringWidth = 4;
@@ -688,6 +709,7 @@ void appCircle(Paint paint, const AppCircle &circle) {
         return;
     Scene &scene = paint.scene;
     Group group(scene, circle.enter);
+    focusGlow(scene, art, art.h / 2, circle.image, amount);
     if (amount > 0) {
         Rect around = {art.x - gap, art.y - gap, art.w + 2 * gap, art.h + 2 * gap};
         Node &ring = scene.shape(around, clear, around.h / 2);

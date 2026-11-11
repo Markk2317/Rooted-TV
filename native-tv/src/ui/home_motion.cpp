@@ -59,8 +59,9 @@ Color tintOf(const Card &card) {
     return home::hsl(static_cast<float>(home::hashOf(card.id + card.title) % 360), .45f,
                      isTitle(card) ? .115f : .2f);
 }
-// Google TV's banner extends its art's own colour, very dark, under the text at its left: the left
-// third's mean (graphics/image_loader.hpp), its hue and saturation kept, its lightness brought down.
+// The wash of pages without art (Apps, the screens over Home) in the banner art's own colour, very
+// dark: the left third's mean (graphics/image_loader.hpp), its hue and saturation kept, its
+// lightness brought down.
 Color scrimOf(int tone) {
     const float r = ((tone >> 16) & 0xff) / 255.0f, g = ((tone >> 8) & 0xff) / 255.0f,
                 b = (tone & 0xff) / 255.0f;
@@ -864,8 +865,7 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
         const int tone = pictures_ && !path.empty()
                              ? pictures_->view(path, kHeroWidth, kHeroHeight, ImageFit::Cover, now_).tone
                              : -1;
-        art.tint[incoming] = tone >= 0 && isTitle(card) ? scrimOf(tone) : tintOf(card);
-        art.wallTint = art.tint[incoming];
+        art.wallTint = tone >= 0 && isTitle(card) ? scrimOf(tone) : tintOf(card);
         std::string in = home::id("ha", incoming), out = home::id("ha", outgoing);
         if (instant || !hadArt) {
             motion_.set(in, 1);
@@ -889,8 +889,7 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
         } else
             motion_.play(push, Tween(0, 1, ms::kenburns, Easing::linear()));
     } else {
-        art.tint[outgoing] = tintOf(card);
-        art.wallTint = art.tint[outgoing];
+        art.wallTint = tintOf(card);
     }
     motion_.play("hp", Tween(0, 1, ms::heroAdvance, Easing::linear()));
     // The dots describe the top picks: they fade while the hero shows an app or an input.

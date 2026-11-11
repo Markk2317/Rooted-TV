@@ -9,16 +9,13 @@
 
 namespace nativetv {
 namespace {
-// Three static cuts of Google Sans Flex (tools/gen_fonts.py): the display cut (optical size 36)
-// for the big titles, and the text cuts (optical size 18) at the two weights the type scale uses.
-constexpr int kFaceCount = 3;
-constexpr int kDisplaySize = 48; // from this pixel size up, regular text uses the display cut
-const char *const kFiles[kFaceCount] = {"GoogleSansFlex-Display.ttf", "GoogleSansFlex-Regular.ttf",
-                                        "GoogleSansFlex-Medium.ttf"};
-int faceFor(int size, int weight) {
-    if (weight >= 450)
-        return 2;
-    return size >= kDisplaySize ? 0 : 1;
+// Two static cuts of Google Sans Flex (tools/gen_fonts.py) at the two weights the type scale uses.
+// Both are at optical size 18 whatever the pixel size: Google TV's launcher sets its google-sans
+// family to opsz 18 for every weight, the big titles included.
+constexpr int kFaceCount = 2;
+const char *const kFiles[kFaceCount] = {"GoogleSansFlex-Regular.ttf", "GoogleSansFlex-Medium.ttf"};
+int faceFor(int, int weight) {
+    return weight >= 450 ? 1 : 0;
 }
 int bitCount(unsigned value) {
     int count = 0;

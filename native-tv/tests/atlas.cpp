@@ -143,7 +143,7 @@ void testPacking() {
 }
 
 void testGlyphs(GlyphAtlas &glyphs, StubStore &store) {
-    check(glyphs.ok(), "All three Google Sans Flex cuts open");
+    check(glyphs.ok(), "Both Google Sans Flex cuts open");
     FontMetrics metrics = glyphs.metrics(31, 400);
     check(metrics.ascent == 30 && metrics.descent == 9,
           "31 px Google Sans Flex has a 30/9 ascent/descent");
@@ -157,9 +157,10 @@ void testGlyphs(GlyphAtlas &glyphs, StubStore &store) {
           "Weights are separate faces");
     check(glyphs.glyph(31, 700, 'H').advance == glyphs.glyph(31, 600, 'H').advance,
           "Weights of 500 and more use the medium cut");
-    // The display cut is drawn tighter, so the same letter has another proportion there.
-    check(glyphs.glyph(48, 400, 'H').advance / 48 != glyphs.glyph(47, 400, 'H').advance / 47,
-          "Regular text of 48 px and more uses the display cut");
+    // Google TV draws its titles at optical size 18 too: a letter keeps its proportion at any size.
+    check(std::fabs(glyphs.glyph(96, 400, 'H').advance / 96 - glyphs.glyph(31, 400, 'H').advance / 31) <
+              .001f,
+          "Big regular text uses the same cut as body text");
     size_t before = store.uploadedBytes;
     check(glyphs.place(capital) && capital.width > 10 && capital.height > 15 &&
               capital.bearingY > 15,

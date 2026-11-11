@@ -1,4 +1,5 @@
 #include "graphics/image_loader.hpp"
+#include "graphics/palette.hpp"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <algorithm>
@@ -166,6 +167,7 @@ DecodedImage decodeImage(const std::string &bytes, int width, int height, ImageF
     if (samples)
         result.tone = (static_cast<int>(sum[0] / samples) << 16) |
                       (static_cast<int>(sum[1] / samples) << 8) | static_cast<int>(sum[2] / samples);
+    result.glow = glowColour(result.rgba.data(), result.width, result.height);
     return result;
 }
 
@@ -238,6 +240,7 @@ ImageView ImageLoader::get(const std::string &id, int width, int height, ImageFi
         view.fade = std::min(1.0f, static_cast<float>(nowMs - slot->arrivedMs) / kFadeMs);
         view.opaque = slot->opaque;
         view.tone = slot->tone;
+        view.glow = slot->glow;
     }
     view.failed = slot->state == Slot::State::Failed;
     return view;
@@ -314,6 +317,7 @@ size_t ImageLoader::pump(size_t uploadBudgetBytes, double nowMs) {
         slot.textureHeight = slot.pixels.height;
         slot.opaque = slot.pixels.opaque;
         slot.tone = slot.pixels.tone;
+        slot.glow = slot.pixels.glow;
         slot.state = Slot::State::Uploading;
         uploads_.push_back(result.slot);
     }
