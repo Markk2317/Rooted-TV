@@ -2833,15 +2833,17 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         return answer();
     }
     if (action == "setGeminiKey") {
-        // The owner's Gemini API key, from Google AI Studio; "" removes it.
+        // The owner's Gemini API key, from Google AI Studio; "" removes it. Older keys are 39 letters,
+        // digits, - and _ ("AIza…"); the authentication keys AI Studio issues since 2026 start "AQ." and
+        // are longer.
         const std::string badKey = say::msg("srv.assistant.badKey",
-                                            "A Gemini API key is 20 to 100 letters, digits, - and _");
+                                            "A Gemini API key is 20 to 200 letters, digits, ., - and _");
         if (!value.isString()) return fail(badKey);
         const std::string key = trimmedText(value.string());
-        bool valid = key.size() >= 20 && key.size() <= 100;
+        bool valid = key.size() >= 20 && key.size() <= 200;
         for (char character : key)
             valid = valid && (std::isalnum(static_cast<unsigned char>(character)) ||
-                              character == '-' || character == '_');
+                              character == '-' || character == '_' || character == '.');
         if (!key.empty() && !valid) return fail(badKey);
         Json change = Json::object();
         change.set("geminiKey", Json::text(key));
@@ -16717,6 +16719,44 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
 
 void HttpFrontDoor::foregroundChanged(const std::string &appId) {
     homeWatching_.foreground(appId, homeNowMilliseconds());
+    closeClientBehind(appId);
+}
+
+namespace {
+// The apps the TV app gives its memory to: every app but LG's own (inputs, Live TV, settings and
+// the overlays, which open over the TV app and go back to it) and Native Tv's, and LG's browser.
+bool needsClientMemory(const std::string &appId) {
+    if (appId.empty() || appId.compare(0, 10, "com.tvweb.") == 0) return false;
+    if (appId == "com.webos.app.browser") return true;
+    for (const char *prefix : {"com.webos.", "com.palm.", "com.lge."})
+        if (appId.compare(0, std::strlen(prefix), prefix) == 0) return false;
+    return true;
+}
+} // namespace
+
+// Where the Home key watcher runs (webOS 3.4): an OLED55C6V has 1.1 GB, the TV app keeps 60 to
+// 90 MB with Home's pictures, and Netflix and Prime Video opened over it were restarted by the
+// TV for memory. Once such an app has kept the front for 3 s the TV app is closed; the Home
+// button launches it again (its window is up 0.7 s after the launch), and Back from the app goes
+// to the last input whether the TV app was behind it or not.
+void HttpFrontDoor::closeClientBehind(const std::string &appId) {
+    const unsigned long long seq = ++foregroundSeq_;
+    if (!homeKeyWatcher_ || !needsClientMemory(appId) ||
+        !currentConfigDocument()["homeButtonOpensNativeHome"].boolean())
+        return;
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(3000), [this, seq, appId]() {
+        if (seq != foregroundSeq_.load()) return;
+        (void)eventLoop_->submitBlocking([this, seq, appId]() {
+            if (seq != foregroundSeq_.load()) return;
+            Json payload = Json::object();
+            payload.set("id", Json::text(kHomeClientApp));
+            LunaReply reply;
+            // "app is not running" when it was not open: nothing to say.
+            if (waitForLuna(luna_, "com.webos.applicationManager/closeByAppId", payload, reply) &&
+                reply.response["returnValue"].boolean() && logger_)
+                logger_->info("memory: closed the TV app behind " + appId + " for its memory");
+        });
+    });
 }
 
 void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
@@ -17242,6 +17282,40 @@ void HttpFrontDoor::handleAssistant(HttpExchange &exchange) const {
     json(result["ok"].boolean() ? 200 : 502, result);
 }
 
+// The Google TV screen saver's pictures where no photo is uploaded: the banner's and the week's
+// trending titles in TMDB's 1920x1080 cut, which the Home image proxy serves and keeps.
+Json HttpFrontDoor::screensaverAmbientPictures() const {
+    Json pictures = Json::array();
+    const Json document = currentConfigDocument();
+    if (document["tmdbKey"].string().empty()) return pictures;
+    const Json feed = homeDiscover_.feed(document["tmdbKey"].string(),
+                                         document["youtubeKey"].string(), tvRegion(dataRoot_));
+    std::set<std::string> seen;
+    for (const char *key : {"featured", "trending", "movies", "series"})
+        for (const Json &row : feed["rows"].items()) {
+            if (row["key"].string() != key) continue;
+            for (const Json &item : row["items"].items()) {
+                const std::string backdrop = item["backdrop"].string();
+                if (backdrop.empty() || pictures.size() >= 30 || !seen.insert(backdrop).second)
+                    continue;
+                std::string overline = item["type"].string() == "movie" ? "Film" : "Series";
+                if (item["year"].valid())
+                    overline += " \u00b7 " + (item["year"].isNumber()
+                                                   ? std::to_string(static_cast<long>(item["year"].number()))
+                                                   : item["year"].string());
+                Json picture = Json::object();
+                picture.set("path", Json::text(
+                    "/api/home/image?u=" +
+                    encode("https://image.tmdb.org/t/p/w1920_and_h1080_bestv2" + backdrop) +
+                    "&priority=hero"));
+                picture.set("overline", Json::text(overline));
+                picture.set("title", item["title"]);
+                pictures.add(picture);
+            }
+        }
+    return pictures;
+}
+
 bool HttpFrontDoor::handleScreensaverPhotos(HttpExchange &exchange) const {
     const HttpRequest &request = exchange.request();
     const std::string &uri = request.uri;
@@ -17269,6 +17343,7 @@ bool HttpFrontDoor::handleScreensaverPhotos(HttpExchange &exchange) const {
         body.set("photos", service::screensaverPhotoStatus(dataRoot_));
         const Json place = currentConfigDocument()["saverWeather"];
         body.set("city", place["city"].isString() ? place["city"] : Json());
+        body.set("ambient", screensaverAmbientPictures());
         return body;
     };
     if (uri == "/api/screensaver/photos" && (request.method == "GET" || request.method == "HEAD")) {

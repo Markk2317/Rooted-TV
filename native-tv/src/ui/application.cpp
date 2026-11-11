@@ -106,6 +106,9 @@ bool Application::coveredForCaps() const {
 void Application::active(bool value) {
     active_ = value;
     if (value) {
+        // Something brought the app back (the Home button, a key that closed the TV's screen saver
+        // over it): that is input the app never saw, so a dimmed screen comes back lit.
+        wake();
         capsAt_ = std::min(capsAt_, now_ + 300);
         if (state_.screen != Screen::Splash) {
             // Asked again on every return: where the server brings the app forward for LG's Home
@@ -160,9 +163,14 @@ bool Application::update(uint32_t now) {
 // ---- Idle dimming -----------------------------------------------------------------------------
 // The panel is an OLED, so no screen may sit still at full brightness: after ms::idleAfter
 // without a key or click every screen but the splash falls to two thirds black over ms::idleDim.
-// The first input afterwards only wakes it. Home's hero advance and the beat read `idle` too.
+// Home, whose banner changes every ms::heroAdvance, waits ms::homeIdleAfter, as Google TV's home
+// stays lit until its ambient mode: dimmed after 30 s, it read as the banners going away.
+// The first input afterwards only wakes it. The beat reads `idle` too.
 void Application::idleUpdate() {
-    const uint32_t idleAt = flow_.lastKeyAt + static_cast<uint32_t>(kit::motion::ms::idleAfter);
+    const bool home = state_.screen == Screen::Home && !screen_;
+    const uint32_t idleAt =
+        flow_.lastKeyAt + static_cast<uint32_t>(home ? kit::motion::ms::homeIdleAfter
+                                                     : kit::motion::ms::idleAfter);
     if (!flow_.idle && static_cast<int32_t>(now_ - idleAt) >= 0) {
         flow_.idle = true;
         motion_.tween("dim", .66, kit::motion::ms::idleDim, kit::easing(kit::motion::ease::inOut));

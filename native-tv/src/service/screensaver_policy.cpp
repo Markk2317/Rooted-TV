@@ -51,6 +51,9 @@ const Saver kSavers[] = {
      "The TV's own readings - panel hours, pixel refresher countdown, temperature."},
     {"photos", "srv.saver.photos", "Your photos", "srv.saver.photos.desc",
      "Your own photos with the time and the weather, as Google TV's ambient mode."},
+    {"ambient", "srv.saver.ambient", "Google TV", "srv.saver.ambient.desc",
+     "Google TV's ambient mode: your photos, or the stills of Home's titles, slowly panning, "
+     "with the time and the weather."},
 };
 
 bool knownSaver(const std::string &id) {

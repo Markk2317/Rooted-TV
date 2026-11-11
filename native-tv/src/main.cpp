@@ -424,7 +424,8 @@ int main(int argc, char **argv) {
                         else
                             videos.fail(response.path, stamp);
                     } else if (!response.ok()) {
-                        loader.fail(response.path, stamp);
+                        loader.fail(response.path, stamp,
+                                    response.status >= 400 && response.status < 500);
                         app.imageFailed(response.path);
                     } else
                         loader.provide(response.path, std::move(response.bytes), stamp);

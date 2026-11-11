@@ -252,6 +252,7 @@ constexpr int trailerDelay = 3500;
 constexpr int boot = 520;
 constexpr int bars = 900;
 constexpr int idleAfter = 30000;
+constexpr int homeIdleAfter = 300000;
 } // namespace ms
 namespace ease {
 constexpr Bezier out = {0.23f, 1, 0.32f, 1};

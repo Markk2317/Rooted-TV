@@ -20,7 +20,7 @@ namespace {
 const char *const kModes[] = {
     "clock", "clock-date", "black", "starfield", "fireworks", "bokeh", "harmonograph",
     "filament", "currents", "veils", "incense", "murmuration", "vortex", "neo",
-    "tesseract", "vitals", "photos"
+    "tesseract", "vitals", "photos", "ambient"
 };
 
 std::string rooted(const std::string &root, const std::string &path) {

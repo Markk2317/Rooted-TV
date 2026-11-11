@@ -258,14 +258,14 @@ void ImageLoader::provide(const std::string &id, std::string bytes, double nowMs
             wake_.notify_one();
         }
 }
-void ImageLoader::fail(const std::string &id, double nowMs) {
+void ImageLoader::fail(const std::string &id, double nowMs, bool lasting) {
     auto found = slots_.find(id);
     if (found == slots_.end())
         return;
     for (auto &slot : found->second)
         if (slot->state == Slot::State::Fetching) {
             slot->state = Slot::State::Failed;
-            slot->retryAtMs = nowMs + kRetryMs;
+            slot->retryAtMs = nowMs + (lasting ? kRetryMs : kQuickRetryMs);
         }
 }
 // Evicts the least recently drawn pictures until `bytes` more fit.

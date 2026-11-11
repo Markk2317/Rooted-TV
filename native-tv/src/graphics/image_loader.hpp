@@ -95,7 +95,7 @@ class ImageLoader {
 
   public:
     static constexpr float kFadeMs = 220;
-    static constexpr double kRetryMs = 30000;
+    static constexpr double kRetryMs = 30000, kQuickRetryMs = 2000;
     ImageLoader(TextureStore &store, Fetch fetch, size_t byteBudget = 40u << 20,
                 unsigned workers = 2, Decoder decoder = decodeImage);
     ~ImageLoader();
@@ -105,7 +105,11 @@ class ImageLoader {
     // drawn this frame or last are never evicted.
     ImageView get(const std::string &id, int width, int height, ImageFit fit, double nowMs);
     void provide(const std::string &id, std::string bytes, double nowMs);
-    void fail(const std::string &id, double nowMs);
+    // `lasting`: the server answered that it has no picture, asked again after kRetryMs. Otherwise
+    // (no answer in time, a server error) it is asked again after kQuickRetryMs: a server still
+    // fetching a row's pictures (a YouTube sign-in brings dozens at once) answers the first cards
+    // later than the client waits, and they stayed grey for the long wait.
+    void fail(const std::string &id, double nowMs, bool lasting = true);
     // Call once per frame: takes finished decodes and copies up to `uploadBudgetBytes` of them
     // into textures, oldest request first, a big picture across several frames. Returns the
     // bytes copied.

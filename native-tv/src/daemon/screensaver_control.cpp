@@ -14,7 +14,7 @@ const char *const kForegroundUri = "com.webos.applicationManager/getForegroundAp
 const char *const kSavers[] = {"stock", "clock", "clock-date", "black", "starfield",
                                "fireworks", "bokeh", "harmonograph", "filament",
                                "currents", "veils", "incense", "murmuration", "vortex",
-                               "neo", "tesseract", "vitals", "photos"};
+                               "neo", "tesseract", "vitals", "photos", "ambient"};
 
 Json failure(const std::string &error) {
     Json result = Json::object();

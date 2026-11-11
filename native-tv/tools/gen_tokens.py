@@ -117,6 +117,7 @@ def generate(tokens, metrics):
     body.append("namespace ms {")
     body += ["constexpr int %s = %d;" % (key, value) for key, value in motion["ms"].items()]
     body.append("constexpr int idleAfter = %d;" % motion["idleAfterMs"])
+    body.append("constexpr int homeIdleAfter = %d;" % motion["homeIdleAfterMs"])
     body.append("} // namespace ms")
     body.append("namespace ease {")
     for key, value in motion["ease"].items():

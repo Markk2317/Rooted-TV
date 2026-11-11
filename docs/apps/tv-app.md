@@ -8,7 +8,7 @@ The dashboard can also run directly on the TV's home screen, driven by the remot
 
 It is drawn by the Native Tv client in the style of Google TV: a dark page with one accent colour, cards that lift and glow when they are focused, and a top bar with the profile, the tabs and the clock. The pages below are its own screens, not web pages. Its type, colour, shape, spacing, focus, motion and icons follow Google's TV Design Kit (Material 3); [Material 3 Expressive](../development/material-3-expressive.md) records the values and where the client differs.
 
-Because the panel is an OLED, no screen of the app holds still at full brightness: thirty seconds without a key or a click dim it to two thirds black, and the first key or click after that only wakes it. This holds for Home, Live, Settings, the catalogue and the setup pages alike; the TV's own screen saver is left as it is set.
+Because the panel is an OLED, no screen of the app holds still at full brightness: thirty seconds without a key or a click dim it to two thirds black, and the first key or click after that only wakes it. This holds for Live, Settings, the catalogue and the setup pages alike. Home, whose banner changes every 12 seconds and keeps changing while dimmed, waits five minutes, as Google TV's home stays lit until its ambient mode. The app coming back to the front (the Home button, a key that closed the TV's screen saver over it) wakes a dimmed screen. The TV's own screen saver is left as it is set.
 
 ### How smooth it is
 

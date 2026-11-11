@@ -1769,6 +1769,21 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
 - `com.webos.service.tv.capture/executeOneShot` with `"method":"DISPLAY"` writes
   the whole screen, video and graphics, to a JPEG or PNG (960 × 540 asked for),
   any app in front.
+- Memory: 1.1 GB with 450 MB of swap, of which LG's own programs keep about
+  900 MB in use; with Netflix preloaded (300 MB) about 200 MB is available. The
+  TV app takes 25 MB on a settings page and about 90 MB on Home with its
+  pictures (60 MB resident plus 27 MB the Mali driver counts for it in
+  `/sys/kernel/debug/mali0/gpu_memory`, readable once debugfs is mounted).
+  Closed, it starts again in 0.7 s to its window (launch to `FULLSCREEN` in the
+  log). Closing the app in front (`closeByAppId`, root's `luna-send` needs no
+  `-a`) brings the last input forward (`last_input_handler`), not the card
+  behind it, so Back out of an app opened from the TV app goes to the last
+  input whether the TV app is still running or not.
+- After a power cut or a reboot nothing of Native Tv runs until its tile is
+  opened (see the boot bullet above), so until then the Home button opens LG's
+  ribbon. With the server running, the Home button brings the TV app forward
+  from any app (Netflix, YouTube, the browser) whether the app was running or
+  closed.
 - Streaming apps declare how they take a title in `deeplinkingParams`:
   Prime Video 3.12 (`amazon.global`, native) `{"contentTarget":"$CONTENTID"}`,
   Disney+ 24.5.8 (`com.disney.disneyplus-prod`, web)

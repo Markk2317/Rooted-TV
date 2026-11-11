@@ -1182,10 +1182,14 @@ int main() {
                   "OK on another app still launches it through the server");
         }
 
-        // Idle: after thirty quiet seconds the screen dims, and the first key only wakes it.
+        // Idle: Home, whose banner keeps changing, stays lit for five quiet minutes, then dims, and
+        // the first key only wakes it.
         clockMs = run(home, clockMs, 33000);
+        check(!home.snapshot()["idle"].boolean() && motion.value("dim") == 0,
+              "Home is still lit after thirty seconds without a key");
+        clockMs = run(home, clockMs, 270000);
         check(home.snapshot()["idle"].boolean() && std::fabs(motion.value("dim") - .66) < .01,
-              "The screen dims after thirty seconds without a key");
+              "Home dims after five minutes without a key");
         size_t position = home.snapshot()["nav"].number();
         home.key(Key::Right);
         check(home.snapshot()["nav"].number() == position && !home.snapshot()["idle"].boolean(),

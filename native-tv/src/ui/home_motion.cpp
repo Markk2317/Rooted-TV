@@ -717,10 +717,11 @@ void Application::homeUpdate() {
                 homeRetargetHero(flow_.want, shownId.empty());
             }
         }
-        // The slideshow: with nobody pressing keys the hero moves on when its progress is full.
+        // The slideshow: with nobody pressing keys the hero moves on when its progress is full, dimmed
+        // or not, as Google TV's does until its ambient mode.
         if (home.spotlight.size() > 1 && onSpotlight && !motion_.moving("hp") &&
             !shownId.empty() && motion_.value("sy") > kBannerCoveredY) {
-            if (!flow_.idle && due(now_, flow_.lastKeyAt + static_cast<uint32_t>(ms::heroAdvance)))
+            if (due(now_, flow_.lastKeyAt + static_cast<uint32_t>(ms::heroAdvance)))
                 home.spotIndex = (home.spotIndex + 1) % home.spotlight.size();
             motion_.play("hp", Tween(0, 1, ms::heroAdvance, Easing::linear()));
         }

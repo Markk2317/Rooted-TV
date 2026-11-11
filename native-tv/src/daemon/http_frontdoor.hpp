@@ -171,7 +171,8 @@ class HttpFrontDoor {
     // Where LG's Home cannot be replaced (webOS 3.4), follows the compositor for LG's Home being
     // opened and, with `homeButtonOpensNativeHome` set, brings Native Tv Home forward instead.
     void startHomeKeyWatcher();
-    // The app now in front ("" with the screen off), for Continue watching.
+    // The app now in front ("" with the screen off), for Continue watching, and to close the TV app
+    // behind an app that needs its memory (webOS 3.4, see closeClientBehind).
     void foregroundChanged(const std::string &appId);
     // Whether GitHub has a newer release: the Server tab's Check button, and
     // the opt-in daily check (checkReleaseIfDue, run hourly).
@@ -344,6 +345,7 @@ class HttpFrontDoor {
     // /api/screensaver/photos, /photo, /photos/upload, /photos/remove and /weather: the Photos
     // screen saver's pictures and weather. True when the request was one of them.
     bool handleScreensaverPhotos(HttpExchange &exchange) const;
+    Json screensaverAmbientPictures() const;
     // POST /api/assistant {"question"}: the Gemini assistant, with the TV's tools.
     void handleAssistant(HttpExchange &exchange) const;
     // A request to this server from itself, as the assistant's tools make them: the server's own
@@ -604,6 +606,9 @@ class HttpFrontDoor {
     // Next to last for the same reason as the watcher: its worker looks trailers up through the
     // front door.
     std::unique_ptr<service::HomeTrailers> homeTrailers_;
+    // Counts foreground changes, so a close planned for one app is dropped once another is in front.
+    std::atomic<unsigned long long> foregroundSeq_{0};
+    void closeClientBehind(const std::string &appId);
     // Last, so its thread, which calls into the front door, stops before anything else goes.
     std::unique_ptr<HomeKeyWatcher> homeKeyWatcher_;
 };

@@ -341,6 +341,11 @@ void testFailureAndRetry() {
     check(fetches == 2, "An error report holds the retry back too");
     loader.get("x", 8, 8, ImageFit::Cover, 61000);
     check(fetches == 3, "and the retry comes 30 s after the report");
+    loader.fail("x", 62000, false);
+    loader.get("x", 8, 8, ImageFit::Cover, 63999);
+    check(fetches == 3, "A request that timed out is not asked again at once");
+    loader.get("x", 8, 8, ImageFit::Cover, 64000);
+    check(fetches == 4, "but 2 s after, not 30 s: the server may still be fetching it");
     ImageLoader broken(store, [](const std::string &) { return true; }, 1 << 20, 1);
     broken.get("bad", 8, 8, ImageFit::Cover, 0);
     broken.provide("bad", "definitely not a picture", 0);

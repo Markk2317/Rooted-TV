@@ -88,7 +88,7 @@
       "csrf": "not applicable",
       "bodyLimit": {"max": 0, "unit": "bytes"},
       "owner": "native",
-      "notes": "The Photos screen saver's list of photos (and the weather's town), one photo by number as image/jpeg with an ETag, and the current weather there from Open-Meteo, cached for half an hour. The screen saver asks with the token in `k`."
+      "notes": "The Photos screen saver's list of photos (and the weather's town, and for the Google TV screen saver the stills of Home's titles as image paths with their captions), one photo by number as image/jpeg with an ETag, and the current weather there from Open-Meteo, cached for half an hour. The screen saver asks with the token in `k`."
     },
     {
       "paths": ["/api/screensaver/photos/upload"],
