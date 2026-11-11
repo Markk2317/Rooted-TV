@@ -77,6 +77,7 @@ constexpr Color quickInk = rgb(0xDFF3FF, 0.54f);
 constexpr Color quickDate = rgb(0xDFF3FF, 0.39f);
 constexpr Color quickTile = rgb(0xCFDEED, 0.047f);
 constexpr Color quickVeil = rgb(0x000000, 0.6f);
+constexpr Color detailsBlurDim = rgb(0x0C0B0E, 0.55f);
 } // namespace alpha
 namespace type {
 constexpr const char *family = "Google Sans Flex";
@@ -326,6 +327,7 @@ constexpr float quickItemTextX = 24;
 constexpr float quickTrackW = 168;
 constexpr float quickTrackH = 8;
 constexpr float quickItemR = 24;
+constexpr float detailsBlurSpread = 40;
 constexpr int dotSlots = 6;
 constexpr int tileCols = 6;
 constexpr int statCols = 4;

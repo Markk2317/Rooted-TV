@@ -595,18 +595,40 @@ Json DetailsScreen::snapshot() const {
 
 namespace {
 // The backdrop, with one diagonal fade that keeps the lines readable at the upper left and the
-// row of similar titles at the bottom: two full-screen layers in all.
-void backdrop(kit::Paint paint, const Json &item) {
+// row of similar titles at the bottom. As the rows take the page (`rows` 0 to 1) the art turns
+// into a dark blur of itself, as Google TV's does: TMDB's smallest cut the server serves, drawn at
+// the screen's size four times a few pixels apart.
+void backdrop(kit::Paint paint, const Json &item, float rows) {
     Scene &scene = paint.scene;
     Rect screen = {0, 0, kit::canvas::width, kit::canvas::height};
     std::string art = artwork(item, true);
     if (art.empty())
         kit::ambientWall(paint, 1, home::hsl(static_cast<float>(home::hashOf(item["id"].string()) % 360),
                                              .45f, .115f));
-    else
-        scene.picture(screen, 0).value = art;
+    else {
+        if (rows < 1)
+            scene.picture(screen, 0).value = art;
+        if (rows > 0) {
+            const std::string blur = "tmdb:w185:" + item["backdrop"].string();
+            const float spread = kit::layout::detailsBlurSpread;
+            int layer = 0;
+            for (Rect at : {Rect{-spread, -spread, screen.w + 2 * spread, screen.h + 2 * spread},
+                            Rect{-2 * spread, 0, screen.w + 2 * spread, screen.h + 2 * spread},
+                            Rect{0, -2 * spread, screen.w + 2 * spread, screen.h + 2 * spread},
+                            Rect{-2 * spread, -2 * spread, screen.w + 3 * spread, screen.h + 3 * spread}}) {
+                Node &soft = scene.picture(at, 0);
+                soft.value = blur;
+                soft.opacity = rows / static_cast<float>(++layer);
+            }
+            scene.shape(screen, kit::focus::withAlpha(kit::color::ink, kit::alpha::detailsBlurDim.a * rows));
+        }
+    }
+    if (rows >= 1)
+        return;
+    // The blur is dimmed evenly, so the fade goes as it comes.
     Color shade = kit::color::ink;
     Node &fade = scene.shape(screen, {0, 0, 0, 0});
+    fade.opacity = 1 - rows;
     fade.gradient.stops = 4;
     fade.gradient.angle = 45;
     fade.gradient.color[0] = kit::focus::withAlpha(shade, .97f);
@@ -717,11 +739,11 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
     Scene &scene = paint.scene;
     const Json &item = title.item;
     scene.background = kit::color::ink;
-    backdrop(paint, item);
-
     // The page rises as the focus goes down its rows; its head fades as it leaves.
     const float rise = static_cast<float>(motion.value("details:vy"));
     const float head = kit::focus::clamp01(1 + rise / 500);
+    backdrop(paint, item, 1 - head);
+
     scene.pushTransform(Transform::translate(0, rise));
     auto group = [&](int block, float alpha = 1) {
         kit::Enter enter = enterOf(motion, block);

@@ -27,7 +27,8 @@ With a TMDB key, **OK** on a film or series opens its details, laid out as
 Google TV's: the title in large type, its rating, genre, year and length, two
 lines of its overview and its buttons, then two rows that rise to the top as the
 focus goes down: **Cast & crew** (the director first, then the cast, with their
-photos from TMDB) and **If you liked** the title, its similar titles. **Open on Netflix**
+photos from TMDB) and **If you liked** the title, its similar titles, over a dark
+blur of the backdrop. **Open on Netflix**
 launches the title in Netflix when it is there (see below); **Trailer** opens
 YouTube when a trailer is available. As Google TV's watch options, the details lead with **Open on Netflix**, **Open on Prime Video** or **Open on Disney+** for each of those services that has the title with a subscription in the TV's country (TMDB's watch providers, JustWatch's data) and whose app is installed, the service of the row the title came from first. Each opens the service's app: on the title in Netflix with Netflix links on, and in Prime Video with `"primeDeepLinks": true` in `config.json` where Wikidata has the title's Prime Video ID (its GTI); otherwise, and always in Disney+, which takes no link to a title, on the app's own Home. Both apps ask whose profile it is first. The trending rows list only titles that open in Netflix or have a trailer.
 After them come **Watchlist** and the thumbs, as on Google TV: Watchlist
