@@ -5037,6 +5037,12 @@ void HttpFrontDoor::sendOledCare(HttpExchange &exchange) const {
     }
 
     Json response = service::oledCareResponse(sources);
+    // An OLED without LG's Logo Luminance (webOS 3.4): the server's own logo dimming takes its row.
+    if (response["isOled"].boolean() && !sources.logoDimming) {
+        logoDimmingInSoftware_.store(1);
+        response.set("logoDimming", Json::text(staticDimmingLevel()));
+        response.set("logoDimmingSoftware", Json::flag(true));
+    }
     {
         std::lock_guard<std::mutex> cacheLock(oledCareCacheMutex_);
         oledCareCache_ = response;
@@ -12243,6 +12249,28 @@ void HttpFrontDoor::setControl(HttpExchange &exchange) const {
         sendControlFailure("logo dimming takes off, light, strong");
         return;
     }
+    // The server's own logo dimming, where the picture settings have none: a config value.
+    if (logoDimmingAction && logoDimmingInSoftware()) {
+        Json change = Json::object();
+        change.set("staticDimming", Json::text(logoDimming));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error)) {
+            sendControlFailure("could not save setting: " + error);
+            return;
+        }
+        std::string reloadError;
+        if (!proxy_.requestNodeConfigReload(reloadError) && logger_)
+            logger_->warning("config: saved a setting but Node did not reload it: " + reloadError);
+        invalidateOledCareCache();
+        Json result = Json::object();
+        result.set("ok", Json::flag(true));
+        (void)exchange.respond(200,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               result.dump());
+        return;
+    }
     if (alwaysReadyOffStartAction && !validAlwaysReadyOffStart) {
         sendControlFailure(say::msg("srv.arOff.badHour", "the start must be an hour from 0 to 23"));
         return;
@@ -16719,7 +16747,153 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
 
 void HttpFrontDoor::foregroundChanged(const std::string &appId) {
     homeWatching_.foreground(appId, homeNowMilliseconds());
+    {
+        std::lock_guard<std::mutex> lock(foregroundMutex_);
+        foregroundApp_ = appId;
+    }
     closeClientBehind(appId);
+}
+
+bool HttpFrontDoor::logoDimmingInSoftware() const {
+    const int known = logoDimmingInSoftware_.load();
+    if (known >= 0) return known == 1;
+    const Json configuredPanel = service::javascriptTruthy(config_.document["panel"])
+        ? config_.document["panel"] : config_.document["device"]["panel"];
+    bool oled = false;
+    if (service::javascriptTruthy(configuredPanel)) {
+        oled = service::oledModel(service::javascriptString(configuredPanel));
+    } else if (service::hasOledPanelTypeMarker(systemRoot_) ||
+               service::hasOledPanelRecords(systemRoot_)) {
+        oled = true;
+    } else {
+        Json request = Json::object();
+        Json keys = Json::array();
+        keys.add(Json::text("modelName"));
+        request.set("keys", keys);
+        LunaReply reply;
+        if (!waitForLuna(luna_, "com.webos.service.tv.systemproperty/getSystemProperties", request,
+                         reply))
+            return false; // asked again next time
+        oled = service::oledModel(service::javascriptString(reply.response["modelName"]));
+    }
+    if (!oled) {
+        logoDimmingInSoftware_.store(0);
+        return false;
+    }
+    // Asked beside one every TV has: a key the TV does not have makes the answer returnValue false
+    // with the others' values, and alone, "no result from DB" (webOS 3.4).
+    Json request = Json::object();
+    request.set("category", Json::text("picture"));
+    Json keys = Json::array();
+    keys.add(Json::text("backlight"));
+    keys.add(Json::text("logoLuminanceAdjust"));
+    request.set("keys", keys);
+    LunaReply reply;
+    (void)waitForLuna(luna_, "com.webos.service.settings/getSystemSettings", request, reply);
+    const Json settings = reply.response["settings"];
+    if (!settings["backlight"].valid()) return false; // no answer: asked again next time
+    const bool missing = !settings["logoLuminanceAdjust"].isString();
+    logoDimmingInSoftware_.store(missing ? 1 : 0);
+    return missing;
+}
+
+// Light unless the owner chose otherwise, as LG ships its Logo Luminance on.
+std::string HttpFrontDoor::staticDimmingLevel() const {
+    const std::string level = currentConfigDocument()["staticDimming"].string();
+    return level == "off" || level == "strong" ? level : "light";
+}
+
+void HttpFrontDoor::startStaticDimming() {
+    if (staticDimming_ || systemRoot_ != "/") return;
+    StaticDimmingRunner::Deps deps;
+    deps.level = [this]() { return logoDimmingInSoftware() ? staticDimmingLevel() : "off"; };
+    // Another app's picture: not Native Tv's own screens, which dim themselves when idle, and
+    // nothing with the screen off.
+    deps.watching = [this]() {
+        std::string app;
+        {
+            std::lock_guard<std::mutex> lock(foregroundMutex_);
+            app = foregroundApp_;
+        }
+        // Only changes are reported: an app already in front when the server started is asked for.
+        if (app.empty()) {
+            LunaReply reply;
+            if (waitForLuna(luna_, "com.webos.applicationManager/getForegroundAppInfo",
+                            Json::object(), reply))
+                app = reply.response["appId"].string();
+        }
+        return !app.empty() && app.compare(0, 10, "com.tvweb.") != 0 &&
+               app != "com.webos.app.screensaver";
+    };
+    deps.capture = [this](std::string &bytes) {
+        const std::string path = "/tmp/nativetv-static-dimming.bmp";
+        // Parsed, so the sizes are integers: as doubles ("64.0") the capture service answers
+        // ERROR_06 "Invalid argument".
+        const Json request = Json::parse("{\"path\":\"" + path +
+                                         "\",\"method\":\"DISPLAY\",\"width\":64,"
+                                         "\"height\":36,\"format\":\"BMP\"}");
+        LunaReply reply;
+        if (!waitForLuna(luna_, "com.webos.service.tv.capture/executeOneShot", request, reply) ||
+            !reply.response["returnValue"].boolean())
+            return false;
+        std::ifstream input(path.c_str(), std::ios::binary);
+        bytes.assign(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+        std::remove(path.c_str());
+        return !bytes.empty();
+    };
+    // LG keeps the OLED light per input and picture mode, the reply's "dimension".
+    const auto readLight = [this](const Json &dimension) {
+        Json request = Json::object();
+        request.set("category", Json::text("picture"));
+        if (dimension.isObject()) request.set("dimension", dimension);
+        Json keys = Json::array();
+        keys.add(Json::text("backlight"));
+        request.set("keys", keys);
+        Json result = Json::object();
+        result.set("value", Json::numeric(-1));
+        LunaReply reply;
+        if (!waitForLuna(luna_, "com.webos.service.settings/getSystemSettings", request, reply))
+            return result;
+        result.set("dimension", reply.response["dimension"]);
+        const Json value = reply.response["settings"]["backlight"];
+        const std::string text = value.string();
+        if (value.isNumber())
+            result.set("value", value);
+        else if (!text.empty() && text.size() <= 3 &&
+                 std::all_of(text.begin(), text.end(),
+                             [](unsigned char c) { return c >= '0' && c <= '9'; }))
+            result.set("value", Json::numeric(std::stoi(text)));
+        return result;
+    };
+    deps.readLight = [readLight]() { return readLight(Json()); };
+    deps.readLightOf = [readLight](const Json &dimension) {
+        const Json value = readLight(dimension)["value"];
+        return value.isNumber() ? static_cast<int>(value.number()) : -1;
+    };
+    deps.setLightOf = [this](const Json &dimension, int light) {
+        Json request = Json::object();
+        request.set("category", Json::text("picture"));
+        request.set("dimension", dimension);
+        Json settings = Json::object();
+        settings.set("backlight", Json::text(std::to_string(light)));
+        request.set("settings", settings);
+        LunaReply reply;
+        std::unique_lock<std::mutex> lock(systemSettingsControlMutex_);
+        const bool done =
+            waitForLuna(luna_, "com.webos.service.settings/setSystemSettings", request, reply) &&
+            reply.response["returnValue"].boolean();
+        lock.unlock();
+        invalidateOledCareCache();
+        return done;
+    };
+    deps.statePath = dataRoot_ + "/static-dimming.json";
+    deps.logger = logger_;
+    staticDimming_.reset(new StaticDimmingRunner(std::move(deps)));
+    // Started from the event loop half a minute in, once the server is up and the TV's foreground
+    // app has been reported.
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(30000), [this]() {
+        if (staticDimming_) staticDimming_->start();
+    });
 }
 
 namespace {

@@ -5,6 +5,7 @@
 #include "daemon/app_install_upload_reservation.hpp"
 #include "daemon/http_auth.hpp"
 #include "daemon/home_key_watcher.hpp"
+#include "daemon/static_dimming_runner.hpp"
 #include "daemon/hostname_cache.hpp"
 #include "daemon/http_proxy.hpp"
 #include "daemon/http_static_assets.hpp"
@@ -171,6 +172,9 @@ class HttpFrontDoor {
     // Where LG's Home cannot be replaced (webOS 3.4), follows the compositor for LG's Home being
     // opened and, with `homeButtonOpensNativeHome` set, brings Native Tv Home forward instead.
     void startHomeKeyWatcher();
+    // Where the panel is an OLED without LG's Logo Luminance (webOS 3.4), the server's own logo
+    // dimming (service::StaticDimming), at the level `staticDimming` in config.json names.
+    void startStaticDimming();
     // The app now in front ("" with the screen off), for Continue watching, and to close the TV app
     // behind an app that needs its memory (webOS 3.4, see closeClientBehind).
     void foregroundChanged(const std::string &appId);
@@ -609,6 +613,14 @@ class HttpFrontDoor {
     // Counts foreground changes, so a close planned for one app is dropped once another is in front.
     std::atomic<unsigned long long> foregroundSeq_{0};
     void closeClientBehind(const std::string &appId);
+    mutable std::mutex foregroundMutex_;
+    std::string foregroundApp_;
+    // 1 where logo dimming is the server's own (an OLED whose picture settings lack
+    // logoLuminanceAdjust), 0 where it is not, -1 until known.
+    mutable std::atomic<int> logoDimmingInSoftware_{-1};
+    bool logoDimmingInSoftware() const;
+    std::string staticDimmingLevel() const;
+    std::unique_ptr<StaticDimmingRunner> staticDimming_;
     // Last, so its thread, which calls into the front door, stops before anything else goes.
     std::unique_ptr<HomeKeyWatcher> homeKeyWatcher_;
 };

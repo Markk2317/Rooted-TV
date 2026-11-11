@@ -27,7 +27,8 @@ async function loadOledCare() {
 
   const state = v => v === null || v === undefined ? null : !!v;
   const onOff = on => on ? t('common.on', 'On') : t('common.off', 'Off');
-  // A TV without logo dimming (webOS 3.4) reports null for it, and the row is left out.
+  // A TV without logo dimming reports null for it, and the row is left out; an OLED on webOS 3.4
+  // reports the server's own instead (logoDimmingSoftware).
   const html = OLED_ROWS.filter(r => r.kind !== 'logo' || d.logoDimming !== null).map(r => {
     // Marked apart only when they can actually be changed here - the warning
     // that explains the colour is hidden otherwise.
@@ -42,6 +43,12 @@ async function loadOledCare() {
         attrs: 'data-oled="screenShift"'
       });
     } else if (r.kind === 'logo') {
+      if (d.logoDimmingSoftware) {
+        r = Object.assign({}, r, {
+          sub: t('oled.logo.subSoftware', 'Native Tv, whole picture'),
+          desc: t('oled.logo.descSoftware', 'This panel has no logo dimming of its own, so Native Tv\'s stands in: a bright logo, score or HUD that stays put for two minutes while the picture moves lowers the OLED light of the whole picture by 15 % (light) or 30 % (strong) until it goes.')
+        });
+      }
       const v = String(d.logoDimming || 'off').toLowerCase();
       const label = v === 'strong' ? t('oled.logo.high', 'High') : v === 'light' ? t('oled.logo.light', 'Light') : t('common.off', 'Off');
       pill = renderToggle({

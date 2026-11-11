@@ -1768,7 +1768,14 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   written there opens the ribbon.
 - `com.webos.service.tv.capture/executeOneShot` with `"method":"DISPLAY"` writes
   the whole screen, video and graphics, to a JPEG or PNG (960 × 540 asked for),
-  any app in front.
+  any app in front. `"format":"BMP"` writes an uncompressed 24-bit BMP (6,966 bytes
+  at 64 × 36) in 0.12 s; `RAW` is refused.
+- The panel has none of the later protections: no `com.webos.service.oledepl`
+  (GSR, TPC) and no `logoLuminanceAdjust`; the picture category has
+  `screenShift`, `backlight` (the OLED light) and `energySaving`.
+  `com.webos.service.tv.display` has `requestClearPanelNoise` and
+  `getClearPanelNoiseStatus`, and `/mnt/lg/cmn_data/pnwash/` holds the panel
+  cycles' state (`state`, `jobScope`, `autoPnwashTime`, `autoOffRsTime`).
 - Memory: 1.1 GB with 450 MB of swap, of which LG's own programs keep about
   900 MB in use; with Netflix preloaded (300 MB) about 200 MB is available. The
   TV app takes 25 MB on a settings page and about 90 MB on Home with its

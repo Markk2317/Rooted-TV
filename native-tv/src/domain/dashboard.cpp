@@ -825,9 +825,15 @@ void oled(Rows &rows, const Json &data) {
                                                          : value == "light" ? "strong"
                                                                             : "off"))
                      : Command(),
-            say::msg("tv.oled.logoDimming.hint",
-                     "Spots a station logo that has not moved and fades it slightly. Higher "
-                     "settings dim more of the picture around it."),
+            data["logoDimmingSoftware"].boolean()
+                ? say::msg("tv.oled.logoDimming.softwareHint",
+                           "This panel has no logo dimming of its own, so Native Tv's stands in: "
+                           "a bright logo, score or HUD that stays put for two minutes while the "
+                           "picture moves lowers the OLED light of the whole picture by 15 % "
+                           "(light) or 30 % (strong) until it goes.")
+                : say::msg("tv.oled.logoDimming.hint",
+                           "Spots a station logo that has not moved and fades it slightly. Higher "
+                           "settings dim more of the picture around it."),
             say::msg("tv.settings.change", "Change"))
             .choices = [&] {
             Choices options;

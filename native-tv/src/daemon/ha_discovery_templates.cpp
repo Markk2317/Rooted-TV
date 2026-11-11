@@ -1888,10 +1888,11 @@ const Json &templates() {
         "Neo",
         "Tesseract",
         "Panel vitals",
-        "Your photos"
+        "Your photos",
+        "Google TV"
       ],
-      "command_template": "{{ {\"LG default\":\"stock\",\"Clock\":\"clock\",\"Clock with date\":\"clock-date\",\"Black screen\":\"black\",\"Starfield\":\"starfield\",\"Fireworks\":\"fireworks\",\"Bokeh\":\"bokeh\",\"Harmonograph\":\"harmonograph\",\"Filament\":\"filament\",\"Currents\":\"currents\",\"Veils\":\"veils\",\"Incense\":\"incense\",\"Murmuration\":\"murmuration\",\"Vortex\":\"vortex\",\"Neo\":\"neo\",\"Tesseract\":\"tesseract\",\"Panel vitals\":\"vitals\",\"Your photos\":\"photos\"}[value] }}",
-      "value_template": "{{ {\"stock\":\"LG default\",\"clock\":\"Clock\",\"clock-date\":\"Clock with date\",\"black\":\"Black screen\",\"starfield\":\"Starfield\",\"fireworks\":\"Fireworks\",\"bokeh\":\"Bokeh\",\"harmonograph\":\"Harmonograph\",\"filament\":\"Filament\",\"currents\":\"Currents\",\"veils\":\"Veils\",\"incense\":\"Incense\",\"murmuration\":\"Murmuration\",\"vortex\":\"Vortex\",\"neo\":\"Neo\",\"tesseract\":\"Tesseract\",\"vitals\":\"Panel vitals\",\"photos\":\"Your photos\"}.get(value_json.get('screensaverMode'), \"LG default\") }}",
+      "command_template": "{{ {\"LG default\":\"stock\",\"Clock\":\"clock\",\"Clock with date\":\"clock-date\",\"Black screen\":\"black\",\"Starfield\":\"starfield\",\"Fireworks\":\"fireworks\",\"Bokeh\":\"bokeh\",\"Harmonograph\":\"harmonograph\",\"Filament\":\"filament\",\"Currents\":\"currents\",\"Veils\":\"veils\",\"Incense\":\"incense\",\"Murmuration\":\"murmuration\",\"Vortex\":\"vortex\",\"Neo\":\"neo\",\"Tesseract\":\"tesseract\",\"Panel vitals\":\"vitals\",\"Your photos\":\"photos\",\"Google TV\":\"ambient\"}[value] }}",
+      "value_template": "{{ {\"stock\":\"LG default\",\"clock\":\"Clock\",\"clock-date\":\"Clock with date\",\"black\":\"Black screen\",\"starfield\":\"Starfield\",\"fireworks\":\"Fireworks\",\"bokeh\":\"Bokeh\",\"harmonograph\":\"Harmonograph\",\"filament\":\"Filament\",\"currents\":\"Currents\",\"veils\":\"Veils\",\"incense\":\"Incense\",\"murmuration\":\"Murmuration\",\"vortex\":\"Vortex\",\"neo\":\"Neo\",\"tesseract\":\"Tesseract\",\"vitals\":\"Panel vitals\",\"photos\":\"Your photos\",\"ambient\":\"Google TV\"}.get(value_json.get('screensaverMode'), \"LG default\") }}",
       "icon": "mdi:television-shimmer",
       "unique_id": "lg_tv_screensaver_mode",
       "default_entity_id": "select.lg_tv_screensaver_mode",

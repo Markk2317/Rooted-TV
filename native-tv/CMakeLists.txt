@@ -59,6 +59,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/home_boot_manager.cpp
   src/daemon/home_crash_breaker.cpp
   src/daemon/home_key_watcher.cpp
+  src/daemon/static_dimming_runner.cpp
   src/daemon/home_orchestrator.cpp
   src/daemon/home_probe_gate.cpp
   src/daemon/home_restore_manager.cpp
@@ -113,7 +114,7 @@ add_library(nativetv_metrics src/service/kernel_files.cpp src/service/process_me
   src/service/system_metrics.cpp src/service/hdmi_inputs.cpp src/service/logs.cpp
   src/service/ntp.cpp src/service/cpu_windows.cpp src/service/network_rates.cpp
   src/service/syslog.cpp src/service/prometheus.cpp src/service/oled_care.cpp
-  src/service/stuck_child_reaper.cpp
+  src/service/static_dimming.cpp src/service/stuck_child_reaper.cpp
   src/service/sound_outputs.cpp)
 target_link_libraries(nativetv_metrics PUBLIC nativetv_core nativetv_names Threads::Threads)
 target_compile_options(nativetv_metrics PRIVATE -Wall -Wextra -Werror)
@@ -369,6 +370,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-home-key-watcher-tests PRIVATE nativetv_daemon Threads::Threads)
   target_compile_options(native-home-key-watcher-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-home-key-watcher COMMAND native-home-key-watcher-tests)
+  add_executable(native-static-dimming-runner-tests tests/static_dimming_runner.cpp)
+  target_link_libraries(native-static-dimming-runner-tests PRIVATE nativetv_daemon Threads::Threads)
+  target_compile_options(native-static-dimming-runner-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-static-dimming-runner COMMAND native-static-dimming-runner-tests)
   add_executable(native-home-status-tests tests/home_status.cpp)
   target_link_libraries(native-home-status-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-status-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
@@ -654,6 +659,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-oled-care-tests PRIVATE nativetv_metrics)
   target_compile_options(native-oled-care-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-oled-care COMMAND native-oled-care-tests)
+  add_executable(native-static-dimming-tests tests/static_dimming.cpp)
+  target_link_libraries(native-static-dimming-tests PRIVATE nativetv_metrics)
+  target_compile_options(native-static-dimming-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-static-dimming COMMAND native-static-dimming-tests)
   add_executable(native-privacy-consent-tests tests/privacy_consent.cpp)
   target_link_libraries(native-privacy-consent-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-privacy-consent-tests PRIVATE -Wall -Wextra -Werror)
