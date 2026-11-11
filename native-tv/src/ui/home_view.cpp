@@ -106,8 +106,8 @@ kit::Hero heroOf(const Frame &frame) {
     hero.expand = static_cast<float>(motion.value("he"));
     hero.buttonAlpha = static_cast<float>(motion.value("hb"));
     hero.textAlpha = static_cast<float>(motion.value("ht"));
-    hero.dim = static_cast<float>(motion.value("hd"));
-    hero.lift = kit::layout::picksLift * static_cast<float>(motion.value("hu"));
+    hero.drop = kit::layout::bannerTextDrop * static_cast<float>(motion.value("hn"));
+    hero.preview = home.art.text.preview;
     for (int i = 0; i < 3; ++i)
         hero.text[i] = textEnter(motion, i);
     return hero;
@@ -158,10 +158,11 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
     const bool appNames = state.catalogue["layout"]["appNames"].boolean(true);
     // On the Apps page every circle carries its name; on Home only the focused one does.
     const bool namedApps = home.tabs[home.tab].key == "apps";
-    const float risen = static_cast<float>(motion.value("rs"));
+    const float risen = static_cast<float>(motion.value("rs")), up = static_cast<float>(motion.value("ru"));
     std::vector<home::RowLook> looks;
     for (size_t ri = 0; ri < home.rows.size(); ++ri) {
         home::RowLook look;
+        look.up = up;
         look.risen = risen;
         look.grow = static_cast<float>(motion.value(home::id("rg", ri)));
         look.names = static_cast<float>(motion.value(home::id("rn", ri)));
@@ -272,6 +273,14 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 }
                 if (card.data["progress"].isNumber())
                     poster.progress = static_cast<float>(card.data["progress"].number());
+                if (row.key == "continue") {
+                    // Google TV's Continue watching: what OK does over the art, the title and
+                    // its service under the card.
+                    poster.action = "RESUME";
+                    poster.caption = card.title;
+                    poster.captionLine = continueLine(card);
+                    poster.title.clear();
+                }
                 poster.focus = focus;
                 poster.enter = enter;
                 kit::card(paint, poster);
@@ -394,6 +403,12 @@ void drawHome(kit::Paint paint, const Frame &frame) {
     } else {
         kit::Hero hero = heroOf(frame);
         kit::heroWall(paint, hero);
+        // Google TV darkens only the banner's art while the bar has the focus; its lines and the
+        // rows keep their light.
+        const float artDim = static_cast<float>(motion.value("bd"));
+        if (artDim > .002f)
+            scene.shape({0, 0, kit::canvas::width, kit::canvas::height},
+                        kit::focus::withAlpha(kit::alpha::artDim, artDim));
         scene.pushTransform(Transform::translate(slide, 0));
         kit::heroText(paint, hero);
         if (home.spotlight.size() > 1) {
@@ -406,7 +421,8 @@ void drawHome(kit::Paint paint, const Frame &frame) {
             dots.alpha = hero.text[2].alpha * parallax.textAlpha *
                          static_cast<float>(motion.value("dots")) * hero.textAlpha *
                          (1 - static_cast<float>(motion.value("hu")));
-            dots.y = parallax.textY;
+            // Google TV's dots go down with the rows while the banner has the focus.
+            dots.y = parallax.textY + std::max(hero.stackY, 0.0f);
             kit::pagination(paint, dots);
         }
         rows(paint, frame);
@@ -434,8 +450,8 @@ void drawHome(kit::Paint paint, const Frame &frame) {
         hide.focus = static_cast<float>(motion.value("f:eh"));
         kit::pillButton(paint, hide);
     }
-    // Google TV darkens the page under the bar while the bar has the focus.
-    const float barDim = static_cast<float>(motion.value("bd"));
+    // On the Apps page Google TV darkens all of it under the bar while the bar has the focus.
+    const float barDim = apps ? static_cast<float>(motion.value("bd")) : 0;
     if (barDim > .002f)
         scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::focus::withAlpha(kit::alpha::barDim, barDim));
     // On Home's first page the bar leaves with the page once the rows below the first two are

@@ -127,8 +127,8 @@ HeroText linesOf(const ViewState &state, const Card &card) {
     HeroText text;
     text.title = card.title;
     if (isTitle(card) && featured(state, card) && card.data["overview"].isString()) {
-        // Google TV's banner: the service that has the title over it, then why it is shown and
-        // its logline on one line.
+        // Google TV's banner: the service that has the title over it, then why it is shown; with
+        // the focus, its logline and a button under that.
         const std::string service = card.data["service"].string();
         for (const auto &candidate : names::streamingServices())
             if (candidate.key == service)
@@ -138,31 +138,22 @@ HeroText linesOf(const ViewState &state, const Card &card) {
             text.wordmark = "wordmark-" + service;
         text.tag = "Trending";
         text.facts = card.subtitle;
-        const std::string overview = card.data["overview"].string();
-        text.description = loglineOf(overview);
-        // The focused banner's description goes on from its logline.
-        std::string rest = overview.compare(0, text.description.size(), text.description) == 0
-                               ? overview.substr(text.description.size())
-                               : overview;
-        rest.erase(0, std::min(rest.find_first_not_of(" "), rest.size()));
-        text.more = rest;
-        text.button = text.source.empty() ? "More info" : "Watch on " + text.source;
+        text.description = loglineOf(card.data["overview"].string());
+        text.button = text.source.empty() ? "More info" : "Watch now";
     } else if (isTitle(card) && state.home.spotlightOwn) {
-        // A focused top pick on Google TV's banner: its service's wordmark, the title, its facts
-        // and, under them, its description.
+        // A focused title of a row on Google TV's banner: its logo or title, the service that has
+        // it, two lines of its overview and its facts.
+        text.preview = true;
         const std::string service = card.data["service"].string();
         for (const auto &candidate : names::streamingServices())
-            if (candidate.key == service) {
+            if (candidate.key == service)
                 text.source = candidate.name;
-                text.wordmark = "wordmark-" + service;
-            }
-        text.facts = card.subtitle.empty() && card.kind == "youtube" ? "YouTube" : card.subtitle;
+        if (text.source.empty() && card.kind == "youtube")
+            text.source = "YouTube";
+        text.facts = card.subtitle.empty() && card.kind == "youtube" ? "" : card.subtitle;
         text.more = card.data["overview"].string();
-        // A pick Gemini chose says why, before its facts: "Because you watched Heat | Film · 2026".
-        if (!card.data["because"].string().empty()) {
-            text.tag = card.data["because"].string();
-            text.description = text.facts;
-        }
+        // A pick Gemini chose says why after its service: "Netflix · Because you watched Heat".
+        text.tag = card.data["because"].string();
     } else if (isTitle(card)) {
         text.source = card.data["because"].string().empty() ? rowTitleOf(state, card)
                                                             : card.data["because"].string();
@@ -232,7 +223,7 @@ void Application::homeStart() {
     if (!flow_.beatAt)
         flow_.beatAt = now_ + kBeatMs;
     for (const char *prefix :
-         {"f:", "rx", "rd", "rg", "rn", "rs", "bd", "he", "hb", "ht", "hd", "hu", "ba", "E", "ha", "hx", "hv", "dot",
+         {"f:", "rx", "rd", "rg", "rn", "rs", "ru", "bd", "he", "hb", "ht", "hn", "hu", "ba", "E", "ha", "hx", "hv", "dot",
           "pgx", "pgs", "dim", "gy", "sy", "lift"})
         motion_.erasePrefix(prefix);
     home.art = HeroArt();
@@ -447,16 +438,17 @@ void Application::homeFocus(bool jump) {
                 motion_.spring(name, target, springParams(kit::motion::spring::row));
         }
     }
-    // Google TV's Home, as measured on its 2025 home (gtv-refs/motion.md): with the bar focused the
-    // banner is compact and the top picks and Your apps sit under it; the banner focused grows its
-    // description and button and the rows drop; the top picks focused lose the bar and the banner
-    // shows the focused title; Your apps focused rises a little over the dimmed art; further down
-    // the rows rise to the top, the focused one's title large. Without a banner of its own (the
+    // Google TV's Home, as measured on a Chromecast with Google TV (Android 14, 2025): with the bar
+    // focused the banner is compact and the top picks and Your apps sit under it; the banner focused
+    // moves its lines down, adds its description and button, and the rows drop to the screen's
+    // foot; the top picks focused lose the bar and the banner shows the focused title; from Your
+    // apps down the rows rise to the top, the focused one's title large. The rows' titles grow from
+    // 24 to 36 px as soon as anything under the bar has the focus. Without a banner of its own (the
     // Live tab, an older server) the first rows stay under the hero and past them the focused row
     // takes the first row's place.
     const bool kindRows = home.tabs[home.tab].key == "apps" && !grid;
     const bool overBanner = homeHeroOffered();
-    enum class Place { Bar, Banner, Picks, Apps, Lower, Other };
+    enum class Place { Bar, Banner, Picks, Lower, Other };
     Place place = Place::Other;
     if (overBanner && !grid) {
         if (home.navigation)
@@ -464,11 +456,10 @@ void Application::homeFocus(bool jump) {
         else if (home.heroFocus)
             place = Place::Banner;
         else if (home.row < home.rows.size())
-            place = home.rows[home.row].key == "trending" ? Place::Picks
-                    : home::isApps(home.rows[home.row]) ? Place::Apps
-                                                        : Place::Lower;
+            place = home.rows[home.row].key == "trending" ? Place::Picks : Place::Lower;
     }
     const bool risen = place == Place::Lower;
+    const bool titlesUp = place == Place::Banner || place == Place::Picks || risen;
     const bool namedApps = home.tabs[home.tab].key == "apps";
     auto tween = [&](const std::string &name, double to) {
         if (jump)
@@ -477,19 +468,26 @@ void Application::homeFocus(bool jump) {
             motion_.tween(name, to, ms::page, easing(ease::decelerate));
     };
     tween("rs", risen ? 1 : 0);
+    tween("ru", titlesUp ? 1 : 0);
     tween("bd", home.navigation && !home.editing ? 1 : 0);
     tween("he", place == Place::Banner || place == Place::Picks ? 1 : 0); // the banner's description
-    tween("hb", place == Place::Banner ? 1 : 0);                          // and its button
-    tween("ht", place == Place::Apps || place == Place::Lower ? 0 : 1);   // the banner's text
-    tween("hd", place == Place::Apps ? 1 : 0);                            // the art dimmed
+    // and its button, which goes at once, before the lines move up over it
+    if (jump)
+        motion_.set("hb", place == Place::Banner ? 1 : 0);
+    else
+        motion_.tween("hb", place == Place::Banner ? 1 : 0,
+                      place == Place::Banner ? ms::page : ms::pageOut, easing(ease::decelerate));
+    tween("ht", place == Place::Lower ? 0 : 1); // the banner's text
     tween("hu", place == Place::Picks ? 1 : 0); // a focused pick's lines, higher up, without dots
-    tween("ba", place == Place::Picks || place == Place::Apps || place == Place::Lower ? 1 : 0);
+    tween("hn", place == Place::Banner ? 1 : 0); // the banner's lines, lower down
+    tween("ba", place == Place::Picks || place == Place::Lower ? 1 : 0);
     std::vector<home::RowLook> looks;
     for (size_t r = 0; r < home.rows.size(); ++r) {
         home::RowLook look;
+        look.up = titlesUp ? 1 : 0;
         look.risen = risen ? 1 : 0;
         look.grow = risen && r == home.row ? 1 : 0;
-        look.names = namedApps ? 1 : home::isApps(home.rows[r]) && (risen ? r == home.row : place == Place::Apps) ? 1 : 0;
+        look.names = namedApps ? 1 : home::isApps(home.rows[r]) && risen && r == home.row ? 1 : 0;
         tween(home::id("rg", r), look.grow);
         tween(home::id("rn", r), look.names);
         looks.push_back(look);
@@ -503,8 +501,6 @@ void Application::homeFocus(bool jump) {
         stack = kit::layout::bannerDrop;
     else if (place == Place::Picks)
         stack = kit::layout::picksDrop;
-    else if (place == Place::Apps)
-        stack = kit::layout::appsFocusTop - (tops[home.row] + home::labelArea(looks[home.row]));
     else if (place == Place::Lower)
         stack = kit::layout::rowsRisenTop - tops[home.row];
     else if (home.row < home.rows.size() && !home.navigation && !home.heroFocus && !grid) {
@@ -931,16 +927,17 @@ bool Application::logoSettled(const Card &card) {
     if (card.logo.empty() || !pictures_)
         return true;
     const ImageView view = pictures_->view(card.logo, pictureTexels(kit::layout::heroLogoW),
-                                           pictureTexels(kit::layout::heroLogoH),
+                                           pictureTexels(kit::layout::previewLogoH),
                                            ImageFit::Contain, now_);
     return view.texture != 0 || view.failed;
 }
 HeroText Application::heroLinesOf(const Card &card) {
     HeroText text = linesOf(state_, card);
-    if (card.logo.empty() || !pictures_ || !isTitle(card))
+    // Google TV draws a title's logo in its preview; the banner's own titles are lettered.
+    if (card.logo.empty() || !pictures_ || !isTitle(card) || !text.preview)
         return text;
     const ImageView view = pictures_->view(card.logo, pictureTexels(kit::layout::heroLogoW),
-                                           pictureTexels(kit::layout::heroLogoH),
+                                           pictureTexels(kit::layout::previewLogoH),
                                            ImageFit::Contain, now_);
     // A dark logo (black lettering) would not read over the dimmed art: the name stays.
     const int luma = view.tone < 0 ? 0

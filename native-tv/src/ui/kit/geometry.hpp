@@ -75,9 +75,10 @@ constexpr Rect clock(float wordmarkWidth) {
 constexpr Rect heroSource() {
     return {layout::homeX, layout::heroSourceTop, layout::heroW, layout::heroSourceH};
 }
+// The title is set within Google TV's 968 px, smaller when it is longer.
 constexpr Rect heroTitle() {
     return {layout::homeX, heroSource().y + layout::heroSourceH + layout::heroTitleGap,
-            layout::heroW, layout::heroTitleH};
+            layout::heroTitleFitW, layout::heroTitleH};
 }
 constexpr Rect heroSubtitle() {
     return {layout::homeX, heroTitle().y + layout::heroTitleH + layout::heroSubGap, layout::heroW,

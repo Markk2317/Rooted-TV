@@ -79,6 +79,9 @@ std::string kindOf(const Card &card);
 std::vector<std::string> orderAfterMove(const Json &order, const std::vector<std::string> &shown);
 std::string artwork(const Json &item, bool hero = false);
 std::string titleFacts(const Json &item, bool withKind = true);
+// The line under a Continue watching card, after its title: "Netflix  •  1 h 12 min left", or for
+// a play in a service's app without a title, how long it played.
+std::string continueLine(const Card &card);
 std::string pictureLabel(const Json &picture);
 std::vector<Tab> dashboardTabs();
 std::vector<MenuRow> dashboardRows(const std::string &tab, const Json &data, const Json &caps,

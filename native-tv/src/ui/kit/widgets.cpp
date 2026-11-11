@@ -384,9 +384,8 @@ void heroWall(Paint paint, const Hero &hero) {
         top.gradient = gradient(180, {{faded(color::ink, .45f), 0}, {faded(color::ink, 0), .2f}});
         scene.popOpacity();
     }
-    // Rises with the rows so cards stay legible once the hero has scrolled away; behind Your apps
-    // the art stays, dimmed.
-    const float veil = std::max(parallax.scrimOpacity, .55f * focus::clamp01(hero.dim));
+    // Rises with the rows so cards stay legible once the hero has scrolled away.
+    const float veil = parallax.scrimOpacity;
     if (veil > .002f)
         scene.shape(screen, faded(color::page, veil));
 }
@@ -420,12 +419,71 @@ WordmarkSize wordmarkSize(const std::string &name) {
     return {40, 40};
 }
 } // namespace
+namespace {
+// The banner's title at its size, shrunk to fit Google TV's 968 px (its long titles are set
+// smaller), its foot where the box's foot is.
+void heroTitleText(Paint paint, Rect box, const std::string &title) {
+    const float width = paint.glyphs.measure(title, type::heroTitle);
+    const float scale = width > layout::heroTitleFitW ? std::max(.6f, layout::heroTitleFitW / width) : 1;
+    if (scale < 1)
+        paint.scene.pushTransform(Transform::scaleAbout(box, 0, 1, scale));
+    text(paint, {box.x, box.y, layout::heroTitleFitW / scale, box.h}, title, type::heroTitle,
+         color::onSurface);
+    if (scale < 1)
+        paint.scene.popTransform();
+}
+// A focused title of a row under the banner, as Google TV previews it: its logo (or title) with
+// its foot at previewTitleFoot, its service, two lines of its overview and its facts.
+void heroPreview(Paint paint, const Hero &hero) {
+    Scene &scene = paint.scene;
+    const float foot = layout::previewTitleFoot;
+    if (!invisible(hero.text[1])) {
+        Group group(scene, hero.text[1]);
+        if (!hero.logo.empty()) {
+            Node &logo = scene.picture({layout::homeX, foot - layout::previewLogoH, layout::heroLogoW,
+                                        layout::previewLogoH},
+                                       0, 0, true);
+            logo.value = hero.logo;
+            logo.containAtFoot = true;
+        } else
+            heroTitleText(paint, {layout::homeX, foot - layout::heroTitleH, layout::heroTitleFitW,
+                                  layout::heroTitleH},
+                          hero.title);
+    }
+    if (invisible(hero.text[2]))
+        return;
+    Group group(scene, hero.text[2]);
+    float y = foot + layout::previewServiceGap;
+    // The service it is on; a pick Gemini chose says why after it.
+    std::string line = hero.source;
+    if (!hero.tag.empty())
+        line += (line.empty() ? "" : "  ·  ") + hero.tag;
+    if (!line.empty()) {
+        text(paint, {layout::homeX, y, layout::heroW, type::heroLine.line}, line, type::heroLine,
+             color::onSurface, Node::Align::Left, 1);
+        y += type::heroLine.line + layout::previewDescGap;
+    }
+    if (!hero.more.empty()) {
+        text(paint, {layout::homeX, y, layout::previewDescW, type::body.line * 2}, hero.more,
+             type::body, color::onSurface2, Node::Align::Left, 2);
+        y += type::body.line * 2 + layout::previewFactsGap;
+    }
+    if (!hero.facts.empty())
+        factsText(paint, {layout::homeX, y, layout::heroW, type::body.line}, hero.facts, type::body,
+                  color::onSurface2);
+}
+} // namespace
+
 void heroText(Paint paint, const Hero &hero) {
     Scene &scene = paint.scene;
     geometry::HeroParallax parallax = geometry::heroParallax(hero.stackY);
     if (parallax.textAlpha * hero.textAlpha <= .002f)
         return;
-    Group page(scene, {parallax.textAlpha * hero.textAlpha, parallax.textY - hero.lift});
+    Group page(scene, {parallax.textAlpha * hero.textAlpha, parallax.textY + hero.drop});
+    if (hero.preview) {
+        heroPreview(paint, hero);
+        return;
+    }
 
     // An app's icon stands left of its lines, so they all move right by its width.
     const float dx = hero.image.empty() ? 0 : layout::heroArt + layout::heroArtGap;
@@ -467,51 +525,44 @@ void heroText(Paint paint, const Hero &hero) {
                      type::heroSource.line},
              hero.source, type::heroSource, color::onSurface);
     }
-    if (!invisible(hero.text[1]) && !hero.logo.empty()) {
-        // Google TV draws the title's own lettering over its banner.
+    if (!invisible(hero.text[1])) {
         Group group(scene, hero.text[1]);
-        const Rect title = beside(geometry::heroTitle());
-        Node &logo = scene.picture({title.x, title.y + title.h - layout::heroLogoH, layout::heroLogoW,
-                                    layout::heroLogoH},
-                                   0, 0, true);
-        logo.value = hero.logo;
-        logo.containAtFoot = true;
-    } else if (!invisible(hero.text[1])) {
-        Group group(scene, hero.text[1]);
-        text(paint, beside(geometry::heroTitle()), hero.title, type::heroTitle, color::onSurface);
+        if (hero.image.empty())
+            heroTitleText(paint, geometry::heroTitle(), hero.title);
+        else
+            text(paint, beside(geometry::heroTitle()), hero.title, type::heroTitle, color::onSurface);
     }
     if (!invisible(hero.text[2])) {
         Group group(scene, hero.text[2]);
         Rect line = beside(geometry::heroSubtitle());
-        if (!hero.tag.empty()) {
-            // Google TV's line under the banner's title: why it is shown, a rule, its logline.
-            const float tag = paint.glyphs.measure(hero.tag, type::heroLine);
-            text(paint, {line.x, line.y, tag + 4, line.h}, hero.tag, type::heroLine,
-                 color::onSurface);
-            const float rule = line.x + tag + 18;
-            scene.shape({rule, line.y + 8, 2, line.h - 16}, faded(color::onSurface, .8f), 1);
-            const float x = rule + 2 + 18;
-            text(paint, {x, line.y, line.x + line.w - x, line.h}, hero.description, type::heroLine,
-                 color::onSurface, Node::Align::Left, 1);
-        } else if (!hero.facts.empty())
+        // Google TV's line under the banner's title says why it is shown, and nothing else.
+        if (!hero.tag.empty())
+            text(paint, line, hero.tag, type::heroLine, color::onSurface, Node::Align::Left, 1);
+        else if (!hero.facts.empty())
             factsText(paint, line, hero.facts, type::heroLine, color::onSurface2);
         if (!hero.hint.empty()) {
             Rect body = beside(geometry::heroDescription());
             keyHint(paint, body.x, body.y + 8, "OK", hero.hint);
         }
-        // Google TV's banner with the focus: two lines of description, then its button.
-        Rect more = beside(geometry::heroDescription());
-        if (!hero.more.empty() && hero.expand > .004f)
-            text(paint, {more.x, more.y, layout::heroMoreW, type::body.line * 2}, hero.more,
-                 type::body, faded(color::onSurface2, focus::clamp01(hero.expand)),
-                 Node::Align::Left, 2);
+        // Google TV's banner with the focus: one line of description, then its button.
+        Rect more = {line.x, line.y + layout::heroSubH + layout::heroBannerDescGap, layout::heroW,
+                     type::body.line};
+        if (!hero.description.empty() && !hero.tag.empty() && hero.expand > .004f)
+            text(paint, more, hero.description, type::body,
+                 faded(color::onSurface2, focus::clamp01(hero.expand)), Node::Align::Left, 1);
         if (!hero.button.empty() && hero.buttonAlpha > .004f) {
-            const float width = paint.glyphs.measure(hero.button, type::title) + 2 * 32;
-            Rect button = {more.x, more.y + (hero.more.empty() ? 0 : type::body.line * 2 + 20), width, 64};
-            Group shown(scene, {focus::clamp01(hero.buttonAlpha), 0});
-            scene.shape(button, color::tabFocused, button.h / 2);
+            const float shown = focus::clamp01(hero.buttonAlpha);
+            const float width = paint.glyphs.measure(hero.button, type::title) + 2 * layout::heroButtonPad;
+            Rect button = {more.x, more.y + type::body.line + layout::heroButtonGap, width,
+                           layout::heroButtonH};
+            // It has the focus with the banner: Google TV's light button, grown a tenth.
+            Transform grown = Transform::scaleAbout(button, .5f, .5f, 1 + .1f * shown);
+            Group visible(scene, {shown, 0});
+            scene.pushTransform(grown);
+            scene.shape(button, color::tabSelected, button.h / 2);
             text(paint, {button.x, button.y + (button.h - type::title.line) / 2, button.w, type::title.line},
                  hero.button, type::title, color::onFocus, Node::Align::Center);
+            scene.popTransform();
         }
     }
 }
@@ -556,6 +607,18 @@ void card(Paint paint, const PosterCard &poster) {
     if (invisible(poster.enter) || offCanvas(look.rect))
         return;
     Scene &scene = paint.scene;
+    const bool captioned = !poster.caption.empty();
+    if (captioned) {
+        // Under the card, outside the focus's scale: the lines stay where they are.
+        Group lines(scene, poster.enter);
+        const float y = poster.rest.y + poster.rest.h + layout::cardCaptionGap;
+        text(paint, {poster.rest.x, y, poster.rest.w, layout::cardCaptionLine}, poster.caption,
+             type::cardCaption, color::onSurface, Node::Align::Left, 1);
+        if (!poster.captionLine.empty())
+            text(paint, {poster.rest.x, y + layout::cardCaptionLine, poster.rest.w,
+                         layout::cardCaptionLine},
+                 poster.captionLine, type::cardCaption, color::onSurface2, Node::Align::Left, 1);
+    }
     Transform scale = focus::transformAt(poster.rest, look.scale);
     Group group(scene, poster.enter, look.scale != 1 ? &scale : nullptr);
     // Google TV's focused card: a thin light ring that stands off the card, the page showing in the
@@ -570,7 +633,7 @@ void card(Paint paint, const PosterCard &poster) {
     scene.shape(poster.rest, color::surface2, layout::cardR);
     if (!poster.image.empty())
         scene.picture(poster.rest, 0, layout::cardR).value = poster.image;
-    if (!poster.title.empty()) {
+    if (!poster.title.empty() && !captioned) {
         // The title sits on a veil over the lower part of the art; on focus it rises to make
         // room for the facts line under it.
         float amount = focus::clamp01(poster.focus);
@@ -588,13 +651,24 @@ void card(Paint paint, const PosterCard &poster) {
             factsText(paint, {left, bottom - type::labelM.line, width, type::labelM.line},
                       poster.subtitle, type::labelM, faded(color::onSurface2, amount));
     }
+    // Google TV's Continue watching: a track along the foot, filled white as far as watched, and
+    // what OK does over it on a dark pill.
+    const float inset = 23;
+    const Rect track = {poster.rest.x + inset, poster.rest.y + poster.rest.h - inset - 8,
+                        poster.rest.w - 2 * inset, 8};
     if (poster.progress >= 0) {
-        // Google TV's Continue watching: a thin track along the foot, filled as far as watched.
         const float progress = focus::clamp01(poster.progress);
-        Rect track = {poster.rest.x + 16, poster.rest.y + poster.rest.h - 10, poster.rest.w - 32, 4};
-        scene.shape(track, faded(white, .32f), 2);
+        scene.shape(track, faded(white, .3f), 4);
         if (progress > 0)
-            scene.shape({track.x, track.y, track.w * progress, track.h}, color::accent, 2);
+            scene.shape({track.x, track.y, std::max(8.0f, track.w * progress), track.h}, white, 4);
+    }
+    if (!poster.action.empty()) {
+        const float width = paint.glyphs.measure(poster.action, type::cardAction) + 24;
+        const Rect pill = {track.x - 4, track.y - 18 - type::cardAction.line, width,
+                           type::cardAction.line + 4};
+        scene.shape(pill, faded(color::ink, .55f), 8);
+        text(paint, {pill.x + 12, pill.y + 2, width - 24, type::cardAction.line}, poster.action,
+             type::cardAction, white);
     }
     hit(scene, look.rect, poster.id);
 }

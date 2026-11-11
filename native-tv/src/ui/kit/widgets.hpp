@@ -114,18 +114,19 @@ struct Hero {
     std::string trailer; // a film's clip, drawn over the art
     float trailerAlpha = 0;
     // A title: source row, title, and one line of facts, or, in the banner's own carousel, why it
-    // is shown and its logline (Google TV's "Trending | ..."). An app: its icon beside the lines,
-    // and the key hint under them. wordmark: the service's wordmark (an icon file, drawn white)
-    // in the source row's place, as Google TV shows it over the banner's title.
+    // is shown (Google TV's "Recommended for you"). An app: its icon beside the lines, and the key
+    // hint under them. wordmark: the service's wordmark (an icon file, drawn white) in the source
+    // row's place, as Google TV shows it over the banner's title.
     std::string source, title, facts, description, image, hint, tag, wordmark;
-    std::string logo; // the title's logo, drawn in the title's place, its foot on the title's foot
-    // Google TV's banner with the focus (or showing a focused top pick): `more` (its description,
-    // two lines) under the line, fading in with `expand`, and `button` under that with `buttonAlpha`.
+    std::string logo; // the title's logo, drawn in a preview's title place, its foot on the title's
+    // Google TV's banner with the focus: the description, one line, under the line, fading in with
+    // `expand`, and `button` under that with `buttonAlpha`; `drop` px it has moved down.
     std::string more, button;
-    float expand = 0, buttonAlpha = 0;
-    float textAlpha = 1; // the text leaves while Your apps or the rows below have the focus
-    float dim = 0;       // 0..1: the art dimmed behind Your apps
-    float lift = 0;      // px the lines move up: Google TV shows a focused top pick's higher
+    float expand = 0, buttonAlpha = 0, drop = 0;
+    // A focused title of another row (Google TV's preview): its logo or title higher up, then its
+    // service, `more` (its overview, two lines) and its facts.
+    bool preview = false;
+    float textAlpha = 1; // the text leaves while the rows below have the focus
     // Source row, title and the lines under it enter one after another (spec 5.3).
     Enter text[3];
 };
@@ -180,6 +181,10 @@ struct PosterCard {
     float focus = 0;
     // How far it was watched, 0 to 1, as a bar along the card's foot; below 0, none.
     float progress = -1;
+    // Google TV's Continue watching: what OK does, in capitals over the art ("RESUME"), and two
+    // lines under the card that the focus leaves in place (the title, then its service and how
+    // much is left). With a caption the card prints no title of its own.
+    std::string action, caption, captionLine;
     Enter enter;
 };
 void card(Paint paint, const PosterCard &card);

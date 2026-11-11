@@ -77,26 +77,31 @@ inline std::string hit(size_t row, size_t column) {
     return "card:" + std::to_string(row) + ":" + std::to_string(column);
 }
 
-// How a row stands, from the animated values: `risen` (0..1) while the rows are over the banner,
-// `grow` (0..1) for the focused row then, `names` (0..1) while every app's name shows under it.
+// How a row stands, from the animated values: `up` (0..1) once anything under the bar has the
+// focus, `risen` (0..1) while the rows are over the banner, `grow` (0..1) for the focused row then,
+// `names` (0..1) while every app's name shows under it.
 struct RowLook {
-    float risen = 0, grow = 0, names = 0;
+    float up = 0, risen = 0, grow = 0, names = 0;
 };
-// The row's title: 24 px over the banner, 29 px once the rows have risen, 52 px for the focused
-// row then (Google TV's sizes at 1080p).
+// The row's title: 24 px under the banner at rest, 36 px once a row or the banner has the focus,
+// 63 px for the focused row once the rows have risen (Google TV's sizes at 1080p, measured on a
+// Chromecast with Google TV).
 inline float labelPx(const RowLook &look) {
-    return kit::focus::mix(24, 29, look.risen) + (52 - 29) * look.grow;
+    return kit::focus::mix(24, 36, look.up) + (63 - 36) * look.grow;
 }
-// From the title's top to the items: the title and the gap under it, which grows with it
-// (measured: 55 px at 24 px, 69 at 29, 121 at 52; the line fits them within 2 px).
+// From the title's top to the items: 55 px, 69 px, and 121 px for the focused risen row.
 inline float labelArea(const RowLook &look) {
-    return 55 + (labelPx(look) - 24) * 2.36f;
+    return kit::focus::mix(55, 69, look.up) + (121 - 69) * look.grow;
 }
 // From the title's top to the next row's title.
 inline float rowSpan(const CardRow &row, const RowLook &look) {
-    float foot = kit::focus::mix(kit::layout::rowGap, kit::layout::rowGapRisen, look.risen);
+    float foot = kit::focus::mix(kit::focus::mix(kit::layout::rowGap, kit::layout::rowGapUp, look.up),
+                                 kit::layout::rowGapRisen, look.risen);
     if (isApps(row))
         foot += kit::layout::appNames * look.names;
+    // Continue watching has two lines under its cards.
+    if (row.key == "continue")
+        foot += kit::layout::cardCaptionGap + 2 * kit::layout::cardCaptionLine;
     return labelArea(look) + itemHeight(row) + foot;
 }
 // Each row's title top, the first at `top`.

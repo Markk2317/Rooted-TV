@@ -27,17 +27,21 @@ enum class Screen {
 struct HeroText {
     // source: the row the card came from; facts: year, rating, length; image and hint: an app's
     // icon and what OK does, in place of a title's description.
-    // tag: why the banner shows the title ("Trending"), before its logline; wordmark: the icon file
-    // of the service's wordmark ("wordmark-netflix"), drawn in the source line's place.
-    // more: what the banner adds under its line once it has the focus; button: its button then.
-    // logo: the title's logo, drawn in place of its name once it has arrived and reads on the art.
+    // tag: why the banner shows the title ("Trending"); description: its logline, which the banner
+    // adds under the tag with its button once it has the focus; wordmark: the icon file of the
+    // service's wordmark ("wordmark-netflix"), drawn in the source line's place.
+    // preview: a focused title of a row under the banner, laid out as Google TV previews it (its
+    // logo, its service, `more` (its overview) and its facts).
+    // logo: the title's logo, drawn in a preview in place of its name once it has arrived and
+    // reads on the art.
     std::string source, title, facts, description, image, hint, tag, wordmark, more, button, logo;
+    bool preview = false;
     bool operator==(const HeroText &other) const {
         return source == other.source && title == other.title && logo == other.logo &&
                facts == other.facts &&
                description == other.description && image == other.image && hint == other.hint &&
                tag == other.tag && wordmark == other.wordmark && more == other.more &&
-               button == other.button;
+               button == other.button && preview == other.preview;
     }
 };
 struct HeroArt {

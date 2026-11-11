@@ -1880,14 +1880,15 @@ titles leave it as they leave the other rows. The client's spotlight is that row
 the banner's focus: it starts there on Home when the spotlight is the server's own, Up from the
 first row and Down from the bar reach it, Left and Right change `spotIndex`, OK opens the
 details, and Back goes rows, banner, bar. `homeFocus` places Home in one of the states measured on
-Google TV's 2025 home (`Place`): the bar focused (stack 0), the banner focused (`bannerDrop`, its
-description and button shown through the `he`/`hb` values), the top picks focused (`picksDrop`, the
-bar away through `ba`, the hero showing the focused card with its lines lifted by `picksLift`), Your
-apps focused (its circles at `appsFocusTop`, the hero's text gone and its art dimmed through `hd`)
-and the rows below, which rise to `rowsRisenTop` (`rs`, and `rg:<row>` growing the focused row's
-title). Rows are not one pitch apart any more: `home::rowTops` lays them out from each row's
-`RowLook` (title size, the large 391 × 220 cards of the rows under the first screen, the apps'
-names). Without a banner of its own (the Live tab, an older server) the first rows stay under the
+a Chromecast with Google TV (`Place`): the bar focused (stack 0, the art darkened through `bd`), the
+banner focused (`bannerDrop`, its lines moved down `bannerTextDrop` through `hn`, its logline and
+button shown through `he`/`hb`), the top picks focused (`picksDrop`, the bar away through `ba`, the
+hero previewing the focused card: `HeroText::preview`), and from Your apps down the rows risen to
+`rowsRisenTop` (`rs`, and `rg:<row>` growing the focused row's title). The rows' titles grow from
+24 to 36 px as soon as anything under the bar has the focus (`ru`). Rows are not one pitch apart
+any more: `home::rowTops` lays them out from each row's `RowLook` (title size, the large 391 × 220
+cards of the rows under the first screen, the apps' names, Continue watching's two lines under its
+cards). Without a banner of its own (the Live tab, an older server) the first rows stay under the
 hero and past them the focused row takes the first row's place. The hero's art is TMDB's `w1920_and_h1080_bestv2` cut
 (`kHeroArtSize`), which the image proxy allows and warms for the featured row, decoded at
 1920 × 1080.

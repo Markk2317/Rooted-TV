@@ -294,6 +294,21 @@ Card feedCard(const Json &item, const std::string &rowKey) {
     return card;
 }
 } // namespace
+std::string continueLine(const Card &card) {
+    if (card.data["kind"].string() == "app")
+        return card.subtitle;
+    std::string line;
+    const std::string service = card.data["service"].string();
+    for (const auto &candidate : nativetv::names::streamingServices())
+        if (candidate.key == service)
+            line = candidate.name;
+    const double runtime = card.data["runtime"].number(), progress = card.data["progress"].number();
+    if (runtime > 0 && progress > 0 && progress < 1) {
+        const double left = runtime * (1 - progress) * 60000;
+        line += (line.empty() ? "" : " • ") + playedFor(left) + " left";
+    }
+    return line;
+}
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide) {
     std::vector<CardRow> result;

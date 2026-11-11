@@ -348,7 +348,7 @@ int main() {
             focusedCard = focusedCard || hit.id == "card:0:0";
         check(wallpaper.snapshot()["wallpaper"].string() == "visible" &&
                   wallpaper.snapshot()["row"].number() == 0 && focusedCard && carouselTitle &&
-                  carouselTitle->rect.x == 116 && carouselTitle->rect.w == 1460 &&
+                  carouselTitle->rect.x == 116 && carouselTitle->rect.w == kit::layout::heroTitleFitW &&
                   carouselTitle->color.a == 1,
               "The hero title keeps the design's geometry over the wallpaper");
         check(imageNode(focusedWallpaper, "wallpaper:night@r1"),
@@ -487,16 +487,16 @@ int main() {
                   "The banner has titles of its own and the focus starts on it");
             check(std::fabs(bannerMotion.value("sy") - kit::layout::bannerDrop) < 1 &&
                       bannerMotion.value("he") > .99 && bannerMotion.value("hb") > .99 &&
-                      bannerMotion.value("ba") < .01 && banner.shows("And more.") &&
-                      banner.shows("Watch on Netflix"),
-                  "The focused banner drops the rows by bannerDrop and adds the rest of its "
-                  "description and a Watch on button");
+                      bannerMotion.value("hn") > .99 && bannerMotion.value("ba") < .01 &&
+                      banner.shows("A first film. And more.") && banner.shows("Watch now"),
+                  "The focused banner moves its lines down, drops the rows by bannerDrop and adds "
+                  "its logline and a Watch now button");
             banner.key(Key::Right);
             at = run(banner, at, 1500);
             check(banner.snapshot()["heroFocus"].boolean() &&
                       banner.snapshot()["heroTitle"].string() == "Banner Two",
                   "Right on the banner shows its next title");
-            check(banner.shows("More info") && !banner.shows("Watch on"),
+            check(banner.shows("More info") && !banner.shows("Watch now"),
                   "A banner title on no known service offers More info");
             banner.key(Key::Down);
             at = run(banner, at, 1500);
@@ -507,8 +507,8 @@ int main() {
             check(std::fabs(bannerMotion.value("sy") - kit::layout::picksDrop) < 1 &&
                       bannerMotion.value("ba") > .99 && bannerMotion.value("hu") > .99 &&
                       bannerMotion.value("hb") < .01 && !banner.shows("More info"),
-                  "Down drops the rows by picksDrop under the banner, the bar away and the pick's "
-                  "lines lifted, with no button");
+                  "Down drops the rows by picksDrop under the banner, the bar away and the pick "
+                  "previewed, with no button");
             // The hero shows the focused pick's title, so look for each card's own title on it.
             const auto titleOnCard = [](const Scene &scene, const std::string &card,
                                         const std::string &title) {
@@ -556,9 +556,7 @@ int main() {
             banner.key(Key::Ok);
             check(banner.screenName() == "details", "OK on the banner opens its title");
 
-            // Further down Google TV's Home has two more states: Your apps over the banner's art,
-            // dimmed, its text gone; past it the rows risen to the top, the focused row's title
-            // large.
+            // From Your apps down Google TV's rows rise to the top, the focused row's title large.
             const char *lowerFeed =
                 R"({"ok":true,"enabled":true,"titlesEnabled":true,"rows":[{"key":"featured","items":[{"id":11,"type":"movie","title":"Banner One","overview":"First."}]},{"key":"trending","items":[{"id":1,"type":"movie","title":"Plain"}]},{"key":"movies","items":[{"id":9,"type":"movie","title":"Nine"}]}]})";
             FakeTransport lowerTransport;
@@ -571,13 +569,16 @@ int main() {
             lower.key(Key::Down); // the top picks
             lower.key(Key::Down); // Your apps
             lowerMs = run(lower, lowerMs, 1500);
-            check(lower.snapshot()["row"].number() == 1 &&
-                      std::fabs(lowerMotion.value("sy") -
-                                (kit::layout::appsFocusTop - kit::geometry::rowItemsY(1))) < 1 &&
-                      lowerMotion.value("ht") < .01 && lowerMotion.value("hd") > .99 &&
-                      lowerMotion.value("ba") > .99 && lowerMotion.value("rs") < .01,
-                  "Your apps focused stands its circles at appsFocusTop over the dimmed art, the "
-                  "banner's text gone");
+            bool appsRisen = false;
+            for (const auto &node : lower.scene().nodes)
+                if (node.kind == Node::Kind::Text && node.value == "Your apps")
+                    appsRisen = appsRisen || std::fabs(node.group.apply(node.rect).y -
+                                                       kit::layout::rowsRisenTop) < 1;
+            check(lower.snapshot()["row"].number() == 1 && appsRisen &&
+                      lowerMotion.value("ht") < .01 && lowerMotion.value("ba") > .99 &&
+                      lowerMotion.value("rs") > .99 && lowerMotion.value("rg:1") > .99,
+                  "Your apps focused rises to the top like the rows under it, its title large and "
+                  "the banner's text gone");
             check(lower.shows("Alpha") && lower.shows("Beta") && lower.shows("Gamma"),
                   "Your apps focused shows every app's name, as Google TV's row does");
             lower.key(Key::Down); // the films under Your apps
@@ -593,7 +594,7 @@ int main() {
             check(lower.snapshot()["row"].number() == 2 && lowerMotion.value("rs") > .99 &&
                       lowerMotion.value("rg:2") > .99 && lowerMotion.value("rg:1") < .01 &&
                       risenTitle,
-                  "Past Your apps the rows rise, the focused row's 52 px title at rowsRisenTop");
+                  "Past Your apps the rows stay risen, the focused row's 63 px title at rowsRisenTop");
         }
         FakeTransport homeTransport;
         Application home(homeTransport);
@@ -1330,7 +1331,7 @@ int main() {
                   "The apps row is not drawn while its icons are on the way");
             bool askedIcon = false;
             for (const auto &id : icons.asked)
-                askedIcon = askedIcon || id == "app:a@165x165";
+                askedIcon = askedIcon || id == "app:a@167x167";
             check(askedIcon, "The icons are asked for as soon as the rows exist, at the circles' size");
             for (const char *app : {"a", "b", "c", "d", "e", "f", "g", "h"})
                 icons.ready[std::string("app:") + app] = 3;

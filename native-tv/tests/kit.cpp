@@ -233,7 +233,7 @@ void geometryAgainstMetrics() {
           "picks");
     check(sameRect(geometry::appCircle(1, 0), home::app1) &&
               sameRect(geometry::appCircle(1, 1), home::app2),
-          "App circles are 150 px at a 192 px pitch, as Google TV's Your apps");
+          "App circles are 152 px at a 182 px pitch, as Google TV's Your apps");
     check(sameRect(geometry::inputTile(2, 0), home::input1), "Input tiles sit in the third row");
 
     namespace apps = kit::metrics::apps;
@@ -309,20 +309,22 @@ void homeLayout() {
     check(home::itemWidth(picks) == 306 && home::itemHeight(picks) == 172 &&
               home::itemGap(picks) == 40 && home::itemWidth(more) == 391 &&
               home::itemHeight(more) == 220 && home::itemGap(more) == 41 &&
-              home::itemWidth(apps) == 150 && home::itemHeight(apps) == 150,
+              home::itemWidth(apps) == 152 && home::itemHeight(apps) == 152,
           "The top picks keep 306x172 cards; the rows of titles under Your apps take 391x220 ones");
-    home::RowLook rest, risen, focused;
-    risen.risen = 1;
+    home::RowLook rest, up, focused;
+    up.up = 1;
+    focused.up = 1;
     focused.risen = 1;
     focused.grow = 1;
-    check(home::labelPx(rest) == 24 && home::labelPx(risen) == 29 && home::labelPx(focused) == 52 &&
-              near(home::labelArea(rest), 55) && near(home::labelArea(focused), 121, .2f),
-          "Row titles are 24 px over the banner, 29 risen and 52 for the focused row; items stand "
-          "55 px under a resting title, 121 under the focused one");
+    check(home::labelPx(rest) == 24 && home::labelPx(up) == 36 && home::labelPx(focused) == 63 &&
+              near(home::labelArea(rest), 55) && near(home::labelArea(up), 69) &&
+              near(home::labelArea(focused), 121),
+          "Row titles are 24 px under the banner at rest, 36 once anything under the bar has the "
+          "focus and 63 for the focused risen row; items stand 55, 69 and 121 px under them");
     std::vector<float> tops = home::rowTops({picks, apps, more}, {});
     check(tops.size() == 3 && tops[0] == kit::layout::rowsTop &&
               near(tops[1], kit::geometry::rowLabelY(1)) &&
-              near(tops[2], tops[1] + 55 + 150 + kit::layout::rowGap),
+              near(tops[2], tops[1] + 55 + 152 + kit::layout::rowGap),
           "The first screen's rows stand where the geometry puts them, each row as tall as its "
           "items");
     check(sameRect(home::item(more, 700, 1), {116 + 391 + 41, 700, 391, 220}),
@@ -411,15 +413,15 @@ void circlesAndTiles() {
     app.color = kit::rgb(0xE50914);
     kit::appCircle(circle.paint(), app);
     const Node &disc = circle.scene.nodes[0];
-    check(sameRect(disc.rect, {116, 906, 150, 150}) && disc.radius == 75 &&
+    check(sameRect(disc.rect, {116, 906, 152, 152}) && disc.radius == 76 &&
               disc.gradient.stops == 3 && disc.gradient.angle == 145 && disc.gradient.at[2] == 1 &&
               !textAt(circle.scene, "Netflix") && circle.scene.nodes.size() == 2,
-          "An app circle is a 150 px disc with a 145 degree gradient and no name at rest");
+          "An app circle is a 152 px disc with a 145 degree gradient and no name at rest");
     Fixture named;
     app.focus = 1;
     kit::appCircle(named.paint(), app);
     // Google TV's focused app: the disc grows 6% inside a 4 px white ring 3 px off it, no shadow.
-    const Rect grownDisc = kit::focus::scaledAbout({116, 906, 150, 150}, 1.06f);
+    const Rect grownDisc = kit::focus::scaledAbout({116, 906, 152, 152}, 1.06f);
     const Node &appRing = named.scene.nodes[0], &grownFill = named.scene.nodes[1];
     bool appShadow = false;
     for (const auto &node : named.scene.nodes)
@@ -432,7 +434,7 @@ void circlesAndTiles() {
           "A focused app circle grows 6% inside a 4 px white ring standing 3 px off it, without a "
           "shadow");
     check(textAt(named.scene, "Netflix") &&
-              sameRect(textAt(named.scene, "Netflix")->rect, {64, 1080, 254, 32}) &&
+              sameRect(textAt(named.scene, "Netflix")->rect, {64, 1080, 256, 32}) &&
               sameColor(textAt(named.scene, "Netflix")->color, kit::color::appNameFocused),
           "A focused app circle shows its name 174 px below its top, in the focused name colour");
     Fixture half;
@@ -463,16 +465,17 @@ void circlesAndTiles() {
     app.image = "app:netflix";
     kit::appCircle(art.paint(), app);
     check(art.scene.nodes[0].backing &&
-              sameRect(art.scene.nodes[0].rect, {117.5f, 907.5f, 147, 147}) &&
-              art.scene.nodes[0].radius == 73.5f && art.scene.nodes[1].kind == Node::Kind::Image &&
+              sameRect(art.scene.nodes[0].rect, {117.5f, 907.5f, 149, 149}) &&
+              art.scene.nodes[0].radius == 74.5f && art.scene.nodes[1].kind == Node::Kind::Image &&
               art.scene.nodes[1].value == "app:netflix" &&
-              sameRect(art.scene.nodes[1].rect, {116, 906, 150, 150}),
+              sameRect(art.scene.nodes[1].rect, {116, 906, 152, 152}),
           "An app circle's fill is a backing that stops short of its picture's edge");
     Fixture artFocused;
     app.focus = 1;
     kit::appCircle(artFocused.paint(), app);
     check(!artFocused.scene.nodes[0].backing && artFocused.scene.nodes[0].ring.outer > 0 &&
-              sameRect(artFocused.scene.nodes[0].rect, {108.5f, 898.5f, 165, 165}) &&
+              sameRect(artFocused.scene.nodes[0].rect, {grownDisc.x - 3, grownDisc.y - 3,
+                                                        grownDisc.w + 6, grownDisc.h + 6}) &&
               artFocused.scene.nodes[1].backing &&
               sameRect(artFocused.scene.nodes[2].rect, grownDisc),
           "The focus ring stands off the grown circle, under the backing and the picture");
@@ -650,50 +653,70 @@ void barAndHero() {
               !textAt(wall.scene, "A ferry pilot and a lighthouse keeper") &&
               shapeAt(wall.scene, {116, 281, 40, 40}),
           "The hero text block sits where the design puts it: source, title and one line of facts");
-    // The banner's own titles have Google TV's line: why it is shown, a rule and the logline.
+    // The banner's own titles have Google TV's line under the title: why it is shown, alone.
     Fixture banner;
     kit::Hero featured = hero;
     featured.tag = "Trending";
     featured.wordmark = "wordmark-netflix";
-    featured.more = "The ferry stops running; the light keeps burning.";
-    featured.button = "Watch on Netflix";
+    featured.button = "Watch now";
     kit::heroText(banner.paint(), featured);
-    const Node *tag = textAt(banner.scene, "Trending"),
-               *logline = textAt(banner.scene, "A ferry pilot and a lighthouse keeper");
+    const Node *tag = textAt(banner.scene, "Trending");
     const Node *serviceMark = nullptr;
     for (const auto &node : banner.scene.nodes)
         if (node.kind == Node::Kind::Image &&
             node.value.find("wordmark-netflix") != std::string::npos)
             serviceMark = &node;
-    check(tag && logline && near(tag->rect.x, 116) && near(tag->rect.y, 494) &&
-              near(logline->rect.y, 494) && logline->rect.x > tag->rect.x + tag->rect.w + 30 &&
+    check(tag && near(tag->rect.x, 116) && near(tag->rect.y, 494) &&
+              !textAt(banner.scene, "A ferry pilot and a lighthouse keeper") &&
               !textAt(banner.scene, "2021 · 7.2 · 98 min") && serviceMark &&
               !textAt(banner.scene, "Harbor Originals") &&
               near(serviceMark->rect.x, 116) &&
               near(serviceMark->rect.y + serviceMark->rect.h, 281 + 40) &&
               near(serviceMark->rect.h, 34) &&
               sameColor(serviceMark->color, kit::color::onSurface),
-          "The banner's title has the service's white wordmark over it and \"Trending | logline\" "
-          "under it");
-    check(!textAt(banner.scene, "Watch on Netflix") &&
-              !textAt(banner.scene, "The ferry stops running; the light keeps burning."),
-          "The banner's description and button stay hidden until it has the focus");
-    // With the focus Google TV's banner adds two lines of description and its button under them.
+          "The banner's title has the service's white wordmark over it and why it is shown under it");
+    check(!textAt(banner.scene, "Watch now"),
+          "The banner's logline and button stay hidden until it has the focus");
+    // With the focus Google TV's banner moves down and adds its logline and button under its line.
     Fixture expanded;
     featured.expand = 1;
     featured.buttonAlpha = 1;
+    featured.drop = kit::layout::bannerTextDrop;
     kit::heroText(expanded.paint(), featured);
-    const Node *more = textAt(expanded.scene, "The ferry stops running; the light keeps burning."),
-               *watch = textAt(expanded.scene, "Watch on Netflix");
-    const Rect description = kit::geometry::heroDescription();
-    check(more && watch && near(more->rect.x, 116) && near(more->rect.y, description.y) &&
-              near(more->rect.h, 2 * kit::type::body.line) &&
-              watch->rect.y > more->rect.y + more->rect.h &&
+    const Node *logline = textAt(expanded.scene, "A ferry pilot and a lighthouse keeper"),
+               *watch = textAt(expanded.scene, "Watch now");
+    const float lineFoot = 494 + kit::layout::heroSubH;
+    check(logline && watch && near(logline->rect.x, 116) &&
+              near(logline->rect.y, lineFoot + kit::layout::heroBannerDescGap) &&
+              near(logline->group.ty, kit::layout::bannerTextDrop) &&
+              near(watch->rect.y + watch->rect.h / 2,
+                   lineFoot + kit::layout::heroBannerDescGap + kit::type::body.line +
+                       kit::layout::heroButtonGap + kit::layout::heroButtonH / 2) &&
               shapeWith(expanded.scene,
-                        {116, description.y + 2 * kit::type::body.line + 20,
-                         watch->rect.w, 64},
-                        kit::color::tabFocused),
-          "The focused banner shows two lines of description and a light pill button under them");
+                        {116, lineFoot + kit::layout::heroBannerDescGap + kit::type::body.line +
+                                  kit::layout::heroButtonGap,
+                         watch->rect.w, kit::layout::heroButtonH},
+                        kit::color::tabSelected),
+          "The focused banner moves down by bannerTextDrop and shows its logline and Google TV's "
+          "light 80 px button under its line");
+    // A focused title of a row: its title, its service, two lines of overview and its facts.
+    Fixture preview;
+    kit::Hero shown = hero;
+    shown.preview = true;
+    shown.source = "Netflix";
+    shown.more = "The ferry stops running.";
+    kit::heroText(preview.paint(), shown);
+    const Node *previewTitle = textAt(preview.scene, "Harbor Lights"),
+               *service = textAt(preview.scene, "Netflix"),
+               *overview = textAt(preview.scene, "The ferry stops running."),
+               *facts = textAt(preview.scene, "2021 · 7.2 · 98 min");
+    check(previewTitle && service && overview && facts &&
+              near(previewTitle->rect.y + previewTitle->rect.h, kit::layout::previewTitleFoot) &&
+              near(service->rect.y, kit::layout::previewTitleFoot + kit::layout::previewServiceGap) &&
+              overview->rect.y > service->rect.y && facts->rect.y > overview->rect.y &&
+              !textAt(preview.scene, "Harbor Originals"),
+          "A focused title's preview stands its title's foot at previewTitleFoot, then its service, "
+          "its overview and its facts");
     namespace home = kit::metrics::home;
     check(near(kit::geometry::heroSubtitle().y + kit::geometry::heroSubtitle().h -
                    kit::geometry::heroSource().y,
@@ -727,21 +750,12 @@ void barAndHero() {
               sameColor(scrolled.scene.nodes.back().color,
                         kit::focus::withAlpha(kit::color::page, .95f)),
           "Scrolled a full row the hero text is gone and the page-coloured veil is up at 95%");
-    Fixture dimmed;
     hero.stackY = 0;
-    hero.dim = 1;
-    kit::heroWall(dimmed.paint(), hero);
-    check(sameColor(dimmed.scene.nodes.back().color, kit::focus::withAlpha(kit::color::page, .55f)),
-          "Behind Your apps the art stays, dimmed under a veil of the page colour");
-    hero.dim = 0;
-    Fixture lifted;
-    hero.lift = kit::layout::picksLift;
+    Fixture faded;
     hero.textAlpha = .5f;
-    kit::heroText(lifted.paint(), hero);
-    check(near(textAt(lifted.scene, "Harbor Lights")->group.ty, -kit::layout::picksLift) &&
-              near(textAt(lifted.scene, "Harbor Lights")->groupOpacity, .5f),
-          "A focused top pick's lines move up by picksLift and fade with the banner's text");
-    hero.lift = 0;
+    kit::heroText(faded.paint(), hero);
+    check(near(textAt(faded.scene, "Harbor Lights")->groupOpacity, .5f),
+          "The banner's lines fade with its text");
     hero.textAlpha = 1;
     Fixture mid;
     hero.stackY = -75;
@@ -774,26 +788,26 @@ void rows() {
     row.label = "Your apps";
     row.dim = 1;
     kit::row(dimmed.paint(), row);
-    // The title is set at type::rowTitle's 52 px and scaled down to the row's size, 24 px at rest.
+    // The title is set at type::rowTitle's 63 px and scaled down to the row's size, 24 px at rest.
     const Node *label = textAt(dimmed.scene, "Your apps");
     const Rect drawn = label->group.apply(label->rect);
     const Rect record = kit::metrics::home::row2Label;
     check(near(drawn.x, record.x) && near(drawn.y, record.y) && near(drawn.w, record.w, .5f) &&
               near(drawn.h, kit::type::rowTitle.line * 24 / kit::type::rowTitle.px, .01f) &&
-              near(label->group.sx, 24.0f / 52, 1e-5f) &&
+              near(label->group.sx, 24.0f / kit::type::rowTitle.px, 1e-5f) &&
               near(label->color.a, .5f),
           "A row label sits 251 px per row down at 24 px and dims to 50% when focus is elsewhere");
     Fixture risen;
     row.placed = true;
     row.y = kit::layout::rowsRisenTop;
-    row.px = 52;
+    row.px = 63;
     row.grow = 1;
     kit::row(risen.paint(), row);
     const Node *grown = textAt(risen.scene, "Your apps");
     check(near(grown->group.apply(grown->rect).y, kit::layout::rowsRisenTop) &&
               near(grown->group.sx, 1, 1e-5f) &&
               sameColor(grown->color, kit::color::rowTitleFocused),
-          "A placed row's title stands at its own top; the focused risen row's is 52 px, light and "
+          "A placed row's title stands at its own top; the focused risen row's is 63 px, light and "
           "undimmed");
     row.placed = false;
     row.px = 24;
