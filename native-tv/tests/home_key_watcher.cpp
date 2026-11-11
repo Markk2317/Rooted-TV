@@ -35,6 +35,12 @@ const char *kShownOverApp =
 const char *kOther =
     "2026-11-06T11:47:38.522431Z [7678.205] user.info sam [] SAM NL_APP_LAUNCH_BEGIN "
     "{\"app_id\":\"com.tvweb.dashboard\",\"caller_id\":\"\",\"mode\":\"normal\"} \n";
+const char *const kPowerOn =
+    "2026-11-11T12:10:37.050798Z [8728.257207820] user.info sam [] SAM NL_APP_LAUNCH_BEGIN "
+    "{\"app_id\":\"com.webos.app.hdmi1\",\"caller_id\":\"com.webos.bootManager\",\"mode\":\"normal\"} \n";
+const char *const kUserLaunch =
+    "2026-11-11T12:18:31.896632Z [9203.103057547] user.info sam [] SAM NL_APP_LAUNCH_BEGIN "
+    "{\"app_id\":\"netflix\",\"caller_id\":\"\",\"mode\":\"normal\"} \n";
 
 bool waitFor(const std::function<bool()> &condition) {
     for (int attempt = 0; attempt < 200; ++attempt) {
@@ -51,6 +57,10 @@ int main() {
         check(parseHomeShown(kShownOverHdmi, foreground) && foreground == "com.webos.app.hdmi1",
               "the card in front is read from the compositor's line");
         check(!parseHomeShown(kOther, foreground), "other lines are not a Home");
+        check(parsePowerOnLaunch(kPowerOn, foreground) && foreground == "com.webos.app.hdmi1",
+              "the boot manager's launch is the TV switched on, with the input it opened");
+        check(!parsePowerOnLaunch(kUserLaunch, foreground) && !parsePowerOnLaunch(kShownOverHdmi, foreground),
+              "any other launch is not");
 
         char pattern[] = "/tmp/nativetv-home-key-XXXXXX";
         const int descriptor = mkstemp(pattern);
@@ -61,7 +71,7 @@ int main() {
 
         std::mutex mutex;
         std::vector<std::string> opened;
-        std::atomic<bool> enabled{true};
+        std::atomic<bool> enabled{true}, powerOn{false};
         HomeKeyWatcherOptions options;
         options.logPath = log;
         options.pollIntervalMilliseconds = 10;
@@ -71,6 +81,7 @@ int main() {
                                    opened.push_back(id);
                                },
                                nullptr, options);
+        watcher.setPowerOn([&powerOn]() { return powerOn.load(); });
         const auto count = [&]() {
             std::lock_guard<std::mutex> lock(mutex);
             return opened.size();
@@ -107,9 +118,20 @@ int main() {
         check(count() == 2 && watcher.status()["seq"].number() == 2,
               "switched off, a Home is left to LG");
 
+        append(log, kPowerOn);
+        std::this_thread::sleep_for(std::chrono::milliseconds(80));
+        check(count() == 2, "a power-on is left to LG with its own switch off");
+        powerOn = true;
+        append(log, kPowerOn);
+        check(waitFor([&]() { return count() == 3; }) && opened[2] == "com.webos.app.hdmi1",
+              "and handed on with it on, whatever the Home button's switch");
+        append(log, kUserLaunch);
+        std::this_thread::sleep_for(std::chrono::milliseconds(80));
+        check(count() == 3, "an app the owner opens is not a power-on");
+
         enabled = true;
         std::ofstream(log.c_str(), std::ios::trunc) << kShownOverHdmi; // rotated: shorter, all new
-        check(waitFor([&]() { return count() == 3; }), "a rotated log is read from its start");
+        check(waitFor([&]() { return count() == 4; }), "a rotated log is read from its start");
 
         watcher.stop();
         std::remove(log.c_str());

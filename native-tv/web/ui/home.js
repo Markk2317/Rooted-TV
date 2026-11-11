@@ -69,6 +69,9 @@ let tmdbKeySet = false;
 let youtubeKeySet = false;
 // null where the server offers no Home button switch (LG's Home is replaced, or none to watch).
 let homeButtonOn = null;
+// The same for opening Home as the TV comes on, and for the activity that starts the server after a reboot.
+let powerOnOn = null;
+let rebootOn = null;
 // The Google account of the profile in use: {clientSet, linked, name, pending, error}.
 let googleAccount = null;
 let googleWatch = null;
@@ -80,11 +83,14 @@ async function loadHomeKeys() {
     tmdbKeySet = status.tmdbKeySet === true;
     youtubeKeySet = status.youtubeKeySet === true;
     homeButtonOn = typeof status.homeButton === 'boolean' ? status.homeButton : null;
+    powerOnOn = typeof status.homeOnPowerOn === 'boolean' ? status.homeOnPowerOn : null;
+    rebootOn = typeof status.startAfterReboot === 'boolean' ? status.startAfterReboot : null;
     googleAccount = status.youtubeAccount || null;
     geminiKeySet = status.geminiKeySet === true;
     homeTrailersOn = status.homeTrailers !== false;
   } catch (e) { return; }
   renderHomeButton();
+  renderStartSwitches();
   renderTmdb();
   renderYoutube();
   renderGoogle();
@@ -103,6 +109,26 @@ async function homeButtonToggle() {
   if (homeButtonOn === null) return;
   const r = await sendCommand('setHomeButton', !homeButtonOn);
   if (r && r.ok) { homeButtonOn = r.homeButton === true; renderHomeButton(); }
+}
+function renderStartSwitches() {
+  [['power-on', powerOnOn], ['reboot', rebootOn]].forEach(([key, on]) => {
+    const row = q('home-' + key + '-row'), btn = q('home-' + key);
+    if (!row || !btn) return;
+    row.hidden = on === null;
+    updateToggle(btn, { cls: on ? 'good' : 'idle', label: on ? t('common.on', 'On') : t('common.off', 'Off'), on: !!on });
+    btn.setAttribute('aria-pressed', String(!!on));
+    btn.disabled = !homeWritable();
+  });
+}
+async function powerOnToggle() {
+  if (powerOnOn === null) return;
+  const r = await sendCommand('setHomeOnPowerOn', !powerOnOn);
+  if (r && r.ok) { powerOnOn = r.homeOnPowerOn === true; renderStartSwitches(); }
+}
+async function rebootToggle() {
+  if (rebootOn === null) return;
+  const r = await sendCommand('setStartAfterReboot', !rebootOn);
+  if (r && r.ok) { rebootOn = r.startAfterReboot === true; renderStartSwitches(); }
 }
 function renderTmdb() {
   const row = q('home-tmdb-row');

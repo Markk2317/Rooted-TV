@@ -1788,7 +1788,13 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   input whether the TV app is still running or not.
 - After a power cut or a reboot nothing of Native Tv runs until its tile is
   opened (see the boot bullet above), so until then the Home button opens LG's
-  ribbon. With the server running, the Home button brings the TV app forward
+  ribbon.
+- Switched on from Quick Start's standby, the boot manager opens the last
+  input (`SAM NL_APP_LAUNCH_BEGIN {"app_id":"com.webos.app.hdmi1","caller_id":
+  "com.webos.bootManager",...}`, the input card in front 44 ms later), as at a
+  cold start (`com.webos.app.inputcommon` 13 s after boot). With LG's
+  `homeAutoLaunch` on, no `NL_HOME_SHOWN` followed such a wake. The power state
+  reads `Screen Saver` while LG's screen saver shows. With the server running, the Home button brings the TV app forward
   from any app (Netflix, YouTube, the browser) whether the app was running or
   closed.
 - Streaming apps declare how they take a title in `deeplinkingParams`:

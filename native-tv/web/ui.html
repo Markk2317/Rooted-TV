@@ -1489,6 +1489,71 @@
               </button>
             </div>
           </div>
+          <div class="prot-row" id="home-power-on-row" hidden>
+            <div class="prot-main">
+              <div
+                class="prot-title"
+                id="home-power-on-title"
+                data-t="home.powerOn"
+              >
+                When the TV is switched on
+              </div>
+              <div
+                class="prot-desc"
+                id="home-power-on-desc"
+                data-t="home.powerOnDesc"
+              >
+                Opens Native Tv Home over the input the TV opens as it comes on, from standby and,
+                with Start after a reboot, after a cold start.
+              </div>
+            </div>
+            <div class="prot-status">
+              <button
+                type="button"
+                class="pill idle"
+                id="home-power-on"
+                onclick="powerOnToggle()"
+                aria-labelledby="home-power-on-title"
+                aria-describedby="home-power-on-desc"
+                aria-pressed="false"
+              >
+                &mdash;
+              </button>
+            </div>
+          </div>
+          <div class="prot-row" id="home-reboot-row" hidden>
+            <div class="prot-main">
+              <div
+                class="prot-title"
+                id="home-reboot-title"
+                data-t="home.reboot"
+              >
+                Start after a reboot
+              </div>
+              <div
+                class="prot-desc"
+                id="home-reboot-desc"
+                data-t="home.rebootDesc"
+              >
+                Registers an activity with the TV's activity manager that starts the Native Tv server
+                within five minutes of a reboot or a power cut. Without it, the server starts only once
+                the Native Tv tile is opened. Kept until switched off.
+              </div>
+            </div>
+            <div class="prot-status">
+              <button
+                type="button"
+                class="pill idle"
+                id="home-reboot"
+                onclick="rebootToggle()"
+                aria-labelledby="home-reboot-title"
+                aria-describedby="home-reboot-desc"
+                aria-pressed="false"
+              >
+                &mdash;
+              </button>
+            </div>
+          </div>
           <div class="prot-row" id="home-startup-row" hidden>
             <div class="prot-main">
               <div

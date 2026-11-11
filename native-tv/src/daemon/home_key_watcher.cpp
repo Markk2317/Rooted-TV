@@ -23,6 +23,21 @@ bool parseHomeShown(const std::string &line, std::string &foregroundId) {
     return true;
 }
 
+bool parsePowerOnLaunch(const std::string &line, std::string &appId) {
+    const size_t marker = line.find("SAM NL_APP_LAUNCH_BEGIN");
+    if (marker == std::string::npos ||
+        line.find("\"caller_id\":\"com.webos.bootManager\"", marker) == std::string::npos)
+        return false;
+    const std::string key = "\"app_id\":\"";
+    const size_t start = line.find(key, marker);
+    if (start == std::string::npos) return false;
+    const size_t value = start + key.size();
+    const size_t end = line.find('"', value);
+    if (end == std::string::npos) return false;
+    appId = line.substr(value, end - value);
+    return !appId.empty();
+}
+
 HomeKeyWatcher::HomeKeyWatcher(std::function<bool()> enabled, Opened opened, Logger *logger,
                                HomeKeyWatcherOptions options)
     : enabled_(std::move(enabled)), opened_(std::move(opened)), logger_(logger),
@@ -105,8 +120,11 @@ void HomeKeyWatcher::readUpdates() {
     size_t start = 0, end;
     while ((end = partial_.find('\n', start)) != std::string::npos) {
         std::string foregroundId;
-        if (parseHomeShown(partial_.substr(start, end - start), foregroundId))
-            handle(foregroundId);
+        const std::string line = partial_.substr(start, end - start);
+        if (parseHomeShown(line, foregroundId))
+            handle(foregroundId, false);
+        else if (parsePowerOnLaunch(line, foregroundId))
+            handle(foregroundId, true);
         start = end + 1;
     }
     partial_.erase(0, start);
@@ -114,21 +132,24 @@ void HomeKeyWatcher::readUpdates() {
     if (partial_.size() > 65536) partial_.clear();
 }
 
-void HomeKeyWatcher::handle(const std::string &foregroundId) {
+void HomeKeyWatcher::handle(const std::string &foregroundId, bool powerOn) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (std::chrono::steady_clock::now() < suppressedUntil_) return;
     }
-    if (!enabled_ || !enabled_()) return;
+    const std::function<bool()> &enabled = powerOn ? powerOnEnabled_ : enabled_;
+    if (!enabled || !enabled()) return;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         lastAt_ = std::chrono::steady_clock::now();
     }
     seq_.fetch_add(1);
     if (logger_)
-        logger_->info("home key: LG's Home opened over " +
-                      (foregroundId.empty() ? std::string("unknown") : foregroundId) +
-                      "; bringing Native Tv Home forward");
+        logger_->info(powerOn ? "power on: the TV opened " + foregroundId +
+                                    "; bringing Native Tv Home forward"
+                              : "home key: LG's Home opened over " +
+                                    (foregroundId.empty() ? std::string("unknown") : foregroundId) +
+                                    "; bringing Native Tv Home forward");
     if (opened_) opened_(foregroundId);
 }
 

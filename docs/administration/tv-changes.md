@@ -134,6 +134,7 @@ menus. Uninstalling the dashboard leaves them as they are.
 | Change | Note |
 | :----- | :--- |
 | Uninstalling an app | Permanent; reinstall it from the LG Content Store |
+| Start after a reboot (webOS 3.4) | Switched on from the Native Tv Home tab, a persistent activity `com.tvweb.dashboard.boot` in the TV's activity manager calls the Homebrew Channel's `autostart` every 5 minutes, which runs the boot hooks once per boot; the server registers it again at every start and every half hour. Switching it off cancels it. Uninstalling without switching it off leaves it calling `autostart`, which then has nothing to start |
 | SSH keys added or removed on the Server tab | In `/home/root/.ssh/authorized_keys`. Deleting the file there gives root the password `alpine` from the next boot. Uninstalling leaves the file as it is |
 | Installing an app | Installed as a developer app; remove it from the Apps tab or the Homebrew Channel. Its services stay elevated to root if that was chosen |
 | Picture mode, energy saving, sound output, Quick Start+, sleep timer, Quick Access keys | Ordinary TV settings |

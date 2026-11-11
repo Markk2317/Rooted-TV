@@ -175,6 +175,9 @@ class HttpFrontDoor {
     // Where the panel is an OLED without LG's Logo Luminance (webOS 3.4), the server's own logo
     // dimming (service::StaticDimming), at the level `staticDimming` in config.json names.
     void startStaticDimming();
+    // A cold start's Native Tv Home, and the activity that starts the server after a reboot (webOS 3.4).
+    void openHomeAfterBoot();
+    bool setBootActivity(bool on) const;
     // The app now in front ("" with the screen off), for Continue watching, and to close the TV app
     // behind an app that needs its memory (webOS 3.4, see closeClientBehind).
     void foregroundChanged(const std::string &appId);

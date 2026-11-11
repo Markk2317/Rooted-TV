@@ -1973,7 +1973,88 @@ void HttpFrontDoor::startHomeKeyWatcher() {
                 logger_->warning("home key: the TV app did not open");
         },
         logger_, options));
-    if (watcher->start()) homeKeyWatcher_ = std::move(watcher);
+    // The TV switched on: the boot manager opens the last input, and Native Tv Home comes over it.
+    watcher->setPowerOn([this]() { return currentConfigDocument()["homeOnPowerOn"].boolean(true); });
+    if (!watcher->start()) return;
+    homeKeyWatcher_ = std::move(watcher);
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(3000), [this]() {
+        (void)eventLoop_->submitBlocking([this]() { openHomeAfterBoot(); });
+    });
+    // Kept registered while switched on: put back at every start and every half hour, in case the
+    // activity manager drops it once it has called.
+    eventLoop_->scheduleEvery(std::chrono::milliseconds(30 * 60 * 1000), [this]() {
+        (void)eventLoop_->submitBlocking([this]() {
+            if (currentConfigDocument()["startAfterReboot"].boolean()) (void)setBootActivity(true);
+        });
+    });
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(5000), [this]() {
+        (void)eventLoop_->submitBlocking([this]() {
+            if (currentConfigDocument()["startAfterReboot"].boolean()) (void)setBootActivity(true);
+        });
+    });
+}
+
+namespace {
+const char *const kBootActivity = "com.tvweb.dashboard.boot";
+
+bool inputApp(const std::string &appId) {
+    for (const char *prefix : {"com.webos.app.hdmi", "com.webos.app.livetv", "com.webos.app.inputcommon",
+                               "com.webos.app.externalinput"})
+        if (appId.compare(0, std::strlen(prefix), prefix) == 0) return true;
+    return false;
+}
+} // namespace
+
+// The server started minutes after a cold start (by the boot activity, or the tile): the boot
+// manager's opening of the last input was before the watcher, so Native Tv Home is opened here, if
+// that input is still in front.
+void HttpFrontDoor::openHomeAfterBoot() {
+    if (!currentConfigDocument()["homeOnPowerOn"].boolean(true)) return;
+    std::ifstream uptimeFile((systemRoot_ == "/" ? std::string() : systemRoot_) + "/proc/uptime");
+    double uptime = 0;
+    if (!(uptimeFile >> uptime) || uptime > 8 * 60) return;
+    LunaReply reply;
+    if (!waitForLuna(luna_, "com.webos.applicationManager/getForegroundAppInfo", Json::object(),
+                     reply) ||
+        !inputApp(reply.response["appId"].string()))
+        return;
+    Json params = Json::object();
+    params.set("screen", Json::text("home"));
+    Json payload = Json::object();
+    payload.set("id", Json::text(kHomeClientApp));
+    payload.set("params", params);
+    LunaReply launched;
+    if (waitForLuna(luna_, "com.webos.applicationManager/launch", payload, launched) && logger_)
+        logger_->info("power on: started " + std::to_string(static_cast<long>(uptime)) +
+                      " s after the TV's boot; bringing Native Tv Home forward");
+}
+
+// webOS 3.4 runs no root code at boot, so after a power cut or a reboot nothing of Native Tv runs
+// until its tile is opened. The TV's activity manager keeps a persistent activity across reboots:
+// this one calls the Homebrew Channel's autostart every 5 minutes, which runs the boot hooks once
+// per boot (its own flag in /tmp), so the server is up within 5 minutes of a boot. Only on the
+// owner's word: the Home tab's switch.
+bool HttpFrontDoor::setBootActivity(bool on) const {
+    if (!on) {
+        Json payload = Json::object();
+        payload.set("activityName", Json::text(kBootActivity));
+        LunaReply reply;
+        return waitForLuna(luna_, "com.palm.activitymanager/cancel", payload, reply) &&
+               reply.response["returnValue"].boolean();
+    }
+    const Json payload = Json::parse(std::string("{\"activity\":{\"name\":\"") + kBootActivity +
+        "\",\"description\":\"Starts the Native Tv server after the TV boots\","
+        "\"type\":{\"foreground\":true,\"persist\":true},"
+        "\"schedule\":{\"interval\":\"5m\"},"
+        "\"callback\":{\"method\":\"luna://org.webosbrew.hbchannel.service/autostart\","
+        "\"params\":{\"reason\":\"nativetv\"}}},\"start\":true,\"replace\":true}");
+    LunaReply reply;
+    const bool done = waitForLuna(luna_, "com.palm.activitymanager/create", payload, reply) &&
+                      reply.response["returnValue"].boolean();
+    if (!done && logger_)
+        logger_->warning("start after reboot: the activity manager refused the boot activity: " +
+                         reply.raw);
+    return done;
 }
 
 void HttpFrontDoor::ensureHomePictureTracking() const {
@@ -2622,6 +2703,10 @@ Json HttpFrontDoor::serverStatus() const {
     // Offered where the watcher runs: webOS 3.4's Home is the compositor's, not an app.
     status.set("homeButton", homeKeyWatcher_
         ? Json::flag(document["homeButtonOpensNativeHome"].boolean()) : Json());
+    status.set("homeOnPowerOn", homeKeyWatcher_
+        ? Json::flag(document["homeOnPowerOn"].boolean(true)) : Json());
+    status.set("startAfterReboot", homeKeyWatcher_
+        ? Json::flag(document["startAfterReboot"].boolean()) : Json());
     status.set("watchHistory", historyRecorder_ ? historyRecorder_->status() : Json());
 
     Json backupDaily = Json::object();
@@ -2745,6 +2830,31 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         if (!value.isBoolean()) return fail("setHomeButton takes true or false");
         Json change = Json::object();
         change.set("homeButtonOpensNativeHome", Json::flag(value.boolean()));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
+        return answer();
+    }
+    if (action == "setHomeOnPowerOn") {
+        if (!value.isBoolean()) return fail("setHomeOnPowerOn takes true or false");
+        Json change = Json::object();
+        change.set("homeOnPowerOn", Json::flag(value.boolean()));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
+        return answer();
+    }
+    if (action == "setStartAfterReboot") {
+        if (!value.isBoolean()) return fail("setStartAfterReboot takes true or false");
+        if (!homeKeyWatcher_) return fail("not needed on this TV");
+        // Off cancels it even where turning it on would fail, so nothing is left behind.
+        if (!setBootActivity(value.boolean()) && value.boolean())
+            return fail(say::msg("srv.startAfterReboot.refused",
+                                 "The TV's activity manager did not take the start-up activity"));
+        Json change = Json::object();
+        change.set("startAfterReboot", Json::flag(value.boolean()));
         std::string error;
         if (!ConfigStore(configPath_).setTopLevel(change, &error))
             return fail("could not save setting: " + error);
