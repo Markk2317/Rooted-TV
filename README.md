@@ -76,7 +76,7 @@ Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshou
 <p align="center">
   <img src="docs/screenshots/tv-home.jpg" alt="Native Tv Home on an LG TV, laid out as Google TV's home: a featured title, the apps and top picks" width="32%">
   <img src="docs/screenshots/tv-privacy.png" alt="The TV app's Privacy settings: the overview says tracking and ads are off, with tabs for blocking, LG ads, tracking and data" width="32%">
-  <img src="docs/screenshots/tv-quick-settings.jpg" alt="The TV app's Quick settings panel: volume, picture mode, OLED light, sound output, input and sleep timer" width="32%">
+  <img src="docs/screenshots/tv-quick-settings.jpg" alt="The TV app's Quick settings panel after Google TV's: volume and OLED light across the panel, then picture mode, sound output, input and sleep timer tiles" width="32%">
 </p>
 <p align="center"><sub>The dashboard shots come from the repository's TV emulator, so the readings are stand-in values. The TV app shots are captured on a real TV.</sub></p>
 

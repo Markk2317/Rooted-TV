@@ -50,6 +50,15 @@ constexpr Color tabFocused = rgb(0xCDDFED);
 constexpr Color rowTitleFocused = rgb(0xDEEBF9);
 constexpr Color appNameFocused = rgb(0xCDE0F6);
 constexpr Color page = rgb(0x0E0E10);
+constexpr Color quick = rgb(0x131D23);
+constexpr Color quickPage = rgb(0x1E232C);
+constexpr Color quickTitle = rgb(0xE4F3FF);
+constexpr Color quickFocus = rgb(0xCCE8FF);
+constexpr Color quickOnFocus = rgb(0x0E0E0F);
+constexpr Color quickIconOnFocus = rgb(0x292E33);
+constexpr Color quickLabel = rgb(0x989CA3);
+constexpr Color quickWell = rgb(0x004A77);
+constexpr Color quickOnWell = rgb(0xC2E7FF);
 } // namespace color
 // Colours that carry an alpha.
 namespace alpha {
@@ -64,6 +73,10 @@ constexpr Color artDim = rgb(0x000000, 0.18f);
 constexpr Color barDim = rgb(0x000000, 0.32f);
 constexpr Color cardRing = rgb(0xE8E6F4, 0.62f);
 constexpr Color cardGlow = rgb(0xB9B4F0, 0.22f);
+constexpr Color quickInk = rgb(0xDFF3FF, 0.54f);
+constexpr Color quickDate = rgb(0xDFF3FF, 0.39f);
+constexpr Color quickTile = rgb(0xCFDEED, 0.047f);
+constexpr Color quickVeil = rgb(0x000000, 0.6f);
 } // namespace alpha
 namespace type {
 constexpr const char *family = "Google Sans Flex";
@@ -96,6 +109,17 @@ constexpr TypeStyle cardCaption = {24, 36, 400, 0};
 constexpr TypeStyle detailsTitle = {122, 120, 400, -0.01f};
 constexpr TypeStyle detailsFacts = {30, 48, 500, 0};
 constexpr TypeStyle cardAction = {20, 28, 500, 0.08f};
+constexpr TypeStyle quickDate = {24, 32, 500, 0};
+constexpr TypeStyle quickClock = {40, 52, 500, 0};
+constexpr TypeStyle quickTile = {24, 32, 400, 0};
+constexpr TypeStyle quickTileSub = {18, 24, 400, 0};
+constexpr TypeStyle quickLabel = {20, 28, 400, 0};
+constexpr TypeStyle quickTitle = {28, 40, 500, 0};
+constexpr TypeStyle quickItem = {22, 30, 400, 0};
+constexpr TypeStyle quickCard = {22, 30, 400, 0};
+constexpr TypeStyle quickCardSub = {18, 24, 400, 0};
+constexpr TypeStyle quickMark = {24, 32, 500, 0};
+constexpr TypeStyle quickInitial = {24, 32, 500, 0};
 } // namespace type
 namespace space {
 constexpr float x4 = 4;
@@ -265,6 +289,43 @@ constexpr float keyGap = 10;
 constexpr float keyWide = 120;
 constexpr float keySpace = 450;
 constexpr float keyDone = 260;
+constexpr float quickW = 544;
+constexpr float quickH = 1016;
+constexpr float quickTop = 32;
+constexpr float quickRight = 48;
+constexpr float quickR = 40;
+constexpr float quickPad = 24;
+constexpr float quickDateTop = 52;
+constexpr float quickClockTop = 92;
+constexpr float quickButton = 56;
+constexpr float quickButtonTop = 52;
+constexpr float quickGearX = 388;
+constexpr float quickAvatarX = 464;
+constexpr float quickButtonLabelTop = 114;
+constexpr float quickGridTop = 170;
+constexpr float quickTileW = 242;
+constexpr float quickTileH = 108;
+constexpr float quickTilePitch = 120;
+constexpr float quickTileR = 32;
+constexpr float quickTileIcon = 40;
+constexpr float quickTileIconX = 20;
+constexpr float quickTileTextX = 68;
+constexpr float quickCardsGap = 54;
+constexpr float quickCardH = 112;
+constexpr float quickCardGap = 16;
+constexpr float quickCardIcon = 64;
+constexpr float quickCardIconX = 22;
+constexpr float quickCardTextX = 102;
+constexpr float quickMarkX = 36;
+constexpr float quickMarkTop = 966;
+constexpr float quickTitleTop = 32;
+constexpr float quickItemsTop = 113;
+constexpr float quickItemH = 100;
+constexpr float quickItemPitch = 116;
+constexpr float quickItemTextX = 24;
+constexpr float quickTrackW = 168;
+constexpr float quickTrackH = 8;
+constexpr float quickItemR = 24;
 constexpr int dotSlots = 6;
 constexpr int tileCols = 6;
 constexpr int statCols = 4;
@@ -288,6 +349,8 @@ constexpr int heroAdvance = 12000;
 constexpr int trailerDelay = 3500;
 constexpr int boot = 520;
 constexpr int bars = 900;
+constexpr int quick = 500;
+constexpr int quickFocus = 200;
 constexpr int idleAfter = 30000;
 constexpr int homeIdleAfter = 300000;
 } // namespace ms
@@ -297,6 +360,8 @@ constexpr Bezier decelerate = {0, 0, 0.2f, 1};
 constexpr Bezier emphasized = {0.2f, 0, 0, 1};
 constexpr Bezier inOut = {0.77f, 0, 0.175f, 1};
 constexpr Bezier linear = {0, 0, 1, 1};
+constexpr Bezier quick = {0.4f, 1, 0.12f, 1};
+constexpr Bezier quickFocus = {0.2f, 0.1f, 0, 1};
 } // namespace ease
 namespace spring {
 constexpr SpringTuning row = {400, 1};
@@ -315,6 +380,8 @@ constexpr float row = 1.02f;
 constexpr float key = 1.1f;
 constexpr float circle = 1.12f;
 constexpr float press = 0.94f;
+constexpr float quickTile = 1.025f;
+constexpr float quickButton = 1.1f;
 } // namespace scale
 namespace stagger {
 constexpr int homeBase = 80;

@@ -2,6 +2,8 @@
 // that every change shows at once and goes to the TV through the optimistic-update layer, with
 // replies that come late, out of order or not at all.
 #include "overlay_harness.hpp"
+#include <map>
+#include <vector>
 
 using namespace overlay_test;
 
@@ -27,9 +29,22 @@ struct Quick : World {
     double light() {
         return snapshot()["light"].number();
     }
-    void focusRow(size_t row) {
-        for (size_t i = 0; i < row; ++i)
-            press(Key::Down);
+    // The keys from Volume, where the panel opens, to an item of its grid.
+    void focusOn(const std::string &title) {
+        static const std::map<std::string, std::vector<Key>> paths = {
+            {"Home settings", {Key::Up}},
+            {"Profile", {Key::Up, Key::Right}},
+            {"OLED light", {Key::Down}},
+            {"Picture mode", {Key::Down, Key::Down}},
+            {"Sound output", {Key::Down, Key::Down, Key::Right}},
+            {"Input", {Key::Down, Key::Down, Key::Down}},
+            {"Sleep timer", {Key::Down, Key::Down, Key::Down, Key::Right}},
+            {"Screensaver", {Key::Down, Key::Down, Key::Down, Key::Down}},
+            {"Screen off", {Key::Down, Key::Down, Key::Down, Key::Down, Key::Right}},
+            {"Recent apps", {Key::Down, Key::Down, Key::Down, Key::Down, Key::Down}}};
+        for (Key key : paths.at(title))
+            press(key);
+        check(snapshot()["focus"].string() == title, ("The keys reach " + title).c_str());
     }
 };
 // Counts the dots of a spinner on the screen: the small round nodes of one size.
@@ -97,7 +112,7 @@ void openChecks() {
     check(world.app.activate("tool:1"), "The gear opens the drawer");
     check(world.screen() == "quick" && world.transport.count("quick:stats") == 1 && world.transport.count("quick:now") == 1,
           "The drawer reads what the TV is on when it opens");
-    check(world.motion("quick:x") > 700, "The drawer starts off the right edge");
+    check(world.motion("quick:x") > 540, "The panel starts its own width to the right");
     double previous = world.motion("quick:x");
     bool monotonic = true;
     for (int frame = 0; frame < 40; ++frame) {
@@ -107,7 +122,7 @@ void openChecks() {
         monotonic = monotonic && now <= previous + 1e-6 && now >= -.01;
         previous = now;
     }
-    check(monotonic && previous < .5, "The drawer springs in without overshoot");
+    check(monotonic && previous < .5, "The panel slides in without overshoot");
     world.reply("quick:stats", statsWith(24));
     world.reply("quick:now", R"({"ok":true,"kind":"input","port":1})");
     world.settle(300);
@@ -158,7 +173,7 @@ void heldChecks(bool light, bool up) {
     const char *channel = light ? "w:quick.light" : "w:quick.volume";
     Quick world(light ? statsWith(24, from) : statsWith(from));
     if (light)
-        world.focusRow(2);
+        world.focusOn("OLED light");
     check(world.snapshot()["focus"].string() == (light ? "OLED light" : "Volume"), "The row is focused");
     auto shown = [&] { return light ? world.light() : world.volume(); };
     double previous = from;
@@ -208,7 +223,7 @@ void heldChecks(bool light, bool up) {
     // The TV capped it: its answer wins.
     Quick capped(light ? statsWith(24, 50) : statsWith(50));
     if (light)
-        capped.focusRow(2);
+        capped.focusOn("OLED light");
     capped.press(Key::Right);
     capped.settle(10);
     capped.answer(capped.on(channel).back());
@@ -254,7 +269,7 @@ void failureChecks() {
 
 void choiceChecks() {
     Quick world;
-    world.press(Key::Down);
+    world.focusOn("Picture mode");
     world.press(Key::Ok);
     check(world.screen() == "quick:picture" && world.snapshot()["focus"].string() == "Cinema",
           "Picture mode opens its list on the mode in force");
@@ -273,7 +288,7 @@ void choiceChecks() {
           "A refusal gives the mode back and says why");
     // Two choices in a row: the newest is the one sent and the older reply changes nothing.
     Quick quick;
-    quick.press(Key::Down);
+    quick.focusOn("Picture mode");
     quick.press(Key::Ok);
     quick.press(Key::Down);
     quick.press(Key::Ok); // game
@@ -292,7 +307,7 @@ void choiceChecks() {
     check(quick.snapshot()["picture"].string() == "vivid", "A reply to an older choice changes nothing");
     // Sleep timer and sound output.
     Quick sleep;
-    sleep.focusRow(5);
+    sleep.focusOn("Sleep timer");
     sleep.press(Key::Ok);
     check(sleep.screen() == "quick:sleep" && sleep.snapshot()["focus"].string() == "Off", "Sleep timer opens on Off");
     sleep.press({Key::Down, Key::Down});
@@ -307,7 +322,7 @@ void choiceChecks() {
     sleep.settle(40);
     check(sleep.snapshot()["sleep"].string() == "off", "A refusal gives it back");
     Quick sound;
-    sound.focusRow(3);
+    sound.focusOn("Sound output");
     sound.press(Key::Ok);
     sound.press(Key::Down);
     sound.press(Key::Ok);
@@ -315,31 +330,23 @@ void choiceChecks() {
     check(sound.app.shows("HDMI ARC") && sound.on("w:quick.sound")[0].body["action"].string() == "soundOutput" &&
               sound.on("w:quick.sound")[0].body["value"].string() == "arc",
           "A sound output shows at once and is posted");
-    // Left and Right on those rows step through the values without opening the list.
-    Quick stepping;
-    stepping.press(Key::Down);
-    stepping.press(Key::Right);
-    check(stepping.screen() == "quick" && stepping.snapshot()["picture"].string() == "game" &&
-              stepping.snapshot()["focus"].string() == "Picture mode",
-          "Right on Picture mode shows the next mode and leaves the list closed");
-    stepping.press({Key::Left, Key::Left});
-    check(stepping.snapshot()["picture"].string() == "vivid", "Left goes back through the modes");
-    stepping.settle(300);
-    check(stepping.on("w:quick.picture").back().body["value"].string() == "vivid", "and the newest one is posted");
-    Quick sleeping;
-    sleeping.focusRow(5);
-    sleeping.press(Key::Right);
-    check(sleeping.snapshot()["sleep"].string() == "10" && sleeping.screen() == "quick", "Right on Sleep timer picks the next time");
-    sleeping.press({Key::Left, Key::Left});
-    check(sleeping.snapshot()["sleep"].string() == "120", "Left from Off wraps to the longest");
-    Quick sounding;
-    sounding.focusRow(3);
-    sounding.press(Key::Right);
-    sounding.settle(300);
-    check(sounding.on("w:quick.sound").back().body["value"].string() == "arc", "Right on Sound output posts the next output");
+    // Left and Right go between the grid's tiles and change nothing.
+    Quick sideways;
+    sideways.focusOn("Picture mode");
+    sideways.press(Key::Right);
+    check(sideways.snapshot()["focus"].string() == "Sound output" && sideways.snapshot()["picture"].string() == "cinema",
+          "Right on Picture mode goes to Sound output and leaves the mode");
+    sideways.press(Key::Right);
+    check(sideways.snapshot()["focus"].string() == "Sound output", "and stops at the panel's edge");
+    sideways.press({Key::Down, Key::Up, Key::Up});
+    check(sideways.snapshot()["focus"].string() == "OLED light", "Up from a tile goes to the light across the grid");
+    sideways.press(Key::Down);
+    check(sideways.snapshot()["focus"].string() == "Sound output", "and Down comes back to the column it left");
+    sideways.settle(300);
+    check(sideways.on("w:quick.picture").empty() && sideways.on("w:quick.sound").empty(), "Nothing was sent");
     // Back and Left go up a level.
     Quick levels;
-    levels.press(Key::Down);
+    levels.focusOn("Picture mode");
     levels.press(Key::Ok);
     levels.press(Key::Back);
     check(levels.screen() == "quick" && levels.snapshot()["focus"].string() == "Picture mode", "Back returns to the main list");
@@ -350,10 +357,9 @@ void choiceChecks() {
 
 void switchChecks() {
     Quick world;
-    world.focusRow(10);
+    world.focusOn("Home settings");
     world.settle(400);
-    check(world.snapshot()["focus"].string() == "Home settings" && world.motion("quick:sy") < -100,
-          "The list scrolls to keep the focused row in view");
+    check(world.app.shows("Home settings"), "The gear says what it opens under it");
     world.press(Key::Ok);
     world.settle(400);
     check(world.screen() == "quick:layout" && world.app.shows("24-hour clock") && world.app.shows("App names"),
@@ -401,8 +407,7 @@ void switchChecks() {
 
 void actionChecks() {
     Quick world;
-    world.focusRow(6);
-    check(world.snapshot()["focus"].string() == "Screensaver", "Screensaver is a row");
+    world.focusOn("Screensaver");
     world.press(Key::Ok);
     check(world.snapshot()["closing"].boolean(), "OK starts it and the drawer closes at once");
     check(world.on("w:quick.act")[0].body["action"].string() == "screensaver", "The write starts the screensaver");
@@ -411,11 +416,11 @@ void actionChecks() {
     world.answer(world.on("w:quick.act")[0], false, "Busy");
     check(world.toasted("That did not work: Busy"), "A refusal after the drawer has gone is still said");
     Quick off;
-    off.focusRow(7);
+    off.focusOn("Screen off");
     off.press(Key::Ok);
     check(off.on("w:quick.act")[0].body["action"].string() == "screenOff", "Screen off posts its action");
     Quick input;
-    input.focusRow(4);
+    input.focusOn("Input");
     input.press(Key::Ok);
     check(input.screen() == "quick:input" && input.snapshot()["focus"].string() == "Console",
           "Input lists the devices, on the one in use");
@@ -433,15 +438,14 @@ void actionChecks() {
 
 void navigationChecks() {
     Quick recents;
-    recents.focusRow(8);
-    check(recents.snapshot()["focus"].string() == "Recent apps", "Recent apps is a row");
+    recents.focusOn("Recent apps");
     recents.press(Key::Ok);
     recents.settle(900);
     check(recents.screen() == "quick:recents", "The row opens the recent apps");
     Quick profile;
-    profile.focusRow(9);
-    check(profile.snapshot()["focus"].string() == "Profile" && profile.app.shows("B3"),
-          "The profile row names the profile after the TV");
+    profile.focusOn("Profile");
+    profile.settle(300);
+    check(profile.app.shows("B3"), "The profile's button names the profile after the TV");
     profile.press(Key::Ok);
     profile.settle(900);
     check(profile.screen() == "profiles", "The row opens the profiles");

@@ -226,8 +226,7 @@ void roundButton(Paint paint, const RoundButton &button) {
     float rounding = button.rest.h / 2;
     Node &base = scene.shape(button.rest, button.fill, rounding);
     if (button.avatar)
-        base.gradient =
-            gradient(135, {{rgb(0xF2B27A), 0}, {rgb(0xB05E8A), .55f}, {rgb(0x5C5AA8), 1}});
+        base.gradient = avatarGradient();
     if (button.focus > 0)
         scene.shape(button.rest, faded(button.focusFill, focus::clamp01(button.focus)), rounding);
     Color ink = focus::inkAt(button.ink, color::onFocus, button.focus);
@@ -244,6 +243,9 @@ void roundButton(Paint paint, const RoundButton &button) {
           avatarStyle.line},
          button.text, avatarStyle, ink, Node::Align::Center);
     hit(scene, look.rect, button.id);
+}
+Gradient avatarGradient() {
+    return gradient(135, {{rgb(0xF2B27A), 0}, {rgb(0xB05E8A), .55f}, {rgb(0x5C5AA8), 1}});
 }
 void topBar(Paint paint, const TopBar &bar) {
     if (invisible(bar.enter))

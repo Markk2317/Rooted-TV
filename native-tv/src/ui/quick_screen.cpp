@@ -1,9 +1,13 @@
-// The Quick settings drawer: a panel that springs in from the right over the page it was opened
-// from, with the TV's volume, picture mode, light, sound output, input and sleep timer, the
-// screensaver and Screen off, the recent apps, the profile and Home's own switches.
+// The Quick settings panel, after Google TV's (launcherx's DashboardActivity, read off a Chromecast
+// with Google TV): a floating panel at the right with the date and the clock over a gear (Home's
+// settings) and the profile; a grid of tiles under them, the volume and the light as tiles across the
+// grid that Left and Right adjust, the picture mode, sound output, input and sleep timer with what is
+// set now, the screensaver and Screen off; and Recent apps as a wide card. Their lists (picture
+// modes, outputs, inputs, sleep times, Home's switches) take the panel's place, as Google TV's sleep
+// timer does.
 //
-// Opening it shows each row's last known value at once (kept in the application between openings)
-// or a spinner where there is none yet, and reads the TV behind it. Every change goes through the
+// Opening it shows each value last read at once (kept in the application between openings) or a
+// spinner where there is none yet, and reads the TV behind it. Every change goes through the
 // optimistic-update layer (optimistic.hpp): the value is on screen the moment the key is pressed,
 // the writes leave at a limited pace and carry the newest value, and a refusal puts the value back
 // and says so. Volume and light are absolute targets (/api/control "volume" and "backlight"), so a
@@ -24,16 +28,16 @@
 namespace nativetv {
 namespace {
 namespace layout = kit::layout;
+namespace qcolor = kit::color;
 using kit::easing;
+using kit::focus::mix;
 using say::msg;
 
-constexpr float kPanelW = 760, kPanelX = kit::canvas::width - kPanelW, kPad = 48,
-                kRowW = kPanelW - 2 * kPad, kViewTop = 140, kViewBottom = kit::canvas::height - 96,
-                kRowPitch = 92;
+constexpr float kPanelW = layout::quickW, kPanelH = layout::quickH,
+                kPanelX = kit::canvas::width - layout::quickRight - layout::quickW, kPanelY = layout::quickTop,
+                kWideW = layout::quickW - 2 * layout::quickPad;
 constexpr int kLightStep = 5;
 constexpr double kRetryMs = 3000;
-// The panel's own spring: quicker than a page's, still without overshoot.
-constexpr kit::SpringTuning kSlide = {420, 1};
 constexpr const char *kStats = "quick:stats", *kNow = "quick:now";
 constexpr const char *kStatsMemory = "quick.stats", *kNowMemory = "quick.now";
 
@@ -54,7 +58,7 @@ const char *levelName(Level level) {
         return "quick";
     }
 }
-// The row of the main list that opens a level.
+// The item of the main page that opens a level.
 const char *rowOpening(Level level) {
     switch (level) {
     case Level::Picture:
@@ -79,6 +83,9 @@ const char *kSleep[] = {"off", "10", "30", "60", "90", "120"};
 
 double clamp(double value, double low, double high) {
     return std::max(low, std::min(high, value));
+}
+Rect onCanvas(Rect panel) {
+    return {kPanelX + panel.x, kPanelY + panel.y, panel.w, panel.h};
 }
 Write controlWrite(const char *action) {
     Write write;
@@ -106,17 +113,38 @@ Write layoutWrite(const std::string &key) {
     write.readOperation = Operation::HomeCatalogue;
     return write;
 }
-// Rows whose value is read from the TV: they wait for the first read.
+// Items whose value is read from the TV: they wait for the first read.
 bool readsStats(const std::string &id) {
     return id == "volume" || id == "light" || id == "picture" || id == "sound" || id == "input" ||
            id == "sleep";
+}
+// "Wed 11 Nov", as the panel's head dates the clock.
+std::string dateText(const ViewState &state) {
+    static const char *const days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+    static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    return std::string(days[((state.weekday % 7) + 7) % 7]) + " " + std::to_string(state.day) + " " +
+           months[((state.month % 12) + 12) % 12];
+}
+std::string clockText(const ViewState &state) {
+    char text[16];
+    if (state.catalogue["layout"]["clockFormat"].string() == "12h")
+        std::snprintf(text, sizeof(text), "%d:%02d", state.hour % 12 ? state.hour % 12 : 12, state.minute);
+    else
+        std::snprintf(text, sizeof(text), "%02d:%02d", state.hour, state.minute);
+    return text;
 }
 
 class QuickScreen final : public ScreenView {
     struct Row {
         enum class Kind { Plain, Slider, Choice, Switch } kind = Kind::Plain;
+        // Google TV's shapes: the head's round buttons, a tile across the grid, a tile in a
+        // column, the wide card under the grid, and an item of a list.
+        enum class Shape { Button, Wide, Tile, Card, Item } shape = Shape::Item;
         std::string id, icon, title, raw, trail;
         bool go = false, dim = false, on = false;
+        int line = 0, column = -1; // the grid's line, and its column (-1 across both)
+        Rect rest;                 // in the panel
     };
 
   public:
@@ -133,8 +161,11 @@ class QuickScreen final : public ScreenView {
     }
 
     void enter(ScreenHost &host) override {
+        // Google TV's panel comes in as it leaves: from its own width to the right, fading, on the
+        // curve that is nearly there in a third of its time.
         host.motion().set("quick:x", kPanelW);
-        host.motion().spring("quick:x", 0, kit::springParams(kSlide));
+        host.motion().tween("quick:x", 0, kit::motion::ms::quick, easing(kit::motion::ease::quick));
+        host.motion().set("quick:page", 1);
         // What was read last time shows at once; the read behind it brings today's values.
         auto &memory = host.memory();
         if (memory.count(kStatsMemory) && memory[kStatsMemory].isObject()) {
@@ -147,8 +178,8 @@ class QuickScreen final : public ScreenView {
         nowGeneration_ = host.services().read(kNow, Operation::HomeNow);
         syncShown(host);
         rebuild(host, true);
+        focus_ = indexOf("volume", focus_);
         focusMoved(host, true);
-        playEntrance(host);
     }
     void leave(ScreenHost &host) override {
         // Writes in flight are the layer's and finish without this page.
@@ -189,18 +220,13 @@ class QuickScreen final : public ScreenView {
         switch (key) {
         case Key::Up:
         case Key::Down:
-        case Key::PageUp:
-        case Key::PageDown: {
-            int delta = (key == Key::Up || key == Key::PageUp ? -1 : 1) *
-                        (key == Key::PageUp || key == Key::PageDown ? 6 : 1);
-            size_t last = rows_.empty() ? 0 : rows_.size() - 1;
-            size_t next = static_cast<size_t>(clamp(static_cast<double>(focus_) + delta, 0, static_cast<double>(last)));
-            if (next != focus_) {
-                focus_ = next;
-                focusMoved(host, false);
-            }
+            move(host, key == Key::Up ? -1 : 1);
             return true;
-        }
+        case Key::PageUp:
+        case Key::PageDown:
+            for (int i = 0; i < 6; ++i)
+                move(host, key == Key::PageUp ? -1 : 1);
+            return true;
         case Key::Left:
         case Key::Right:
             sideways(host, key == Key::Right ? 1 : -1);
@@ -285,31 +311,27 @@ class QuickScreen final : public ScreenView {
             drawHome(paint, Frame{host.view(), motion, host.nowMs()});
         else
             kit::ambientWall(paint, 1, host.view().home.art.wallTint);
-        kit::veil(paint, .62f * open); // the one dim scrim over the page
-        scene.hits.push_back({{0, 0, kPanelX, kit::canvas::height}, "quick:close"});
+        // Google TV dims the page behind its panel to 40 %.
+        kit::veil(paint, kit::alpha::quickVeil.a * open);
+        const Rect panel = {kPanelX, kPanelY, kPanelW, kPanelH};
+        for (Rect around : {Rect{0, 0, kPanelX, kit::canvas::height},
+                            Rect{panel.x + panel.w, 0, kit::canvas::width - panel.x - panel.w, kit::canvas::height},
+                            Rect{panel.x, 0, panel.w, panel.y},
+                            Rect{panel.x, panel.y + panel.h, panel.w, kit::canvas::height - panel.y - panel.h}})
+            scene.hits.push_back({around, "quick:close"});
 
         scene.pushTransform(Transform::translate(slide, 0));
-        Node &panel = scene.shape({kPanelX, 0, kPanelW, kit::canvas::height}, kit::color::surface1);
-        panel.corners = {kit::radius::xl, 0, 0, kit::radius::xl};
-        panel.ring = {1, 0, kit::alpha::outline};
-        scene.hits.push_back({{kPanelX, 0, kPanelW, kit::canvas::height}, "quick:panel"});
-        paint.glyphs.text(scene, {kPanelX + kPad, 56, kRowW, kit::type::headline.line}, title(),
-                          kit::type::headline, kit::color::onSurface);
-
-        scene.pushClip({kPanelX + slide, kViewTop, kPanelW, kViewBottom - kViewTop});
-        float scroll = static_cast<float>(motion.value("quick:sy"));
-        for (size_t i = 0; i < rows_.size(); ++i) {
-            Rect rest = {kPanelX + kPad, kViewTop + layout::srowGap + static_cast<float>(i) * kRowPitch + scroll,
-                         kRowW, layout::srowH};
-            if (rest.y + rest.h < kViewTop - 40 || rest.y > kViewBottom + 40)
-                continue;
-            drawRow(host, paint, rows_[i], i, rest);
-        }
-        scene.popClip();
-        if (!hint().empty())
-            paint.glyphs.text(scene, {kPanelX + kPad, kit::canvas::height - 64, kRowW, kit::type::labelM.line},
-                              hint(), kit::type::labelM,
-                              readFailed_ ? kit::color::warn : kit::color::onSurface3);
+        scene.pushOpacity(open);
+        float page = static_cast<float>(motion.value("quick:bg"));
+        scene.shape(panel, mix(qcolor::quick, qcolor::quickPage, page), layout::quickR);
+        scene.hits.push_back({panel, "quick:panel"});
+        scene.pushOpacity(static_cast<float>(motion.value("quick:page")));
+        if (level_ == Level::Main)
+            drawMain(host, paint);
+        else
+            drawList(host, paint);
+        scene.popOpacity();
+        scene.popOpacity();
         scene.popTransform();
     }
     Json snapshot() const override {
@@ -441,7 +463,16 @@ class QuickScreen final : public ScreenView {
                 return profileName(person, model);
         return "";
     }
-    // The text at the right of a row.
+    std::string initial(const ScreenHost &host) const {
+        std::string name = activeProfile(host);
+        if (name.empty())
+            return "M";
+        size_t end = 1;
+        while (end < name.size() && (static_cast<unsigned char>(name[end]) & 0xc0) == 0x80)
+            ++end;
+        return name.substr(0, end);
+    }
+    // What an item says of its value: a tile's second line, the volume's and the light's number.
     std::string trail(ScreenHost &host, const Row &row) {
         if (row.kind != Row::Kind::Plain)
             return row.trail;
@@ -480,11 +511,17 @@ class QuickScreen final : public ScreenView {
             return row.raw == sleepValue(host);
         return row.on;
     }
+    size_t indexOf(const std::string &id, size_t fallback) const {
+        for (size_t i = 0; i < rows_.size(); ++i)
+            if (rows_[i].id == id)
+                return i;
+        return fallback;
+    }
     void rebuild(ScreenHost &host, bool jump) {
         std::vector<Row> rows;
         auto add = [&](Row::Kind kind, const std::string &id, const std::string &icon,
                        const std::string &title, const std::string &raw = "", bool go = false,
-                       bool dim = false, bool on = false, const std::string &trail = "") {
+                       bool dim = false, bool on = false, const std::string &trail = "") -> Row & {
             Row row;
             row.kind = kind;
             row.id = id;
@@ -496,29 +533,50 @@ class QuickScreen final : public ScreenView {
             row.on = on;
             row.trail = trail;
             rows.push_back(row);
+            return rows.back();
         };
         const Json &s = stats_;
         if (level_ == Level::Main) {
+            const float pad = layout::quickPad, top = layout::quickGridTop, pitch = layout::quickTilePitch;
+            const float right = pad + kWideW - layout::quickTileW;
+            auto place = [&](Row &row, Row::Shape shape, int line, int column, Rect rest) {
+                row.shape = shape;
+                row.line = line;
+                row.column = column;
+                row.rest = rest;
+            };
+            auto tile = [&](Row &row, int line, int column) {
+                place(row, Row::Shape::Tile, line, column,
+                      {column ? right : pad, top + (line - 1) * pitch, layout::quickTileW, layout::quickTileH});
+            };
             bool oled = s["oled"].valid() && (s["oled"].isObject() || s["oled"].boolean());
-            add(Row::Kind::Slider, "volume", "volume", msg("tv.quick.volume", "Volume"));
-            add(Row::Kind::Plain, "picture", "picture", msg("tv.quick.pictureMode", "Picture mode"), "", true);
-            add(Row::Kind::Slider, "light", "light",
-                oled ? msg("tv.quick.oledLight", "OLED light") : msg("tv.quick.backlight", "Backlight"));
-            add(Row::Kind::Plain, "sound", "speaker", msg("tv.quick.sound", "Sound output"), "", true);
-            add(Row::Kind::Plain, "input", "hdmi", msg("tv.quick.input", "Input"), "", true);
-            add(Row::Kind::Plain, "sleep", "clock", msg("tv.quick.sleep", "Sleep timer"), "", true);
-            add(Row::Kind::Plain, "saver", "monitor", msg("tv.quick.screensaver", "Screensaver"));
-            add(Row::Kind::Plain, "off", "power", msg("tv.quick.screenOff", "Screen off"));
-            add(Row::Kind::Plain, "recents", "apps", msg("tv.quick.recents", "Recent apps"), "", true);
-            add(Row::Kind::Plain, "profile", "profile", msg("tv.quick.profile", "Profile"), "", true);
-            add(Row::Kind::Plain, "layout", "gear", msg("tv.quick.settings", "Home settings"), "", true);
+            place(add(Row::Kind::Plain, "layout", "settings", msg("tv.quick.settings", "Home settings"), "", true),
+                  Row::Shape::Button, 0, 0,
+                  {layout::quickGearX, layout::quickButtonTop, layout::quickButton, layout::quickButton});
+            place(add(Row::Kind::Plain, "profile", "profile", msg("tv.quick.profile", "Profile"), "", true),
+                  Row::Shape::Button, 0, 1,
+                  {layout::quickAvatarX, layout::quickButtonTop, layout::quickButton, layout::quickButton});
+            place(add(Row::Kind::Slider, "volume", "volume", msg("tv.quick.volume", "Volume")), Row::Shape::Wide, 1,
+                  -1, {pad, top, kWideW, layout::quickTileH});
+            place(add(Row::Kind::Slider, "light", "light",
+                      oled ? msg("tv.quick.oledLight", "OLED light") : msg("tv.quick.backlight", "Backlight")),
+                  Row::Shape::Wide, 2, -1, {pad, top + pitch, kWideW, layout::quickTileH});
+            tile(add(Row::Kind::Plain, "picture", "picture", msg("tv.quick.pictureMode", "Picture mode"), "", true), 3, 0);
+            tile(add(Row::Kind::Plain, "sound", "tv", msg("tv.quick.sound", "Sound output"), "", true), 3, 1);
+            tile(add(Row::Kind::Plain, "input", "hdmi", msg("tv.quick.input", "Input"), "", true), 4, 0);
+            tile(add(Row::Kind::Plain, "sleep", "bedtime", msg("tv.quick.sleep", "Sleep timer"), "", true), 4, 1);
+            tile(add(Row::Kind::Plain, "saver", "", msg("tv.quick.screensaver", "Screensaver")), 5, 0);
+            tile(add(Row::Kind::Plain, "off", "power", msg("tv.quick.screenOff", "Screen off")), 5, 1);
+            place(add(Row::Kind::Plain, "recents", "apps", msg("tv.quick.recents", "Recent apps"), "", true),
+                  Row::Shape::Card, 6, -1,
+                  {pad, top + 4 * pitch + layout::quickTileH + layout::quickCardsGap, kWideW, layout::quickCardH});
         } else if (level_ == Level::Picture) {
             for (const auto &mode : s["picture"]["modes"].items())
                 add(Row::Kind::Choice, mode["value"].string(), "picture", mode["label"].string(),
                     mode["value"].string());
         } else if (level_ == Level::Sound) {
             for (const auto &output : s["sound"]["outputs"].items())
-                add(Row::Kind::Choice, output["id"].string(), "speaker", output["name"].string(),
+                add(Row::Kind::Choice, output["id"].string(), "tv", output["name"].string(),
                     output["id"].string());
         } else if (level_ == Level::Input) {
             for (const Card &card : inputs(host))
@@ -527,7 +585,7 @@ class QuickScreen final : public ScreenView {
                     card.data["unused"].boolean() ? msg("tv.quick.nothingConnected", "Nothing connected") : "");
         } else if (level_ == Level::Sleep) {
             for (const char *value : kSleep)
-                add(Row::Kind::Choice, value, "timer", sleepLabel(value), value);
+                add(Row::Kind::Choice, value, "bedtime", sleepLabel(value), value);
         } else {
             static const std::vector<std::pair<std::string, std::string>> titles = {
                 {"clockFormat", msg("tv.quick.clock24", "24-hour clock")},
@@ -543,6 +601,13 @@ class QuickScreen final : public ScreenView {
         }
         if (rows.empty())
             add(Row::Kind::Plain, "", "", msg("tv.quick.nothing", "Nothing to choose from"), "", false, true);
+        // A list's items stand one under another, as Google TV's sleep timer lists its times.
+        if (level_ != Level::Main)
+            for (size_t i = 0; i < rows.size(); ++i) {
+                rows[i].line = static_cast<int>(i);
+                rows[i].rest = {layout::quickPad, layout::quickItemsTop + static_cast<float>(i) * layout::quickItemPitch,
+                                kWideW, layout::quickItemH};
+            }
         rows_ = rows;
         focus_ = std::min(focus_, rows_.size() - 1);
         // Switches slide to where they are shown.
@@ -564,24 +629,6 @@ class QuickScreen final : public ScreenView {
             return true;
         return (row.id == "volume" && !volumeKnown()) || (row.id == "light" && !lightKnown());
     }
-    std::string hint() const {
-        if (closing_)
-            return "";
-        if (readFailed_)
-            return msg("tv.quick.noAnswer", "The TV did not answer. Trying again…");
-        if (focus_ >= rows_.size())
-            return "";
-        const Row &row = rows_[focus_];
-        if (level_ == Level::Main && row.id == "volume")
-            return msg("tv.quick.volumeHint", "Left and Right adjust. OK mutes.");
-        if (level_ == Level::Main && row.id == "light")
-            return msg("tv.quick.lightHint", "Left and Right adjust.");
-        if (level_ == Level::Layout)
-            return msg("tv.quick.switchHint", "OK switches. Left or Back returns.");
-        if (level_ != Level::Main)
-            return msg("tv.quick.levelHint", "OK chooses. Left or Back returns.");
-        return "";
-    }
 
     // ---- Motion ------------------------------------------------------------------------------
 
@@ -593,101 +640,271 @@ class QuickScreen final : public ScreenView {
             if (jump)
                 motion.set(id, to);
             else
-                motion.tween(id, to, kit::motion::ms::focus, easing(kit::motion::ease::out));
+                motion.tween(id, to, kit::motion::ms::quickFocus, easing(kit::motion::ease::quickFocus));
         }
-        const float visible = std::floor((kViewBottom - kViewTop) / kRowPitch);
-        float room = std::max(0.0f, static_cast<float>(rows_.size()) * kRowPitch + 2 * layout::srowGap -
-                                        (kViewBottom - kViewTop));
-        double target = -clamp((static_cast<double>(focus_) - (visible - 3)) * kRowPitch, 0, room);
+        if (focus_ < rows_.size() && rows_[focus_].column >= 0)
+            column_ = rows_[focus_].column;
+        // A list longer than the panel scrolls to keep the focused item two from the foot.
+        double target = 0;
+        if (level_ != Level::Main && !rows_.empty()) {
+            const float pitch = layout::quickItemPitch, room = kPanelH - layout::quickItemsTop;
+            const float visible = std::floor(room / pitch);
+            float overflow = std::max(0.0f, static_cast<float>(rows_.size()) * pitch + layout::quickPad - room);
+            target = -clamp((static_cast<double>(focus_) - (visible - 2)) * pitch, 0, overflow);
+        }
         if (jump)
             motion.set("quick:sy", target);
         else
             motion.spring("quick:sy", target, kit::springParams(kit::motion::spring::list));
         host.invalidate();
     }
-    void playEntrance(ScreenHost &host) {
-        Timeline timeline;
-        Tween rise(1, 0, kit::motion::ms::base, easing(kit::motion::ease::out));
-        for (size_t i = 0; i < rows_.size() && i < 14; ++i) {
-            std::string id = "quick:e:" + std::to_string(i);
-            host.motion().set(id, 1);
-            timeline.add(id, rise.delayedBy(kit::motion::stagger::pageItem * static_cast<double>(i) + 60));
-        }
-        timeline.play(host.motion());
+    // A new page: the panel's colour turns to the lists' and the items come in over it.
+    void playPage(ScreenHost &host) {
+        host.motion().set("quick:page", 0);
+        host.motion().tween("quick:page", 1, kit::motion::ms::quickFocus, easing(kit::motion::ease::quickFocus));
+        host.motion().tween("quick:bg", level_ == Level::Main ? 0 : 1, kit::motion::ms::quickFocus,
+                            easing(kit::motion::ease::quickFocus));
     }
-    void drawRow(ScreenHost &host, kit::Paint paint, const Row &row, size_t index, Rect rest) {
-        const Motion &motion = host.motion();
+
+    // ---- Drawing the pages -------------------------------------------------------------------
+
+    struct Look {
+        Rect rest, at; // in the panel, and on the canvas
+        float focus, scale;
+    };
+    Look lookOf(const Motion &motion, size_t index, float scroll = 0) const {
+        Look look;
+        look.rest = rows_[index].rest;
+        look.rest.y += scroll;
+        look.focus = kit::focus::clamp01(static_cast<float>(motion.value("quick:f:" + std::to_string(index))));
+        float target = rows_[index].shape == Row::Shape::Button ? kit::motion::scale::quickButton
+                                                                 : kit::motion::scale::quickTile;
+        look.scale = 1 + (target - 1) * look.focus;
+        look.at = onCanvas(look.rest);
+        return look;
+    }
+    // A focusable surface: its rest tint, Google TV's light blue as it takes the focus, the lift of
+    // its 4 dp elevation, and the hit that clicks it.
+    void surface(Scene &scene, const Look &look, size_t index, float radius) {
+        scene.shape(look.at, kit::alpha::quickTile, radius);
+        if (look.focus > 0) {
+            Node &lit = scene.shape(look.at, kit::focus::withAlpha(qcolor::quickFocus, look.focus), radius);
+            lit.shadow = {0, 4, 16, 0, {0, 0, 0, .32f * look.focus}};
+        }
+        scene.hits.push_back({kit::focus::scaledAbout(look.at, look.scale), "quick:row:" + std::to_string(index)});
+    }
+    void drawMain(ScreenHost &host, kit::Paint paint) {
         Scene &scene = paint.scene;
-        std::string number = std::to_string(index);
-        double hidden = index < 14 ? motion.value("quick:e:" + number) : 0;
-        bool dim = rowDim(row);
-        bool waiting = !loaded_ && readsStats(row.id) && level_ == Level::Main;
-        kit::SettingsRow item;
-        item.rest = rest;
-        item.id = "quick:row:" + number;
-        item.icon = row.icon;
-        item.title = row.title;
-        item.focus = static_cast<float>(motion.value("quick:f:" + number));
-        item.enter = {static_cast<float>(1 - hidden) * (dim ? .6f : 1.0f), static_cast<float>(20 * hidden)};
-        if (row.kind == Row::Kind::Switch) {
-            item.toggle = true;
-            item.on = static_cast<float>(motion.value("quick:t:" + number));
-        } else if (row.kind == Row::Kind::Slider) {
-            if (!waiting)
-                item.value = row.id == "volume" ? volumeText() : lightKnown() ? std::to_string(static_cast<int>(shownLight_)) : "—";
-        } else if (!waiting) {
-            item.value = trail(host, row);
-            // The rows Left and Right step through the values of show a chevron on each side.
-            item.stepper = level_ == Level::Main && steps(row.id) && loaded_ && !dim;
+        const ViewState &state = host.view();
+        paint.glyphs.text(scene, onCanvas({layout::quickMarkX - 6, layout::quickDateTop, 300, kit::type::quickDate.line}),
+                          dateText(state), kit::type::quickDate, kit::alpha::quickDate);
+        paint.glyphs.text(scene, onCanvas({layout::quickMarkX - 6, layout::quickClockTop, 300, kit::type::quickClock.line}),
+                          clockText(state), kit::type::quickClock, kit::alpha::quickInk);
+        for (size_t i = 0; i < rows_.size(); ++i) {
+            switch (rows_[i].shape) {
+            case Row::Shape::Button:
+                drawButton(host, paint, i);
+                break;
+            case Row::Shape::Wide:
+                drawSlider(host, paint, i);
+                break;
+            case Row::Shape::Card:
+                drawCard(host, paint, i);
+                break;
+            default:
+                drawTile(host, paint, i);
+            }
         }
-        kit::settingsRow(paint, item);
-        float right = rest.x + rest.w - layout::srowPadRight;
-        // A value still being read is a turning spinner where the number goes.
-        if (waiting) {
-            scene.pushOpacity(item.enter.alpha);
-            scene.pushTransform(Transform::translate(0, item.enter.dy));
-            kit::focus::Look look = kit::focus::lookAt(rest, kit::motion::scale::row, item.focus, kit::focus::leftCentre);
-            scene.pushTransform(kit::focus::transformAt(rest, look.scale, kit::focus::leftCentre));
-            kit::spinner(paint, {right - 28, rest.y + (rest.h - 28) / 2, 28, 28}, host.nowMs(),
-                         kit::focus::inkAt(kit::color::onSurface2, kit::color::onFocus, item.focus));
-            scene.popTransform();
-            scene.popTransform();
-            scene.popOpacity();
-            return;
-        }
-        if (row.kind != Row::Kind::Slider && row.kind != Row::Kind::Choice)
-            return;
-        // The mark or the bar scales and fades with the row it sits on.
-        kit::focus::Look look = kit::focus::lookAt(rest, kit::motion::scale::row, item.focus,
-                                                   kit::focus::leftCentre);
-        scene.pushOpacity(item.enter.alpha);
-        scene.pushTransform(Transform::translate(0, item.enter.dy));
-        scene.pushTransform(kit::focus::transformAt(rest, look.scale, kit::focus::leftCentre));
-        if (row.kind == Row::Kind::Choice) {
-            kit::radio(paint, {right - 28, rest.y + (rest.h - 28) / 2, 28, 28}, rowOn(host, row) ? 1.0f : 0.0f,
-                       item.focus);
+        // Google TV signs its panel at the foot; a read that failed says so there instead.
+        const Rect foot = onCanvas({layout::quickMarkX, layout::quickMarkTop, kWideW - 24, kit::type::quickMark.line});
+        if (readFailed_)
+            paint.glyphs.text(scene, foot, msg("tv.quick.noAnswer", "The TV did not answer. Trying again…"),
+                              kit::type::quickCardSub, qcolor::warn);
+        else
+            paint.glyphs.text(scene, foot, "Native Tv", kit::type::quickMark, kit::alpha::quickInk);
+    }
+    void drawButton(ScreenHost &host, kit::Paint paint, size_t index) {
+        Scene &scene = paint.scene;
+        const Row &row = rows_[index];
+        Look look = lookOf(host.motion(), index);
+        Transform scale = kit::focus::transformAt(look.at, look.scale);
+        scene.pushTransform(scale);
+        const float round = look.at.h / 2;
+        if (row.id == "profile") {
+            // The profile's face inside a ring that lights as it takes the focus.
+            if (look.focus > 0)
+                scene.shape(look.at, kit::focus::withAlpha(qcolor::quickLabel, .6f * look.focus), round);
+            Rect face = {look.at.x + 4, look.at.y + 4, look.at.w - 8, look.at.h - 8};
+            scene.shape(face, qcolor::quickWell, face.h / 2).gradient = kit::avatarGradient();
+            paint.glyphs.text(scene, {face.x, face.y + (face.h - kit::type::quickInitial.line) / 2, face.w,
+                                      kit::type::quickInitial.line},
+                              initial(host), kit::type::quickInitial, qcolor::onSurface, Node::Align::Center);
         } else {
-            bool isVolume = row.id == "volume";
+            scene.shape(look.at, kit::alpha::quickTile, round);
+            if (look.focus > 0)
+                scene.shape(look.at, kit::focus::withAlpha(qcolor::quickFocus, look.focus), round);
+            paint.glyphs.icon(scene, {look.at.x + 10, look.at.y + 10, look.at.w - 20, look.at.h - 20}, row.icon,
+                              mix(kit::alpha::quickInk, qcolor::quickIconOnFocus, look.focus));
+        }
+        scene.popTransform();
+        scene.hits.push_back({kit::focus::scaledAbout(look.at, look.scale), "quick:row:" + std::to_string(index)});
+        // Under the focused button, what it opens: "Home settings", or the profile's name.
+        if (look.focus > .004f) {
+            const float width = 220, centre = look.at.x + look.at.w / 2;
+            std::string label = row.id == "profile" ? trail(host, row) : row.title;
+            if (label.empty())
+                label = row.title;
+            paint.glyphs.text(scene, onCanvas({centre - kPanelX - width / 2, layout::quickButtonLabelTop, width,
+                                               kit::type::quickLabel.line}),
+                              label, kit::type::quickLabel, kit::focus::withAlpha(qcolor::quickLabel, look.focus),
+                              Node::Align::Center);
+        }
+    }
+    // The second line, or the spinner while it is read.
+    bool waiting(const Row &row) const {
+        return !loaded_ && readsStats(row.id) && level_ == Level::Main;
+    }
+    void drawTile(ScreenHost &host, kit::Paint paint, size_t index) {
+        Scene &scene = paint.scene;
+        const Row &row = rows_[index];
+        Look look = lookOf(host.motion(), index);
+        Transform scale = kit::focus::transformAt(look.at, look.scale);
+        scene.pushTransform(scale);
+        scene.pushOpacity(rowDim(row) && !waiting(row) ? .6f : 1);
+        surface(scene, look, index, layout::quickTileR);
+        const Color ink = mix(kit::alpha::quickInk, qcolor::quickOnFocus, look.focus);
+        float textX = layout::quickTileTextX;
+        if (row.icon.empty()) {
+            textX = layout::quickTileIconX + 2; // Google TV's screensaver tile has no icon
+        } else {
+            const float inset = (layout::quickTileIcon - 32) / 2;
+            paint.glyphs.icon(scene,
+                              {look.at.x + layout::quickTileIconX + inset, look.at.y + (look.at.h - 32) / 2, 32, 32},
+                              row.icon, mix(kit::alpha::quickInk, qcolor::quickIconOnFocus, look.focus));
+        }
+        const float width = look.at.w - textX - layout::quickTileIconX;
+        std::string second = waiting(row) ? "" : trail(host, row);
+        if (row.go && !second.empty()) {
+            paint.glyphs.text(scene, {look.at.x + textX, look.at.y + 22, width, kit::type::quickTile.line}, row.title,
+                              kit::type::quickTile, ink);
+            paint.glyphs.text(scene, {look.at.x + textX, look.at.y + 60, width, kit::type::quickTileSub.line}, second,
+                              kit::type::quickTileSub, kit::focus::withAlpha(ink, .6f));
+        } else {
+            paint.glyphs.text(scene,
+                              {look.at.x + textX, look.at.y + (look.at.h - kit::type::quickTile.line) / 2,
+                               width - (waiting(row) ? 36 : 0), kit::type::quickTile.line},
+                              row.title, kit::type::quickTile, ink);
+        }
+        if (waiting(row))
+            kit::spinner(paint, {look.at.x + look.at.w - 20 - 28, look.at.y + (look.at.h - 28) / 2, 28, 28},
+                         host.nowMs(), ink);
+        scene.popOpacity();
+        scene.popTransform();
+    }
+    void drawSlider(ScreenHost &host, kit::Paint paint, size_t index) {
+        Scene &scene = paint.scene;
+        const Row &row = rows_[index];
+        Look look = lookOf(host.motion(), index);
+        Transform scale = kit::focus::transformAt(look.at, look.scale);
+        scene.pushTransform(scale);
+        scene.pushOpacity(rowDim(row) && !waiting(row) ? .6f : 1);
+        surface(scene, look, index, layout::quickTileR);
+        const Color ink = mix(kit::alpha::quickInk, qcolor::quickOnFocus, look.focus);
+        const float inset = (layout::quickTileIcon - 32) / 2;
+        paint.glyphs.icon(scene, {look.at.x + layout::quickTileIconX + inset, look.at.y + (look.at.h - 32) / 2, 32, 32},
+                          row.icon, mix(kit::alpha::quickInk, qcolor::quickIconOnFocus, look.focus));
+        const float middle = look.at.y + look.at.h / 2, right = look.at.x + look.at.w - layout::quickTileIconX;
+        paint.glyphs.text(scene, {look.at.x + layout::quickTileTextX, middle - kit::type::quickTile.line / 2, 200,
+                                  kit::type::quickTile.line},
+                          row.title, kit::type::quickTile, ink);
+        if (waiting(row)) {
+            kit::spinner(paint, {right - 28, middle - 14, 28, 28}, host.nowMs(), ink);
+        } else {
+            const bool isVolume = row.id == "volume";
+            std::string value = isVolume ? volumeText() : lightKnown() ? std::to_string(static_cast<int>(shownLight_)) : "—";
+            const float valueW = 84;
+            paint.glyphs.text(scene, {right - valueW, middle - kit::type::quickTile.line / 2, valueW, kit::type::quickTile.line},
+                              value, kit::type::quickTile, ink, Node::Align::Right);
+            // The bar follows the value with a short glide, so each key repeat moves it a little.
             double level = isVolume ? (volumeKnown() ? shownVolume_ : 0) : (lightKnown() ? shownLight_ : 0);
             std::string barId = std::string("quick:bar:") + row.id;
-            // The bar follows the value with a short glide, so each key repeat moves it a little.
             host.motion().tween(barId, clamp(level, 0, 100), 90, easing(kit::motion::ease::out));
             float amount = static_cast<float>(clamp(host.motion().value(barId), 0, 100) / 100);
             if (isVolume && shownMuted_)
                 amount = 0;
-            Rect track = {right - 84 - 16 - 160, rest.y + (rest.h - layout::barH) / 2, 160, layout::barH};
-            scene.shape(track, kit::focus::mix(kit::color::surface3, Color{0.075f, 0.067f, 0.094f, .14f}, item.focus),
-                        layout::barH / 2);
-            if (amount > 0) {
-                Node &fill = scene.shape({track.x, track.y, track.w * amount, track.h},
-                                         kit::focus::inkAt(kit::color::accent, kit::color::onAccent, item.focus));
-                float end = amount >= .999f ? layout::barH / 2 : 0;
-                fill.corners = {layout::barH / 2, end, end, layout::barH / 2};
-            }
+            const float trackH = layout::quickTrackH;
+            Rect track = {right - valueW - 16 - layout::quickTrackW, middle - trackH / 2, layout::quickTrackW, trackH};
+            scene.shape(track, mix(kit::focus::withAlpha(kit::alpha::quickInk, .3f),
+                                   kit::focus::withAlpha(qcolor::quickOnFocus, .14f), look.focus),
+                        trackH / 2);
+            if (amount > 0)
+                scene.shape({track.x, track.y, std::max(trackH, track.w * amount), track.h},
+                            mix(qcolor::quickOnWell, qcolor::quickWell, look.focus), trackH / 2);
         }
-        scene.popTransform();
-        scene.popTransform();
         scene.popOpacity();
+        scene.popTransform();
+    }
+    void drawCard(ScreenHost &host, kit::Paint paint, size_t index) {
+        Scene &scene = paint.scene;
+        const Row &row = rows_[index];
+        Look look = lookOf(host.motion(), index);
+        Transform scale = kit::focus::transformAt(look.at, look.scale);
+        scene.pushTransform(scale);
+        surface(scene, look, index, layout::quickTileR);
+        const float icon = layout::quickCardIcon;
+        Rect well = {look.at.x + layout::quickCardIconX, look.at.y + (look.at.h - icon) / 2, icon, icon};
+        scene.shape(well, mix(kit::alpha::quickTile, Color{0, 0, 0, .07f}, look.focus), icon / 2);
+        paint.glyphs.icon(scene, {well.x + 16, well.y + 16, icon - 32, icon - 32}, row.icon,
+                          mix(kit::alpha::quickInk, qcolor::quickWell, look.focus));
+        paint.glyphs.text(scene,
+                          {look.at.x + layout::quickCardTextX, look.at.y + (look.at.h - kit::type::quickCard.line) / 2,
+                           look.at.w - layout::quickCardTextX - 24, kit::type::quickCard.line},
+                          row.title, kit::type::quickCard, mix(kit::alpha::quickInk, qcolor::quickOnFocus, look.focus));
+        scene.popTransform();
+    }
+    void drawList(ScreenHost &host, kit::Paint paint) {
+        Scene &scene = paint.scene;
+        const Motion &motion = host.motion();
+        paint.glyphs.text(scene, onCanvas({0, layout::quickTitleTop, kPanelW, kit::type::quickTitle.line}), title(),
+                          kit::type::quickTitle, qcolor::quickTitle, Node::Align::Center);
+        const float scroll = static_cast<float>(motion.value("quick:sy"));
+        const Rect view = onCanvas({0, layout::quickItemsTop - 16, kPanelW, kPanelH - layout::quickItemsTop + 16});
+        scene.pushClip(view);
+        for (size_t i = 0; i < rows_.size(); ++i) {
+            const Row &row = rows_[i];
+            Look look = lookOf(motion, i, scroll);
+            if (look.at.y + look.at.h < view.y - 20 || look.at.y > view.y + view.h + 20)
+                continue;
+            Transform scale = kit::focus::transformAt(look.at, look.scale);
+            scene.pushTransform(scale);
+            scene.pushOpacity(row.dim ? .6f : 1);
+            surface(scene, look, i, layout::quickItemR);
+            const Color ink = mix(kit::alpha::quickInk, qcolor::quickOnFocus, look.focus);
+            const float textX = look.at.x + layout::quickItemTextX, textW = look.at.w - 2 * layout::quickItemTextX - 72;
+            if (!row.trail.empty()) {
+                paint.glyphs.text(scene, {textX, look.at.y + 18, textW, kit::type::quickItem.line}, row.title,
+                                  kit::type::quickItem, ink);
+                paint.glyphs.text(scene, {textX, look.at.y + 54, textW, kit::type::quickCardSub.line}, row.trail,
+                                  kit::type::quickCardSub, kit::focus::withAlpha(ink, .6f));
+            } else {
+                paint.glyphs.text(scene,
+                                  {textX, look.at.y + (look.at.h - kit::type::quickItem.line) / 2, textW,
+                                   kit::type::quickItem.line},
+                                  row.title, kit::type::quickItem, ink);
+            }
+            const float right = look.at.x + look.at.w - layout::quickItemTextX;
+            if (row.kind == Row::Kind::Switch)
+                kit::toggle(paint,
+                            {right - layout::toggleW, look.at.y + (look.at.h - layout::toggleH) / 2, layout::toggleW,
+                             layout::toggleH},
+                            static_cast<float>(motion.value("quick:t:" + std::to_string(i))), look.focus);
+            else if (row.kind == Row::Kind::Choice)
+                kit::radio(paint, {right - 32, look.at.y + (look.at.h - 32) / 2, 32, 32}, rowOn(host, row) ? 1.0f : 0.0f,
+                           look.focus);
+            scene.popOpacity();
+            scene.popTransform();
+        }
+        scene.popClip();
     }
     std::string volumeText() const {
         if (!volumeKnown())
@@ -697,36 +914,33 @@ class QuickScreen final : public ScreenView {
 
     // ---- Doing things ------------------------------------------------------------------------
 
-    void close(ScreenHost &host, const std::string &destination) {
-        if (closing_)
+    // Up and Down go a line of the grid, to the item in the column last chosen; a list goes one item.
+    void move(ScreenHost &host, int direction) {
+        if (rows_.empty())
             return;
-        closing_ = true;
-        destination_ = destination;
-        host.motion().spring("quick:x", kPanelW, kit::springParams(kSlide));
-        host.invalidate();
-    }
-    void openLevel(ScreenHost &host, Level level) {
-        level_ = level;
-        focus_ = 0;
-        rebuild(host, true);
-        // A list of choices opens on the one in force; a list of switches, on its first.
-        for (size_t i = 0; i < rows_.size(); ++i)
-            if (rows_[i].kind == Row::Kind::Choice && rowOn(host, rows_[i]))
-                focus_ = i;
-        host.motion().erasePrefix("quick:f:");
-        focusMoved(host, true);
-        playEntrance(host);
-    }
-    void toMain(ScreenHost &host) {
-        std::string opener = rowOpening(level_);
-        level_ = Level::Main;
-        rebuild(host, true);
-        for (size_t i = 0; i < rows_.size(); ++i)
-            if (rows_[i].id == opener)
-                focus_ = i;
-        host.motion().erasePrefix("quick:f:");
-        focusMoved(host, true);
-        playEntrance(host);
+        if (level_ != Level::Main) {
+            size_t next = static_cast<size_t>(clamp(static_cast<double>(focus_) + direction, 0,
+                                                    static_cast<double>(rows_.size() - 1)));
+            if (next != focus_) {
+                focus_ = next;
+                focusMoved(host, false);
+            }
+            return;
+        }
+        int lastLine = 0;
+        for (const Row &row : rows_)
+            lastLine = std::max(lastLine, row.line);
+        for (int line = rows_[focus_].line + direction; line >= 0 && line <= lastLine; line += direction) {
+            size_t chosen = rows_.size();
+            for (size_t i = 0; i < rows_.size(); ++i)
+                if (rows_[i].line == line && (rows_[i].column < 0 || rows_[i].column == column_ || chosen == rows_.size()))
+                    chosen = i;
+            if (chosen < rows_.size()) {
+                focus_ = chosen;
+                focusMoved(host, false);
+                return;
+            }
+        }
     }
     void sideways(ScreenHost &host, int direction) {
         if (focus_ >= rows_.size())
@@ -741,51 +955,42 @@ class QuickScreen final : public ScreenView {
             stepVolume(host, direction);
         else if (row.id == "light")
             stepLight(host, direction * kLightStep);
-        else if (steps(row.id))
-            stepList(host, row.id, direction);
+        else if (row.column >= 0)
+            for (size_t i = 0; i < rows_.size(); ++i)
+                if (rows_[i].line == row.line && rows_[i].column == row.column + direction) {
+                    focus_ = i;
+                    focusMoved(host, false);
+                    return;
+                }
     }
-    // Picture mode, Sound output and the Sleep timer have a list of values: OK opens it, and Left and Right
-    // go to the previous or the next one without opening it.
-    static bool steps(const std::string &id) {
-        return id == "picture" || id == "sound" || id == "sleep";
-    }
-    void stepList(ScreenHost &host, const std::string &which, int direction) {
-        if (!loaded_)
+    void close(ScreenHost &host, const std::string &destination) {
+        if (closing_)
             return;
-        std::vector<std::string> values;
-        std::string current;
-        if (which == "picture") {
-            for (const auto &mode : stats_["picture"]["modes"].items())
-                values.push_back(mode["value"].string());
-            current = pictureValue(host);
-        } else if (which == "sound") {
-            for (const auto &output : stats_["sound"]["outputs"].items())
-                values.push_back(output["id"].string());
-            current = soundValue(host);
-        } else {
-            for (const char *value : kSleep)
-                values.push_back(value);
-            current = sleepValue(host);
-        }
-        if (values.empty())
-            return;
-        const auto found = std::find(values.begin(), values.end(), current);
-        const size_t count = values.size();
-        size_t target = found == values.end() ? (direction > 0 ? 0 : count - 1)
-                        : direction > 0       ? (static_cast<size_t>(found - values.begin()) + 1) % count
-                                              : (static_cast<size_t>(found - values.begin()) + count - 1) % count;
-        const std::string &value = values[target];
-        if (which == "picture")
-            host.optimistic().set("quick.picture", Json::text(value), Json::text(stats_["picture"]["mode_raw"].string()),
-                                  controlWrite("pictureMode"));
-        else if (which == "sound")
-            host.optimistic().set("quick.sound", Json::text(value), Json::text(stats_["sound"]["output_raw"].string()),
-                                  controlWrite("soundOutput"));
-        else
-            host.optimistic().set("quick.sleep", Json::text(value), Json::text(stats_["sleepTimer"].string()),
-                                  controlWrite("sleepTimer"));
-        syncShown(host);
+        closing_ = true;
+        destination_ = destination;
+        host.motion().tween("quick:x", kPanelW, kit::motion::ms::quick, easing(kit::motion::ease::quick));
         host.invalidate();
+    }
+    void openLevel(ScreenHost &host, Level level) {
+        level_ = level;
+        focus_ = 0;
+        rebuild(host, true);
+        // A list of choices opens on the one in force; a list of switches, on its first.
+        for (size_t i = 0; i < rows_.size(); ++i)
+            if (rows_[i].kind == Row::Kind::Choice && rowOn(host, rows_[i]))
+                focus_ = i;
+        host.motion().erasePrefix("quick:f:");
+        focusMoved(host, true);
+        playPage(host);
+    }
+    void toMain(ScreenHost &host) {
+        std::string opener = rowOpening(level_);
+        level_ = Level::Main;
+        rebuild(host, true);
+        focus_ = indexOf(opener, focus_);
+        host.motion().erasePrefix("quick:f:");
+        focusMoved(host, true);
+        playPage(host);
     }
     // Held, the key repeats: each repeat changes the shown value at once and the layer sends the
     // newest target at most every 120 ms.
@@ -843,7 +1048,7 @@ class QuickScreen final : public ScreenView {
         else if (row.id == "layout")
             openLevel(host, Level::Layout);
         else if (row.id == "saver" || row.id == "off") {
-            // The TV acts; the drawer is already gone, and a refusal is said by the layer.
+            // The TV acts; the panel is already gone, and a refusal is said by the layer.
             host.optimistic().run("quick.act", controlWrite(row.id == "saver" ? "screensaver" : "screenOff"));
             close(host, returnRoute(host.cameFrom()));
         } else if (row.id == "recents")
@@ -893,6 +1098,7 @@ class QuickScreen final : public ScreenView {
     std::string nowPort_;
     std::vector<Row> rows_;
     size_t focus_ = 0;
+    int column_ = 0; // the grid's column Up and Down keep to
     bool loaded_ = false, readFailed_ = false, needsRebuild_ = false, closing_ = false, closed_ = false;
     double retryAt_ = 0;
     unsigned statsGeneration_ = 0, nowGeneration_ = 0;

@@ -97,6 +97,8 @@ struct RoundButton {
     Enter enter;
 };
 void roundButton(Paint paint, const RoundButton &button);
+// The profile's face where it has no picture: the avatar's warm-to-violet sweep.
+Gradient avatarGradient();
 
 // ---- Hero and pagination ---------------------------------------------------------------------
 
