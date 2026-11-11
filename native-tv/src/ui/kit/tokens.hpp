@@ -147,6 +147,7 @@ constexpr float heroDescH = 96;
 constexpr float heroDescW = 780;
 constexpr float heroMoreW = 1000;
 constexpr float heroLogoW = 720;
+constexpr float pageSlide = 105;
 constexpr float heroLogoH = 140;
 constexpr float heroArt = 168;
 constexpr float heroArtGap = 44;

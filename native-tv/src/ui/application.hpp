@@ -156,6 +156,7 @@ class Application : private ScreenHost {
         size_t rowsEntered = 0;      // rows whose entrance has been played (the apps lead the feed)
         size_t shown = 0;            // tab whose rows are on screen
         int pendingTab = -1;         // tab to show once the old page has left
+        int pageDirection = 1;       // +1 to a tab on the right, -1 to one on the left
         uint32_t swapAt = 0, commitAt = 0, textSwapAt = 0, wantSince = 0, lastKeyAt = 0, beatAt = 0,
                  waitFrom = 0;
         bool idle = false /* dimmed: any screen, see idleUpdate() */, heroWaiting = false, textPending = false, tabPending = false,

@@ -379,17 +379,22 @@ void drawHome(kit::Paint paint, const Frame &frame) {
     wallpaper(scene, home);
     float wall = static_cast<float>(motion.value("wall"));
     kit::ambientWall(paint, 1 - wall, home.art.wallTint);
+    // A tab change slides the page's content sideways; the art behind it only fades.
+    const float slide = static_cast<float>(motion.value("pgs"));
     if (apps) {
         kit::Hero none = heroOf(frame);
         none.wallAlpha = wall;
         kit::heroWall(paint, none);
+        scene.pushTransform(Transform::translate(slide, 0));
         if (home.grid)
             grid(paint, frame);
         else
             appRows(paint, frame);
+        scene.popTransform();
     } else {
         kit::Hero hero = heroOf(frame);
         kit::heroWall(paint, hero);
+        scene.pushTransform(Transform::translate(slide, 0));
         kit::heroText(paint, hero);
         if (home.spotlight.size() > 1) {
             kit::Pagination dots;
@@ -405,6 +410,7 @@ void drawHome(kit::Paint paint, const Frame &frame) {
             kit::pagination(paint, dots);
         }
         rows(paint, frame);
+        scene.popTransform();
         if (home.rows.empty())
             paint.glyphs.text(scene, {kit::canvas::safeX, 800, 1600, kit::type::body.line},
                               state.catalogue.valid() ? "No items to show. Open Settings to arrange Home."

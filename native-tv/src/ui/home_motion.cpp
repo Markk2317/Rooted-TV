@@ -233,7 +233,7 @@ void Application::homeStart() {
         flow_.beatAt = now_ + kBeatMs;
     for (const char *prefix :
          {"f:", "rx", "rd", "rg", "rn", "rs", "bd", "he", "hb", "ht", "hd", "hu", "ba", "E", "ha", "hx", "hv", "dot",
-          "pgx", "dim", "gy", "sy", "lift"})
+          "pgx", "pgs", "dim", "gy", "sy", "lift"})
         motion_.erasePrefix(prefix);
     home.art = HeroArt();
     home.hero = Card();
@@ -625,6 +625,9 @@ void Application::homeSelectTab(size_t tab) {
                    homeRows("apps", state_.catalogue, state_.discover, state_.guide),
                    state_.catalogue["layout"]["sort"]["app"].string() != "kind", true, now_);
     motion_.tween("pgx", 1, ms::pageOut, easing(ease::out));
+    // Google TV's tab change: the page slides away from the tab chosen as it fades.
+    flow_.pageDirection = tab > flow_.shown ? 1 : -1;
+    motion_.tween("pgs", -flow_.pageDirection * kit::layout::pageSlide, ms::pageOut, easing(ease::out));
     motion_.tween("wall", home.tabs[tab].key == "home" ? 1 : 0, ms::page, easing(ease::out));
     dirty_ = true;
 }
@@ -646,12 +649,18 @@ void Application::homeUpdate() {
         flow_.heroUntouched = home.tabs[home.tab].key == "home";
         home.hero = Card();
         home.art.shownId.clear();
+        // The lines go with the page: a tab with nothing to focus (Live without channels) would
+        // otherwise keep the banner's.
+        home.art.text = HeroText();
         flow_.wantId.clear();
         flow_.heroWaiting = false;
         for (const char *prefix : {"f:", "rx", "rd", "E"})
             motion_.erasePrefix(prefix);
         for (const char *name : {"gy", "sy", "pgx"})
             motion_.set(name, 0);
+        // and the new one comes in from the other side.
+        motion_.set("pgs", flow_.pageDirection * kit::layout::pageSlide);
+        motion_.tween("pgs", 0, ms::page, easing(ease::decelerate));
         flow_.entered = flow_.waiting = false;
         flow_.focusId.clear();
         rebuildHome();
