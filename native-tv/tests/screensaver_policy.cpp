@@ -86,8 +86,9 @@ int main() {
         check(list["writable"].boolean(), "writable follows allowControl");
         check(list["external"]["active"].boolean() && !list["external"]["hook"].boolean(),
               "external detection");
-        check(list["modes"].size() == 18, "eighteen entries in dashboard order");
+        check(list["modes"].size() == 19, "nineteen entries in dashboard order");
         check(!modeById(list, "photos")["id"].string().empty(), "Your photos listed");
+        check(!modeById(list, "ambient")["id"].string().empty(), "Google TV's ambient mode listed");
         check(list["modes"][0]["id"].string() == "stock", "stock first");
         marked.markerMode = "bogus";
         marked.markerLevel = "x";

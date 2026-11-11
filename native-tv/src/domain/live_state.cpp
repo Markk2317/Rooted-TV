@@ -76,7 +76,7 @@ Json mediaValue(const std::string &state, const Json &playerType, bool fullScree
 Json mapMedia(const Json &response) {
     const Json acbs = response["acbs"];
     if (acbs.isArray()) {
-        const Json pipe = acbs.size() ? acbs[0] : Json();
+        const Json pipe = mainPipeline(acbs);
         const Json playState = pipe["playStateNow"];
         if (truthy(playState)) {
             return mediaValue(scalarString(playState), pipe["playerType"],
@@ -210,6 +210,13 @@ Json Cache::snapshot() const {
         result.set(group.first, values);
     }
     return result;
+}
+
+Json mainPipeline(const Json &acbs) {
+    for (const Json &pipe : acbs.items())
+        if (pipe.isObject() && (!pipe["isFullScreen"].isBoolean() || pipe["isFullScreen"].boolean()))
+            return pipe;
+    return acbs.isArray() && acbs.size() ? acbs[0] : Json();
 }
 
 Json mapSubscription(const std::string &group, const Json &response,

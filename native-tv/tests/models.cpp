@@ -142,6 +142,11 @@ int main() {
               "The services' rows follow the top picks in the apps' order, without a hidden app's");
         check(rows[2].title == "Popular on Prime Video" && rows[3].title == "Popular on Netflix",
               "A service's row is named after it");
+        streamingFeed.set("watchedServices", Json::parse(R"(["netflix","disney"])"));
+        auto watchedRows = homeRows("home", streamingCatalogue, streamingFeed, Json());
+        check(watchedRows.size() == 5 && watchedRows[2].key == "on:netflix" &&
+                  watchedRows[3].key == "on:prime",
+              "The service the profile watches most leads the services' rows");
         Json personalFeed = Json::parse(
             R"({"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","poster":"/p.jpg"}]},{"key":"movies","items":[{"id":2,"type":"movie","title":"Two","poster":"/m.jpg"}]},{"key":"liked","title":"Because you liked One","items":[{"id":3,"type":"tv","title":"Three","poster":"/l.jpg"}]},{"key":"watchlist","items":[{"id":4,"type":"movie","title":"Four","poster":"/w.jpg"}]}]})");
         auto personal = homeRows("home", catalogue, personalFeed, Json());
@@ -163,6 +168,19 @@ int main() {
                   resume.command.body["service"].string() == "prime" &&
                   resume.data["progress"].number() == 0.4,
               "OK on a title being watched goes back into its app, and the card knows how far");
+        Json playFeed = Json::parse(
+            R"({"rows":[{"key":"continue","items":[{"kind":"app","id":"netflix","appId":"netflix","service":"netflix","title":"Netflix","playedMs":3780000,"endedAt":5,"frame":"netflix@5"},{"kind":"app","id":"amazon.global","appId":"amazon.global","service":"prime","title":"Prime Video","playedMs":2820000,"endedAt":4}]}]})");
+        auto plays = homeRows("home", catalogue, playFeed, Json());
+        const Card &played = plays[1].cards[0];
+        check(plays[1].key == "continue" && played.kind == "continue" &&
+                  played.title == "Netflix" && played.subtitle == "Watched for 1 h 3 min" &&
+                  played.image == "frame:netflix@5" && played.backdrop == played.image &&
+                  played.command.body["kind"].string() == "app" &&
+                  played.command.body["id"].string() == "netflix",
+              "A play without a title is its app's card: its last frame, and OK opens the app");
+        check(plays[1].cards[1].image.empty() &&
+                  plays[1].cards[1].subtitle == "Watched for 47 min",
+              "A play with no frame has no picture");
         Json withSubscriptions = Json::parse(
             R"({"apps":[{"id":"youtube.leanback.v4","title":"YouTube"},{"id":"netflix","title":"Netflix"}],"devices":[],"channels":[],"order":{"app":["youtube.leanback.v4","netflix"]},"layout":{"rows":["app"],"hidden":{}},"sources":{"channels":0}})");
         Json subscriptionsFeed = Json::parse(

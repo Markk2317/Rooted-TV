@@ -182,10 +182,11 @@ class HttpFrontDoor {
     // The app now in front ("" with the screen off), for Continue watching, and to close the TV app
     // behind an app that needs its memory (webOS 3.4, see closeClientBehind).
     void foregroundChanged(const std::string &appId);
-    // Playback in the app in front changed ("playing", "paused", "idle"...): with
-    // `continueFromScreen` on, a title played in a streaming app's own player is read off the screen
-    // for Continue watching (service::screen_title).
-    void mediaChanged(const std::string &state);
+    // LG's player changed (the media snapshot: "state" and "fullScreen"): Continue watching counts
+    // the time a picture plays full screen, a streaming app's play has its frame captured for its
+    // card, and with `continueFromScreen` on, the title it played is read off the screen
+    // (service::screen_title).
+    void mediaChanged(const Json &media);
     // Whether GitHub has a newer release: the Server tab's Check button, and
     // the opt-in daily check (checkReleaseIfDue, run hourly).
     void setReleaseChecker(service::ReleaseChecker *checker) { releaseChecker_ = checker; }
@@ -349,6 +350,7 @@ class HttpFrontDoor {
     void ensureHomePictureTracking() const;
     void sendHomeContent(HttpExchange &exchange, const std::string &kind) const;
     void sendHomeTrailer(HttpExchange &exchange) const;
+    void sendHomeFrame(HttpExchange &exchange) const;
     void sendHomeDiscover(HttpExchange &exchange) const;
     void sendHomeImage(HttpExchange &exchange) const;
     void sendHomeWallpaper(HttpExchange &exchange) const;
@@ -638,6 +640,18 @@ class HttpFrontDoor {
     void readTitleOffScreen(const std::string &appId, const std::string &service, int64_t playedMs,
                             unsigned long long token);
     void endScreenSession(int64_t nowMs);
+    // A streaming app's play has a frame captured for its card on Continue watching, while a
+    // picture plays: kept in /tmp, and under home-frames/ once the play counts (keepPlayFrame).
+    struct PlayFrames {
+        std::string appId, service;
+        bool playing = false;
+        unsigned long long token = 0;
+    };
+    std::mutex framesMutex_;
+    PlayFrames frames_;
+    void followPlayFrames(bool playing);
+    void capturePlayFrame(unsigned long long token);
+    void keepPlayFrame(const Json &ended) const;
     // 1 where logo dimming is the server's own (an OLED whose picture settings lack
     // logoLuminanceAdjust), 0 where it is not, -1 until known.
     mutable std::atomic<int> logoDimmingInSoftware_{-1};

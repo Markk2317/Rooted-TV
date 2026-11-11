@@ -14,10 +14,11 @@ namespace nativetv {
 namespace service {
 
 // Google TV's Top picks for you, chosen by Gemini with the owner's own key: what the profile has
-// watched from Home, liked and put on its watchlist goes to Gemini with the titles Home has on
-// offer (the week's trending ones and the popular ones on the TV's services), and Gemini orders up
-// to 12 of them for that profile, each with why ("Because you watched The Dark Knight"). Only
-// titles, years and kinds are sent. The answer is kept in `home-picks.json`, per profile, for a
+// watched from Home, liked and put on its watchlist, and how long it played each streaming
+// service's app lately, goes to Gemini with the titles Home has on offer (the week's trending ones
+// and the popular ones on the TV's services), and Gemini orders up to 12 of them for that profile,
+// each with why ("Because you watched The Dark Knight"). Only titles, years, kinds and services'
+// times are sent. The answer is kept in `home-picks.json`, per profile, for a
 // day or until the profile's titles change; asking runs on a worker, so Home never waits for it.
 class HomePicks {
   public:
@@ -33,20 +34,24 @@ class HomePicks {
     // The picks kept for `profile`: [{"key": "movie:155", "because"}], best first, or an empty
     // array. When there are none yet, or they are a day old or were made from other titles, Gemini
     // is asked again in the background. `history`: the profile's titles, [{"title", "type",
-    // "year", "why": "watched" | "liked" | "watchlist"}]; `candidates`: the feed's items.
+    // "year", "why": "watched" | "liked" | "watchlist"}]; `services`: the time it played each
+    // service's app, most first ([{"service", "playedMs"}], HomeWatching::services);
+    // `candidates`: the feed's items.
     Json picks(const std::string &key, const std::string &model, const std::string &profile,
-               const Json &history, const Json &candidates, const std::string &region);
+               const Json &history, const Json &services, const Json &candidates,
+               const std::string &region);
     // Blocks until a running request has answered (tests).
     void wait();
 
     // The request Gemini is sent, and its answer read back to picks that are in `candidates`.
-    static std::string prompt(const Json &history, const Json &candidates, const std::string &region);
+    static std::string prompt(const Json &history, const Json &services, const Json &candidates,
+                              const std::string &region);
     static Json parse(const std::string &answer, const Json &candidates);
     static std::string keyOf(const Json &item);
 
   private:
     void ask(std::string key, std::string model, std::string profile, std::string inputs,
-             Json history, Json candidates, std::string region);
+             Json history, Json services, Json candidates, std::string region);
     Json load() const;
     void save(const Json &document) const;
 

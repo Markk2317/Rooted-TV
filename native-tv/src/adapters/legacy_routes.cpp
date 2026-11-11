@@ -30,6 +30,16 @@ std::string legacyAssetRoute(const std::string &asset) {
         return "/api/home/recents/image?id=" + encode(asset.substr(split + 1)) +
                "&v=" + encode(asset.substr(7, split - 7));
     }
+    // "frame:<service>@<version>": the last frame of the profile's last play in the service's app.
+    if (asset.compare(0, 6, "frame:") == 0) {
+        size_t version = asset.find('@', 6);
+        std::string route = "/api/home/frame?service=" +
+                            encode(asset.substr(6, version == std::string::npos ? std::string::npos
+                                                                                : version - 6));
+        if (version != std::string::npos)
+            route += "&v=" + encode(asset.substr(version + 1));
+        return route;
+    }
     // "trailer:movie:<TMDB id>": the start of the film's preview, kept on the TV.
     if (asset.compare(0, 14, "trailer:movie:") == 0)
         return "/api/home/trailer?type=movie&id=" + encode(asset.substr(14));

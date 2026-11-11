@@ -45,6 +45,11 @@ struct MappingOptions {
     Json inputNames;
 };
 
+// The acb pipeline that is the picture: the first full-screen one (an app's video; one that does not
+// say is taken as full screen), else the first (an input, or an app's sound alone). Netflix keeps a
+// sound pipeline playing from launch to exit, its menus included, listed before or after the video's.
+Json mainPipeline(const Json &acbs);
+
 // Map one successful Luna subscription reply to the same primitive state
 // values consumed by history, Home Assistant and the TV dashboard.
 Json mapSubscription(const std::string &group, const Json &response,

@@ -33,46 +33,93 @@ int main() {
         HomeWatching watching(directory);
         assert(!watching.row("main", now).valid());
 
-        // Opened from Home in Prime Video: the time the app stays in front is how far it got.
+        // Opened from Home in Prime Video: on a TV whose player says nothing, the time the app
+        // stays in front is how far it got.
         watching.opened("main", title(1, 100), "prime", "amazon.global", now);
+        watching.foreground("amazon.global", "prime", "main", now);
         now += kMinute;
         assert(!watching.row("main", now).valid()); // a minute is a look, not watching
         now += 9 * kMinute;
-        watching.foreground("com.webos.app.hdmi1", now);
+        const Json ended = watching.foreground("com.webos.app.hdmi1", "", "main", now);
+        assert(ended["service"].string() == "prime" && ended["playedMs"].number() == 10 * kMinute &&
+               ended["titled"].boolean());
         Json row = watching.row("main", now);
         assert(row["key"].string() == "continue" && progressOf(row, 1) == .1);
         assert(row["items"][0]["service"].string() == "prime" &&
                row["items"][0]["title"].string() == "Film 1");
-        now += 60 * kMinute; // elsewhere: not counted
+        assert(row["items"].size() == 1); // the play had the title: no card of the app's own
+        now += 20 * kMinute; // elsewhere: not counted
         assert(progressOf(watching.row("main", now), 1) == .1);
-        watching.foreground("amazon.global", now); // back in the app
+        watching.foreground("amazon.global", "prime", "main", now); // back in the app soon
         now += 50 * kMinute;
         assert(progressOf(watching.row("main", now), 1) == .6); // counting while in front
-        watching.foreground("", now); // the screen goes off
-        now += 30 * kMinute;
+        watching.foreground("", "", "main", now); // the screen goes off
+        now += 20 * kMinute;
         assert(progressOf(watching.row("main", now), 1) == .6);
 
-        // Another title: the newest leads, and one without a runtime is taken as two hours.
+        // Once LG's player has said anything, only the time a picture plays counts: not the
+        // app's menus, nor a pause.
+        watching.playing(false, now);
         watching.opened("main", title(2, 0), "netflix", "netflix", now);
-        now += 30 * kMinute;
-        watching.opened("main", title(3, 50), "netflix", "netflix", now); // counts title 2's time
+        watching.foreground("netflix", "netflix", "main", now);
+        now += 5 * kMinute; // the profiles, the title's page
+        watching.playing(true, now);
+        now += 24 * kMinute;
+        watching.playing(false, now); // paused
+        now += 10 * kMinute;
+        watching.playing(true, now);
+        now += 6 * kMinute;
         row = watching.row("main", now);
-        assert(row["items"][0]["id"].number() == 2 && progressOf(row, 2) == .25);
+        assert(row["items"][0]["id"].number() == 2 && progressOf(row, 2) == .25); // of two hours
+        watching.opened("main", title(3, 50), "netflix", "netflix", now); // counts title 2's time
         now += 46 * kMinute; // title 3 near its end: finished, so no longer shown
-        watching.foreground("youtube.leanback.v4", now);
+        watching.foreground("youtube.leanback.v4", "", "main", now);
         assert(progressOf(watching.row("main", now), 3) == -1);
         assert(!watching.row("guest", now).valid());
+
+        // Netflix opened from its own button, a day later: what it played has no title, so the
+        // row has Netflix's own card, newest first.
+        now += 24 * 60 * kMinute;
+        watching.playing(false, now);
+        watching.foreground("netflix", "netflix", "main", now);
+        now += 2 * kMinute;
+        watching.playing(true, now);
+        now += 47 * kMinute;
+        watching.playing(false, now);
+        const Json untitled = watching.foreground("com.tvweb.dashboard", "", "main", now);
+        assert(untitled["playedMs"].number() == 47 * kMinute && !untitled["titled"].boolean());
+        row = watching.row("main", now);
+        assert(row["items"][0]["kind"].string() == "app" &&
+               row["items"][0]["appId"].string() == "netflix" &&
+               row["items"][0]["playedMs"].number() == 47 * kMinute);
+        assert(progressOf(row, 2) == .25); // title 2 was not counted: it was opened a day ago
+        // A short look in Prime Video is not a play.
+        watching.foreground("amazon.global", "prime", "main", now);
+        watching.playing(true, now);
+        now += kMinute;
+        assert(!watching.foreground("", "", "main", now).valid());
+
+        const Json services = watching.services("main", now);
+        assert(services.size() == 2 && services[0]["service"].string() == "netflix" &&
+               services[0]["playedMs"].number() == (30 + 46 + 47) * kMinute &&
+               services[1]["service"].string() == "prime");
+        assert(!watching.services("guest", now).size());
     }
     struct stat info = {};
     const std::string path = directory + "/home-watching.json";
+    const std::string playsPath = directory + "/home-plays.json";
     assert(stat(path.c_str(), &info) == 0 && (info.st_mode & 0777) == 0600);
+    assert(stat(playsPath.c_str(), &info) == 0 && (info.st_mode & 0777) == 0600);
     {
         HomeWatching again(directory);
         assert(progressOf(again.row("main", now), 1) == .6);
-        // A month later the titles are gone.
+        assert(again.row("main", now)["items"][0]["kind"].string() == "app");
+        // A week later Netflix's own card is gone; a month later the titles too.
+        assert(again.row("main", now + 8LL * 24 * 60 * kMinute)["items"][0]["kind"].string() != "app");
         assert(!again.row("main", now + 31LL * 24 * 60 * kMinute).valid());
     }
     (void)unlink(path.c_str());
+    (void)unlink(playsPath.c_str());
     (void)rmdir(directory.c_str());
     std::printf("Home watching passed.\n");
     return 0;

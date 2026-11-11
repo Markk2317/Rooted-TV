@@ -1,4 +1,5 @@
 #include "daemon/screensaver_control.hpp"
+#include "domain/live_state.hpp"
 #include "domain/names.hpp"
 #include "domain/say.hpp"
 #include <algorithm>
@@ -244,7 +245,7 @@ bool ScreensaverControl::readMedia(Json &media) {
         Json acb;
         const bool answered = deps_.luna("com.webos.service.acb/getForegroundAppInfo",
                                          Json::object(), acb);
-        const Json pipe = answered ? acb["acbs"][0] : Json();
+        const Json pipe = answered ? state::mainPipeline(acb["acbs"]) : Json();
         if (pipe["playStateNow"].isString() && !pipe["playStateNow"].string().empty()) {
             media = Json::object();
             media.set("state", pipe["playStateNow"]);

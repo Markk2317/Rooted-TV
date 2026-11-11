@@ -329,11 +329,15 @@ country, which of Netflix, Prime Video and Disney+ it has, and the results of th
 Gemini calls: titles found on TMDB, whether a title opened, whether a control worked.
 With **Top picks with Gemini** on (the default once a key is saved), Gemini is also sent, at
 most daily per profile, the names, years and kinds of the titles the profile watched from Home,
-liked and saved, and of the titles Home has on offer; the answer is kept in `home-picks.json`.
+liked and saved, how long it played each service's app in the last 30 days, and the titles
+Home has on offer; the answer is kept in `home-picks.json`.
 With **Continue watching from the screen** on (off until switched on), a 960 × 540 screenshot of
 the TV is sent when playback in Netflix, Prime Video or Disney+ is paused or stopped after two
 minutes, until the title is read; the screenshot is not kept on the TV. Gemini gets nothing else
-from the TV. Its tools run as requests from the server to its own
+from the TV. The frames Continue watching shows for a play in those apps whose title is
+unknown are captured from the screen while it plays and stay on the TV, in `home-frames/`
+(0600 files); the server serves them only to a client with the dashboard's token, for the
+profile in use. Its tools run as requests from the server to its own
 `/api/home/open` and `/api/control`, so `allowControl` and the other checks apply to them.
 
 A town saved for the Photos screen saver's weather is sent once to

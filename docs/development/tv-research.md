@@ -805,7 +805,7 @@ and others' work on webOS 10
   Mounted from a webosbrew `init.d` hook, the home app was running with the
   changed layout about 29 s after power-on.
 
-## What the player is doing (webOS 4.4.3, B8; webOS 9.2.2, C2)
+## What the player is doing (webOS 3.4.3, C6; webOS 4.4.3, B8; webOS 9.2.2, C2)
 
 - The B8 answers `com.webos.service.acb/getForegroundAppInfo` with an `acbs`
   pipeline list, each with `playStateNow` and `playerType` (`external input`
@@ -815,6 +815,15 @@ and others' work on webOS 10
   YouTube read `playing`, then `paused` after the remote's Pause key, and the
   list was empty on HDMI 2. `com.webos.media/pause` with that `mediaId`
   answered `returnValue: false` and did not pause.
+- On the C6 (11 November 2026, Netflix), `acbs` lists several pipelines in no
+  fixed order. Netflix keeps one for its sound (`isFullScreen: false`, the
+  `direct_av` pipeline with `PCMMC`) `playing` from launch to exit, its profile
+  page and menus included. A video gets a pipeline of its own with
+  `isFullScreen: true` (position and size 0), going `unloaded`, `loaded`,
+  `playing`, `paused`, then leaving the list when it stops; the background
+  preview of a title's page is one too. The full-screen pipeline is the one
+  that tells whether something is watched. No pipeline carries the title or a
+  playback position (`positionX` and `positionY` are the window's).
 
 ## LG's device scans (webOS 9.2.2, C2)
 

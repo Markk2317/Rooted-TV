@@ -1,6 +1,7 @@
 #include "domain/models.hpp"
 #include "domain/names.hpp"
 #include <algorithm>
+#include <cmath>
 #include <utility>
 #include <map>
 
@@ -234,6 +235,14 @@ std::vector<std::string> orderAfterMove(const Json &order, const std::vector<std
     return result;
 }
 namespace {
+// "47 min", "1 h 3 min".
+std::string playedFor(double milliseconds) {
+    const long minutes = std::lround(milliseconds / 60000);
+    if (minutes < 60)
+        return std::to_string(minutes) + " min";
+    return std::to_string(minutes / 60) + " h" +
+           (minutes % 60 ? " " + std::to_string(minutes % 60) + " min" : std::string());
+}
 // A title card of the feed's row `rowKey`.
 Card feedCard(const Json &item, const std::string &rowKey) {
     const bool videos = rowKey == "youtube" || rowKey == "youtube:subscriptions";
@@ -261,6 +270,14 @@ Card feedCard(const Json &item, const std::string &rowKey) {
         card.command = post(Operation::OpenHomeItem,
                             fields({{"kind", Json::text("netflix")}, {"id", item["id"]},
                                     {"type", item["type"]}}));
+    } else if (card.kind == "continue" && item["kind"].string() == "app") {
+        // A play in a service's own app, of a title nobody named: its last frame, and OK opens the
+        // app, whose own row resumes it.
+        card.image = card.backdrop =
+            item["frame"].string().empty() ? "" : "frame:" + item["frame"].string();
+        card.subtitle = "Watched for " + playedFor(item["playedMs"].number());
+        card.command = post(Operation::OpenHomeItem,
+                            fields({{"kind", Json::text("app")}, {"id", item["appId"]}}));
     } else if (card.kind == "continue") {
         // Back into the service's app on the title, where its own Resume is.
         card.command = post(Operation::OpenHomeItem,
@@ -329,6 +346,30 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
             }
         }
     }
+    // The services the profile watches most lead the services' rows (the server's
+    // "watchedServices", by time played in their apps).
+    std::vector<size_t> slots;
+    std::vector<std::string> serviceKeys;
+    for (size_t i = 0; i < keys.size(); ++i)
+        if (keys[i].compare(0, 3, "on:") == 0) {
+            slots.push_back(i);
+            serviceKeys.push_back(keys[i]);
+        }
+    const auto rankOf = [&discover](const std::string &key) {
+        size_t rank = 0;
+        for (const auto &watched : discover["watchedServices"].items()) {
+            if ("on:" + watched.string() == key)
+                return rank;
+            ++rank;
+        }
+        return rank;
+    };
+    std::stable_sort(serviceKeys.begin(), serviceKeys.end(),
+                     [&rankOf](const std::string &a, const std::string &b) {
+                         return rankOf(a) < rankOf(b);
+                     });
+    for (size_t i = 0; i < slots.size(); ++i)
+        keys[slots[i]] = serviceKeys[i];
     // The profile's own: its watchlist, then the titles like the one it liked last.
     keys.insert(keys.end(), {"watchlist", "liked", "movies", "series"});
     if (!serviceNames.count("on:netflix"))

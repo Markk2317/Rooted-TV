@@ -476,7 +476,8 @@ struct Walk {
     }
     void dim() {
         trail.push_back("idle");
-        for (int i = 0; i < 32; ++i)
+        // Home dims after five quiet minutes, the other screens after thirty seconds.
+        for (int i = 0; i < 320 && !app().snapshot()["idle"].boolean(); ++i)
             settle(1000);
         std::string before = signature(true);
         std::string name = app().screenName();
@@ -492,8 +493,9 @@ struct Walk {
     std::string signature(bool withoutIdle = false) {
         Json value = app().snapshot();
         // The hero's slideshow moves on with time whatever is pressed, and a dimmed screen is dimmed
-        // by time too: neither is a key's doing.
+        // by time too, as a server that stopped answering is found so: none is a key's doing.
         value.set("heroTitle", Json::text(""));
+        value.set("silent", Json::flag(false));
         if (withoutIdle)
             value.set("idle", Json::flag(false));
         return app().screenName() + " " + value.dump();
@@ -547,8 +549,9 @@ struct Walk {
             expect(!snap["editHide"].boolean() || snap["editing"].boolean(), "home.editing",
                    "the hide button focused outside editing");
             const size_t tabCount = tabHits(scene);
+            // Past the tabs: the avatar, the gear, search, the assistant and the screen saver.
             if (tabCount)
-                expect(snap["nav"].number() <= static_cast<double>(tabCount) + 2, "home.nav",
+                expect(snap["nav"].number() <= static_cast<double>(tabCount) + 4, "home.nav",
                        "bar focus beyond the bar's stops");
             if (!snap["navigation"].boolean() && rows > 0 && !snap["editHide"].boolean())
                 expect(!snap["focusCard"].string().empty(), "home.focus",
@@ -629,10 +632,11 @@ struct Walk {
             if (snap["navigation"].boolean()) {
                 const size_t tabCount = tabHits(scene);
                 const size_t nav = static_cast<size_t>(snap["nav"].number());
+                // tool:2 is search, tool:3 the assistant and tool:4 the screen saver.
                 const std::string id = nav < tabCount          ? "nav:tab:" + std::to_string(nav)
                                        : nav == tabCount       ? "nav:avatar"
                                        : nav == tabCount + 1   ? "nav:settings"
-                                                               : "tool:2";
+                                                               : "tool:" + std::to_string(nav - tabCount);
                 expect(hasHit(id), "home.navhit", "the focus is on the bar at " + id + " which has no hit");
             } else if (rows > 0 && !snap["focusCard"].string().empty())
                 shown("card:" + row + ":" + column, "home.cardhit",

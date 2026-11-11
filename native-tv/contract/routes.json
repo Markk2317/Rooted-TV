@@ -630,6 +630,15 @@
       "notes": "The banner's trailer for a film (type=movie, a TMDB id): the first 6 MB of Apple's preview, found through Wikidata's iTunes movie ID (P6398) and the iTunes lookup in the TV's country, then the US store, kept under home-trailers/ (six clips at most, the least recently played dropped). Answers video/mp4, 202 while the clip is being fetched, 404 when there is none or trailers are off (homeTrailers false, or no TMDB key)."
     },
     {
+      "paths": ["/api/home/frame"],
+      "methods": ["GET"],
+      "auth": "token",
+      "csrf": "not applicable",
+      "bodyLimit": {"max": 0, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Continue watching's picture for a play in a streaming service's app whose title is unknown (service=netflix, prime or disney; v is ignored): the last frame captured while it played, kept per profile under home-frames/ (0600). Answers image/jpeg, or 404 when the service is unknown or the profile's last play there left no frame."
+    },
+    {
       "paths": ["/api/home/recents", "/api/home/recents/image"],
       "methods": ["GET"],
       "auth": "token",

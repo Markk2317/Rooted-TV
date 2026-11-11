@@ -30,6 +30,13 @@ std::string serviceName(const std::string &key) {
         if (service.key == key) return service.name;
     return "";
 }
+
+std::string hoursOf(double milliseconds) {
+    const long minutes = static_cast<long>(milliseconds / 60000 + .5);
+    if (minutes < 60) return std::to_string(minutes) + " min";
+    return std::to_string(minutes / 60) + " h" +
+           (minutes % 60 ? " " + std::to_string(minutes % 60) + " min" : std::string());
+}
 } // namespace
 
 HomePicks::HomePicks(std::string dataRoot, Assistant::Transport transport,
@@ -58,7 +65,8 @@ std::string HomePicks::keyOf(const Json &item) {
     return item["type"].string() + ":" + number;
 }
 
-std::string HomePicks::prompt(const Json &history, const Json &candidates, const std::string &region) {
+std::string HomePicks::prompt(const Json &history, const Json &services, const Json &candidates,
+                              const std::string &region) {
     std::string text =
         "You choose \"Top picks for you\" for one viewer on a TV home screen, as Google TV does.\n"
         "The viewer's titles (what they watched, liked or saved to watch):\n";
@@ -68,6 +76,15 @@ std::string HomePicks::prompt(const Json &history, const Json &candidates, const
                 (entry["type"].string() == "tv" ? "series" : "film") +
                 (yearOf(entry).empty() ? "" : ", " + yearOf(entry)) + "): " + entry["why"].string() +
                 "\n";
+    std::string watchedOn;
+    for (const Json &service : services.items()) {
+        const std::string name = serviceName(service["service"].string());
+        if (!name.empty())
+            watchedOn += (watchedOn.empty() ? "" : ", ") + name + " (" +
+                         hoursOf(service["playedMs"].number()) + ")";
+    }
+    if (!watchedOn.empty())
+        text += "Where they watch, by time played in the last 30 days: " + watchedOn + ".\n";
     text += "Titles on offer in country " + (region.empty() ? std::string("unknown") : region) +
             ", as key | title (kind, year) [where to watch]:\n";
     for (const Json &item : candidates.items()) {
@@ -79,7 +96,7 @@ std::string HomePicks::prompt(const Json &history, const Json &candidates, const
     }
     text += "Choose up to " + std::to_string(kPicksMax) +
             " titles from the offer this viewer is most likely to enjoy, best first, none they "
-            "already have. For each, give a short reason in English of at most six words, such as "
+            "already have, favouring the services they watch most. For each, give a short reason in English of at most six words, such as "
             "\"Because you watched <title>\" naming one of their titles, or \"Popular on <service>\" "
             "or \"Trending this week\" when none fits. Answer only with a JSON array of objects "
             "{\"key\": <key from the offer>, \"because\": <reason>}.";
@@ -134,11 +151,15 @@ void HomePicks::save(const Json &document) const {
 }
 
 Json HomePicks::picks(const std::string &key, const std::string &model, const std::string &profile,
-                      const Json &history, const Json &candidates, const std::string &region) {
+                      const Json &history, const Json &services, const Json &candidates,
+                      const std::string &region) {
     if (key.empty() || !candidates.size()) return Json::array();
-    // Asked again when the profile's titles change, not when the offer moves on: the trending
-    // titles change daily, and a day is how long an answer is kept anyway.
-    const std::string inputs = md5Hex(history.dump() + "|" + region);
+    // Asked again when the profile's titles or its services' order change, not when the offer
+    // moves on (the trending titles change daily, and a day is how long an answer is kept anyway)
+    // nor with every minute played.
+    std::string order;
+    for (const Json &service : services.items()) order += service["service"].string() + ",";
+    const std::string inputs = md5Hex(history.dump() + "|" + order + "|" + region);
     const int64_t now = clock_();
     std::lock_guard<std::mutex> lock(mutex_);
     const Json kept = load()[profile];
@@ -151,21 +172,21 @@ Json HomePicks::picks(const std::string &key, const std::string &model, const st
         Json limited = Json::array();
         for (const Json &item : candidates.items())
             if (limited.size() < kCandidatesMax) limited.add(item);
-        worker_ = std::thread(&HomePicks::ask, this, key, model, profile, inputs, history, limited,
-                              region);
+        worker_ = std::thread(&HomePicks::ask, this, key, model, profile, inputs, history, services,
+                              limited, region);
     }
     return kept["picks"].isArray() ? kept["picks"] : Json::array();
 }
 
 void HomePicks::ask(std::string key, std::string model, std::string profile, std::string inputs,
-                    Json history, Json candidates, std::string region) {
+                    Json history, Json services, Json candidates, std::string region) {
     Json request = Json::object();
     Json contents = Json::array();
     Json user = Json::object();
     user.set("role", Json::text("user"));
     Json parts = Json::array();
     Json part = Json::object();
-    part.set("text", Json::text(prompt(history, candidates, region)));
+    part.set("text", Json::text(prompt(history, services, candidates, region)));
     parts.add(part);
     user.set("parts", parts);
     contents.add(user);

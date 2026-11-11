@@ -142,6 +142,9 @@ std::string percentDecoded(const std::string &text) {
 // What the client asks the server for must be a picture the server serves: a YouTube thumbnail at a
 // size it refuses (hqdefault) is a card that never gets its picture.
 void testTheClientAsksForPicturesTheServerServes() {
+    // A play's frame goes to the frame route, with its version.
+    assert(nativetv::legacyAssetRoute("frame:netflix@1794000000000") ==
+           "/api/home/frame?service=netflix&v=1794000000000");
     const std::string youtube = nativetv::legacyAssetRoute("youtube:dQw4w9WgXcQ");
     const std::string prefix = "/api/home/image?u=";
     assert(youtube.compare(0, prefix.size(), prefix) == 0);

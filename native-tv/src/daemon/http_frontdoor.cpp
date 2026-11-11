@@ -7,6 +7,7 @@
 #include "daemon/app_tile_manager.hpp"
 #include "daemon/backup_restore.hpp"
 #include "core/json.hpp"
+#include "core/md5.hpp"
 #include "daemon/child_process.hpp"
 #include "daemon/devtools_firewall.hpp"
 #include "daemon/event_loop.hpp"
@@ -36,6 +37,7 @@
 #include "daemon/screen_time_enforcer.hpp"
 #include "daemon/volume_ceiling_enforcer.hpp"
 #include "daemon/state_subscriptions.hpp"
+#include "domain/live_state.hpp"
 #include "domain/names.hpp"
 #include <curl/curl.h>
 #include <map>
@@ -1148,7 +1150,7 @@ void readMediaStateForControl(LunaClient &luna, bool &acbAbsent,
             const Json returnValue = acb.response["returnValue"];
             if (acbs.isArray() &&
                 (!returnValue.isBoolean() || returnValue.boolean())) {
-                const Json pipe = acbs[0];
+                const Json pipe = state::mainPipeline(acbs);
                 if (truthy(pipe["playStateNow"])) {
                     playState = asString(pipe["playStateNow"]);
                     playerType = asString(pipe["playerType"]);
@@ -16875,12 +16877,60 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
                            result.dump());
 }
 
+namespace {
+const int64_t kScreenTitleAfterMs = 2 * 60 * 1000; // played less, nothing is read
+// A play's frame: the first once it has played this long, then a newer one every few minutes.
+const int64_t kFrameAfterMs = 45 * 1000, kFrameEveryMs = 3 * 60 * 1000;
+// A capture this small is a black picture (a protected video the capture cannot see).
+const long kBlankFrameBytes = 12 * 1024;
+
+std::string serviceOfApp(const std::string &appId) {
+    for (const auto &service : names::streamingServices())
+        for (const std::string &app : service.apps)
+            if (app == appId) return service.key;
+    return "";
+}
+
+std::string serviceNameOf(const std::string &key) {
+    for (const auto &service : names::streamingServices())
+        if (service.key == key) return service.name;
+    return "";
+}
+
+// The latest frame of the play going on in a service's app, and the one kept of its last play.
+std::string playFrameTemporary(const std::string &service) {
+    return "/tmp/nativetv-frame-" + service + ".jpg";
+}
+std::string playFramePath(const std::string &dataRoot, const std::string &profile,
+                          const std::string &service) {
+    return dataFilePath(dataRoot, "home-frames") + "/" + md5Hex(profile).substr(0, 12) + "-" +
+           service + ".jpg";
+}
+
+std::string readWholeFile(const std::string &path) {
+    std::ifstream input(path.c_str(), std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+}
+} // namespace
+
 void HttpFrontDoor::foregroundChanged(const std::string &appId) {
-    homeWatching_.foreground(appId, homeNowMilliseconds());
+    const std::string service = serviceOfApp(appId);
+    const Json ended = homeWatching_.foreground(appId, service, activeHomeProfile(dataRoot_),
+                                                homeNowMilliseconds());
     {
         std::lock_guard<std::mutex> lock(foregroundMutex_);
         foregroundApp_ = appId;
     }
+    {
+        // A capture planned in the app before is dropped.
+        std::lock_guard<std::mutex> lock(framesMutex_);
+        ++frames_.token;
+        frames_.appId = appId;
+        frames_.service = service;
+        frames_.playing = false;
+    }
+    if (ended.isObject()) keepPlayFrame(ended);
+    if (!service.empty()) std::remove(playFrameTemporary(service).c_str());
     {
         std::lock_guard<std::mutex> lock(screenMutex_);
         if (!screenSession_.appId.empty() && appId != screenSession_.appId)
@@ -16889,16 +16939,107 @@ void HttpFrontDoor::foregroundChanged(const std::string &appId) {
     closeClientBehind(appId);
 }
 
-namespace {
-const int64_t kScreenTitleAfterMs = 2 * 60 * 1000; // played less, nothing is read
-
-std::string serviceOfApp(const std::string &appId) {
-    for (const auto &service : names::streamingServices())
-        for (const std::string &app : service.apps)
-            if (app == appId) return service.key;
-    return "";
+void HttpFrontDoor::followPlayFrames(bool playing) {
+    std::string app;
+    {
+        std::lock_guard<std::mutex> lock(foregroundMutex_);
+        app = foregroundApp_;
+    }
+    std::lock_guard<std::mutex> lock(framesMutex_);
+    if (frames_.appId != app) {
+        frames_.appId = app;
+        frames_.service = serviceOfApp(app);
+        frames_.playing = false;
+    }
+    if (playing == frames_.playing) return;
+    frames_.playing = playing;
+    const unsigned long long token = ++frames_.token;
+    if (!playing || frames_.service.empty() || !eventLoop_) return;
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(kFrameAfterMs), [this, token]() {
+        (void)eventLoop_->submitBlocking([this, token]() { capturePlayFrame(token); });
+    });
 }
-} // namespace
+
+void HttpFrontDoor::capturePlayFrame(unsigned long long token) {
+    std::string app, service;
+    {
+        std::lock_guard<std::mutex> lock(framesMutex_);
+        if (token != frames_.token) return;
+        app = frames_.appId;
+        service = frames_.service;
+    }
+    {
+        std::lock_guard<std::mutex> lock(foregroundMutex_);
+        if (foregroundApp_ != app) return;
+    }
+    const std::string path = "/tmp/nativetv-frame-capture.jpg";
+    const Json request = Json::parse("{\"path\":\"" + path +
+                                     "\",\"method\":\"DISPLAY\",\"width\":960,\"height\":540,"
+                                     "\"format\":\"JPEG\"}");
+    LunaReply captured;
+    struct stat info = {};
+    const bool pictured =
+        waitForLuna(luna_, "com.webos.service.tv.capture/executeOneShot", request, captured) &&
+        captured.response["returnValue"].boolean() && stat(path.c_str(), &info) == 0 &&
+        info.st_size >= kBlankFrameBytes;
+    std::lock_guard<std::mutex> lock(framesMutex_);
+    if (pictured && token == frames_.token)
+        (void)std::rename(path.c_str(), playFrameTemporary(service).c_str());
+    std::remove(path.c_str());
+    if (token != frames_.token) return;
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(kFrameEveryMs), [this, token]() {
+        (void)eventLoop_->submitBlocking([this, token]() { capturePlayFrame(token); });
+    });
+}
+
+// The play that ended counts: its last frame is its card's picture, in place of the one before.
+void HttpFrontDoor::keepPlayFrame(const Json &ended) const {
+    const std::string service = ended["service"].string();
+    const std::string temporary = playFrameTemporary(service);
+    const std::string bytes = ended["titled"].boolean() ? std::string() : readWholeFile(temporary);
+    std::remove(temporary.c_str());
+    const std::string target = playFramePath(dataRoot_, ended["profile"].string(), service);
+    if (bytes.empty()) {
+        std::remove(target.c_str());
+        return;
+    }
+    (void)mkdir(dataFilePath(dataRoot_, "home-frames").c_str(), 0700);
+    const std::string partial = target + ".tmp";
+    {
+        std::ofstream output(partial.c_str(), std::ios::binary | std::ios::trunc);
+        output.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+        if (!output) {
+            output.close();
+            std::remove(partial.c_str());
+            return;
+        }
+    }
+    (void)chmod(partial.c_str(), 0600);
+    if (std::rename(partial.c_str(), target.c_str()) != 0) std::remove(partial.c_str());
+}
+
+void HttpFrontDoor::sendHomeFrame(HttpExchange &exchange) const {
+    std::string service, bytes;
+    if (uniqueQueryParameter(exchange.request().query, "service", service) &&
+        !serviceNameOf(service).empty())
+        bytes = readWholeFile(playFramePath(dataRoot_, activeHomeProfile(dataRoot_), service));
+    if (bytes.empty()) {
+        (void)exchange.respond(404,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               "{\"ok\":false,\"error\":\"no frame\"}");
+        return;
+    }
+    const std::vector<HttpHeader> headers = {
+        {"Content-Type", "image/jpeg"}, {"Cache-Control", "private, no-store"},
+        {"X-Content-Type-Options", "nosniff"}
+    };
+    if (!exchange.beginResponse(200, headers, static_cast<long long>(bytes.size())))
+        return;
+    (void)exchange.writeBody(bytes.data(), bytes.size());
+    (void)exchange.finishResponse();
+}
 
 // The session's time not yet counted goes to the title read, and the session ends. Called with
 // screenMutex_ held.
@@ -16913,7 +17054,12 @@ void HttpFrontDoor::endScreenSession(int64_t nowMs) {
     session.token = token;
 }
 
-void HttpFrontDoor::mediaChanged(const std::string &state) {
+void HttpFrontDoor::mediaChanged(const Json &media) {
+    // Only a picture full screen is watching: Netflix's sound plays in its menus too.
+    const bool fullScreen = media["fullScreen"].boolean();
+    const bool playing = fullScreen && media["state"].string() == "playing";
+    homeWatching_.playing(playing, homeNowMilliseconds());
+    followPlayFrames(playing);
     const Json document = currentConfigDocument();
     if (!document["continueFromScreen"].boolean() || document["geminiKey"].string().empty() ||
         document["tmdbKey"].string().empty())
@@ -16931,7 +17077,7 @@ void HttpFrontDoor::mediaChanged(const std::string &state) {
     if (service.empty()) return;
     session.appId = app;
     session.service = service;
-    if (state == "playing") {
+    if (playing) {
         if (!session.playingSince) session.playingSince = now;
         return;
     }
@@ -16952,7 +17098,8 @@ void HttpFrontDoor::mediaChanged(const std::string &state) {
     // Paused, the app shows its pause screen after a moment; stopped, the title's page.
     const unsigned long long token = ++session.token;
     const int64_t playedMs = session.playedMs;
-    eventLoop_->scheduleAfter(std::chrono::milliseconds(state == "paused" ? 4000 : 2500),
+    const bool paused = fullScreen && media["state"].string() == "paused";
+    eventLoop_->scheduleAfter(std::chrono::milliseconds(paused ? 4000 : 2500),
                               [this, app, service, playedMs, token]() {
         (void)eventLoop_->submitBlocking([this, app, service, playedMs, token]() {
             readTitleOffScreen(app, service, playedMs, token);
@@ -17252,6 +17399,7 @@ Json HttpFrontDoor::withGeminiPicks(const Json &rows, const std::string &profile
     }
     const Json picks = homePicks_.picks(document["geminiKey"].string(),
                                         document["geminiModel"].string(), profile, history,
+                                        homeWatching_.services(profile, homeNowMilliseconds()),
                                         candidates, tvRegion(dataRoot_));
     if (!picks.size()) return rows;
     // Home shows the feed's "trending" row as Top picks for you: the picks lead it.
@@ -17304,10 +17452,36 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         const Json titles = homeTitles_.state(profile);
         Json rows = service::HomeTitles::personalRows(result["rows"], titles);
         const Json watching = homeWatching_.row(profile, homeNowMilliseconds());
-        if (watching.isObject()) rows.add(watching);
+        if (watching.isObject()) {
+            // A play without a title is its service's card: its name, and its last frame.
+            Json items = Json::array();
+            for (const Json &item : watching["items"].items()) {
+                if (item["kind"].string() != "app") {
+                    items.add(item);
+                    continue;
+                }
+                const std::string service = item["service"].string();
+                Json card = Json::parse(item.dump());
+                card.set("title", Json::text(serviceNameOf(service)));
+                struct stat info = {};
+                if (stat(playFramePath(dataRoot_, profile, service).c_str(), &info) == 0)
+                    card.set("frame",
+                             Json::text(service + "@" +
+                                        std::to_string(static_cast<long long>(item["endedAt"].number()))));
+                items.add(card);
+            }
+            Json row = Json::parse(watching.dump());
+            row.set("items", items);
+            rows.add(row);
+        }
         result.set("rows", withArt(rows));
         result.set("profileTitles", service::HomeTitles::summary(titles));
     }
+    // The services the profile watches most lead the services' rows.
+    Json watchedServices = Json::array();
+    for (const Json &service : homeWatching_.services(profile, homeNowMilliseconds()).items())
+        watchedServices.add(service["service"]);
+    if (watchedServices.size()) result.set("watchedServices", watchedServices);
     // Top picks chosen by Gemini for the profile, where a Gemini key is saved.
     if (!document["geminiKey"].string().empty() && document["homeGeminiPicks"].boolean(true) &&
         result["rows"].isArray())
@@ -19309,6 +19483,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/trailer" && request.method == "GET") {
         sendHomeTrailer(exchange);
+        return;
+    }
+    if (request.uri == "/api/home/frame" && request.method == "GET") {
+        sendHomeFrame(exchange);
         return;
     }
     if (request.method == "GET" &&

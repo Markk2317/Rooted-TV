@@ -88,7 +88,7 @@ Playback reaches an HDMI source over CEC, where the TV has only one key for both
 | `sensor` | `sensor.lg_tv_audio_output` | Audio Output | Output the audio service is driving (e.g. *HDMI ARC*, *Headphone / AUX*) |
 | `sensor` | `sensor.lg_tv_active_app` | Active App | Current foreground app or friendly CEC device; `app_id` attribute identifies the app. Where the TV reports its windows, `control_app_id` names the one the remote's keys reach, such as LG's Settings or Home over an HDMI input, or is empty with nothing focused or the TV off. Empty window transitions settle for 200 ms; standby clears it immediately |
 | `sensor` | `sensor.lg_tv_sound_format` | Sound Format | Format of the sound the app or input on screen is sending, as the dashboard's Sound panel shows it (e.g. *Opus*, *PCM*, *Dolby Digital Plus · Dolby Atmos*), or *None* while nothing plays. Attributes `codec` and `immersive` give the TV's own names (`eac3`, `atmos`). Published once the TV has answered with a format, which webOS 4 does not |
-| `sensor` | `sensor.lg_tv_play_state` | Player State | State of the TV's own media pipeline (`playing`, `paused`, `stopped`), or `idle` with nothing playing. Published once the TV has reported playback, and kept from then on |
+| `sensor` | `sensor.lg_tv_play_state` | Player State | State of the TV's own media pipeline (`playing`, `paused`, `stopped`), or `idle` with nothing playing: the full-screen one where there are several (an app's video, not the sound pipeline Netflix keeps playing in its menus). Published once the TV has reported playback, and kept from then on |
 
 The five HDMI entities are published per field, and only once the TV has
 reported that field. An HDMI 2.0 port reports as connected but carries none of

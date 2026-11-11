@@ -38,11 +38,17 @@ int main() {
     Json history = Json::array();
     history.add(watched("The Dark Knight", "watched"));
 
-    const std::string text = HomePicks::prompt(history, candidates, "IT");
+    Json services = Json::parse(R"([{"service":"netflix","playedMs":19200000},
+                                     {"service":"prime","playedMs":2400000},{"service":"other","playedMs":1}])");
+    const std::string text = HomePicks::prompt(history, services, candidates, "IT");
     assert(text.find("- The Dark Knight (film, 2008): watched") != std::string::npos);
     assert(text.find("movie:1 | Heat (film, 2026) [Netflix]") != std::string::npos);
     assert(text.find("tv:2 | Slow Horses (series, 2026)\n") != std::string::npos);
     assert(text.find("country IT") != std::string::npos);
+    assert(text.find("in the last 30 days: Netflix (5 h 20 min), Prime Video (40 min).\n") !=
+           std::string::npos);
+    assert(HomePicks::prompt(history, Json::array(), candidates, "IT").find("last 30 days") ==
+           std::string::npos);
 
     // Only titles on offer, once each, with a reason of sensible length.
     const Json parsed = HomePicks::parse(
@@ -76,26 +82,38 @@ int main() {
                 return true;
             },
             [&clock]() { return clock; });
-        assert(!picks.picks("", "", "main", history, candidates, "IT").size());
+        assert(!picks.picks("", "", "main", history, services, candidates, "IT").size());
         assert(asked == 0);
-        assert(!picks.picks("key", "", "main", history, candidates, "IT").size());
+        assert(!picks.picks("key", "", "main", history, services, candidates, "IT").size());
         picks.wait();
         assert(asked == 1 && sentKey == "key");
-        const Json kept = picks.picks("key", "", "main", history, candidates, "IT");
+        const Json kept = picks.picks("key", "", "main", history, services, candidates, "IT");
         assert(kept.size() == 1 && kept[0]["key"].string() == "movie:3");
         picks.wait();
         assert(asked == 1); // kept: not asked again
         clock += HomePicks::kLifetimeMs + 1;
-        assert(picks.picks("key", "", "main", history, candidates, "IT").size() == 1);
+        assert(picks.picks("key", "", "main", history, services, candidates, "IT").size() == 1);
         picks.wait();
         assert(asked == 2); // a day on, asked again, the old picks shown meanwhile
         history.add(watched("Heat", "liked"));
-        (void)picks.picks("key", "", "main", history, candidates, "IT");
+        (void)picks.picks("key", "", "main", history, services, candidates, "IT");
         picks.wait();
         assert(asked == 3); // the profile's titles changed
-        (void)picks.picks("key", "", "kids", history, candidates, "IT");
+        (void)picks.picks("key", "", "kids", history, services, candidates, "IT");
         picks.wait();
         assert(asked == 4); // another profile has its own
+        (void)picks.picks("key", "", "kids", history, services, candidates, "IT");
+        picks.wait();
+        assert(asked == 4); // the same
+        services = Json::parse(R"([{"service":"netflix","playedMs":19260000},
+                                  {"service":"prime","playedMs":2400000},{"service":"other","playedMs":1}])");
+        (void)picks.picks("key", "", "kids", history, services, candidates, "IT");
+        picks.wait();
+        assert(asked == 4); // a minute more played: not asked again
+        Json reordered = Json::parse(R"([{"service":"prime","playedMs":9}])");
+        (void)picks.picks("key", "", "kids", history, reordered, candidates, "IT");
+        picks.wait();
+        assert(asked == 5); // another service watched most
     }
     {
         int failures = 0;
@@ -110,13 +128,13 @@ int main() {
             [&clock]() { return clock; });
         Json other = Json::array();
         other.add(watched("Alien", "watched"));
-        (void)failing.picks("key", "", "main", other, candidates, "IT");
+        (void)failing.picks("key", "", "main", other, services, candidates, "IT");
         failing.wait();
-        (void)failing.picks("key", "", "main", other, candidates, "IT");
+        (void)failing.picks("key", "", "main", other, services, candidates, "IT");
         failing.wait();
         assert(failures == 1); // a refusal is not asked again at once
         clock += HomePicks::kRetryMs + 1;
-        (void)failing.picks("key", "", "main", other, candidates, "IT");
+        (void)failing.picks("key", "", "main", other, services, candidates, "IT");
         failing.wait();
         assert(failures == 2);
     }

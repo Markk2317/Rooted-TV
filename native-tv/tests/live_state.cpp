@@ -156,6 +156,15 @@ void testMediaMapping() {
                 !active["fullScreen"].boolean(),
             "ACB playback state should preserve player type and fullscreen metadata");
 
+    // Netflix on a C6 (webOS 3.4.3): its sound pipeline plays from launch, listed before its video.
+    Json netflix = nativetv::state::mapSubscription(
+        "media", parse(R"({"returnValue":true,"acbs":[
+          {"pipelineId":"_Nf","playStateNow":"playing","isFullScreen":false},
+          {"pipelineId":"_sc","playStateNow":"paused","isFullScreen":true}]})"));
+    Json video = parse(netflix["snapshot"].string());
+    require(video["state"].string() == "paused" && video["fullScreen"].boolean(),
+            "the full-screen pipeline is the picture, wherever it is listed");
+
     Json media = nativetv::state::mapSubscription(
         "media", parse(R"({"returnValue":true,"foregroundAppInfo":[
           {"appId":"youtube.leanback.v4","playState":"paused","type":"media"}]})"));

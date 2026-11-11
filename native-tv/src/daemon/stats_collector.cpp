@@ -1,4 +1,5 @@
 #include "daemon/stats_collector.hpp"
+#include "domain/live_state.hpp"
 #include "domain/names.hpp"
 #include "service/preload.hpp"
 #include "service/stats_fields.hpp"
@@ -540,7 +541,7 @@ bool StatsCollector::media(Json &out) {
     };
     Json acb;
     const bool answered = cached("com.webos.service.acb/getForegroundAppInfo", Json::object(), 4000, acb);
-    const Json pipe = answered && acb["acbs"].isArray() ? acb["acbs"][0] : Json();
+    const Json pipe = answered && acb["acbs"].isArray() ? state::mainPipeline(acb["acbs"]) : Json();
     if (pipe.isObject() && service::javascriptTruthy(pipe["playStateNow"])) {
         out = Json::object();
         out.set("state", Json::text(service::javascriptString(pipe["playStateNow"])));

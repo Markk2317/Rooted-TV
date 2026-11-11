@@ -236,8 +236,13 @@ row in `youtube-rows.json` in the data directory, both mode 0600; signing out re
 Each Home profile's watchlist, liked titles (with the titles similar to each) and titles
 marked not for it are kept in `home-titles.json` in the data directory, mode 0600: at most
 60, 30 and 300. The titles each profile opened from Home in a streaming app, with how long
-that app then stayed in front, are kept in `home-watching.json`, mode 0600, at most 20 for 30
-days.
+a picture then played full screen in that app, are kept in `home-watching.json`, mode 0600, at
+most 20 for 30 days. Each profile's plays of two minutes or more in Netflix, Prime Video or
+Disney+ (the service, when, how long, and whether its title was known) are kept in
+`home-plays.json`, mode 0600, at most 40 for 30 days, and the last frame of its last play in
+each service, a 960 × 540 JPEG captured from the screen while it played, in `home-frames/`,
+mode 0700, each file 0600. While a picture plays in one of those apps, the latest capture
+waits in `/tmp/nativetv-frame-<service>.jpg` until the play ends.
 
 A saved Gemini API key is kept in `config.json` as `geminiKey`.
 

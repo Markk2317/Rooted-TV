@@ -1772,7 +1772,7 @@ int main(int argc, char **argv) {
                     frontDoor->foregroundChanged(event.value.string());
                 if (frontDoor && event.group == "media" && event.key == "snapshot" &&
                     event.value.isString())
-                    frontDoor->mediaChanged(Json::parse(event.value.string())["state"].string());
+                    frontDoor->mediaChanged(Json::parse(event.value.string()));
                 if (frontDoor && event.group == "power" && event.key == "screenOn" &&
                     event.value.isBoolean() && !event.value.boolean())
                     frontDoor->foregroundChanged("");
