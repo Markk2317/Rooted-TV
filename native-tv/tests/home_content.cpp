@@ -299,7 +299,7 @@ int main() {
         std::string saved((std::istreambuf_iterator<char>(input)),
                           std::istreambuf_iterator<char>());
         const Json cache = Json::parse(saved);
-        assert(cache["version"].number() == 2);
+        assert(cache["version"].number() == 3);
         assert(cache["entries"].size() == 40);
     }
     // With the TV's country, a title's details say which services have it there, in TMDB's order,

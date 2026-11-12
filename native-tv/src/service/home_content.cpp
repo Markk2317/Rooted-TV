@@ -27,6 +27,7 @@ namespace {
 const int64_t kDayMs = 24LL * 60 * 60 * 1000;
 const int64_t kRetryMs = 10LL * 60 * 1000;
 const size_t kMaximumCacheEntries = 40;
+const int kCacheVersion = 3; // home-content.json's format; see loadCacheLocked
 const size_t kMaximumDocumentBytes = 8 * 1024 * 1024;
 const char *const kTmdbApi = "https://api.themoviedb.org/3/";
 
@@ -968,8 +969,9 @@ void HomeContent::loadCacheLocked() {
     close(input);
     if (!ok) return;
     const Json saved = Json::parse(contents);
-    // Version 2: a title's cast carries its photos and director; older details are fetched again.
-    if (!saved.isObject() || saved["version"].number() != 2 ||
+    // Version 2: a title's cast carries its photos and director; version 3: its details name the
+    // genres of Search's grid it is in. Older details are fetched again.
+    if (!saved.isObject() || saved["version"].number() != kCacheVersion ||
         !saved["entries"].isArray()) return;
     for (const Json &item : saved["entries"].items()) {
         const std::string key = item["key"].string();
@@ -1006,7 +1008,7 @@ void HomeContent::saveCacheLocked() {
             cache_[entries[index].first] = entries[index].second;
     }
     Json document = Json::object();
-    document.set("version", Json::numeric(2));
+    document.set("version", Json::numeric(kCacheVersion));
     Json values = Json::array();
     for (const auto &pair : cache_) {
         Json entry = Json::object();

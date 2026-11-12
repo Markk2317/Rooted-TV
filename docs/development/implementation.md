@@ -1835,7 +1835,8 @@ film or series ID of its kind), which the TV's details page asks this route for
 to fill its rows of the title's first two genres.
 
 `home-content.json` stores up to 40 trimmed replies under hashed request
-keys, atomically written with mode 0600. Details live for a day and search
+keys, atomically written with mode 0600, with a format version (3) that drops
+the replies of an older format when it changes. Details live for a day and search
 for fifteen minutes. Concurrent duplicates share a request, with two active
 metadata calls and at most sixteen queued. Failed refreshes use saved replies
 when present and wait ten minutes before retrying. No-key requests do not
