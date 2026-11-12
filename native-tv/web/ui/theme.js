@@ -1,4 +1,4 @@
-// The theme toggle: follow the system, or stay dark or light.
+// The theme toggle: dark by default, as Google TV is; or follow the system, or stay light.
 
 // The toggle's mark, from the sprite in the page.
 const THEME_MARKS = { auto: 'contrast', light: 'light_mode', dark: 'dark_mode' };
@@ -9,19 +9,19 @@ const THEME_MARKS = { auto: 'contrast', light: 'light_mode', dark: 'dark_mode' }
   const urlTheme = new URLSearchParams(location.search).get('theme');
   let stored = null;
   try { stored = localStorage.getItem('theme'); } catch (e) { /* private window */ }
-  let setting = urlTheme || stored || 'auto';
-  if (setting !== 'auto' && setting !== 'dark' && setting !== 'light') setting = 'auto';
+  let setting = urlTheme || stored || 'dark';
+  if (setting !== 'auto' && setting !== 'dark' && setting !== 'light') setting = 'dark';
   apply();
 
   function themeName(s) {
     return s === 'light' ? t('theme.light', 'Light') : s === 'dark' ? t('theme.dark', 'Dark') : t('theme.auto', 'Auto');
   }
 
-  // Browsers without prefers-color-scheme report the query as "not all"; the
-  // sheet's light roles are what they get.
+  // On Auto the sheet's dark roles stand unless the system asks for light; browsers without
+  // prefers-color-scheme report the query as "not all" and stay dark.
   function resolved() {
     if (setting !== 'auto') return setting;
-    return mq.media !== 'not all' && mq.matches ? 'dark' : 'light';
+    return mq.media !== 'not all' && !mq.matches ? 'light' : 'dark';
   }
 
   // The sheet follows the system with no attribute, and a choice sets one.
@@ -37,7 +37,7 @@ const THEME_MARKS = { auto: 'contrast', light: 'light_mode', dark: 'dark_mode' }
       btn.setAttribute('aria-label', label);
     }
     const mc = document.querySelector('meta[name="theme-color"]');
-    if (mc) mc.content = resolved() === 'light' ? '#f7faf8' : '#111411';
+    if (mc) mc.content = resolved() === 'light' ? '#f8fafd' : '#0e0f11';
   }
 
   function nextSetting() {

@@ -121,9 +121,10 @@ Object.keys(TABS).forEach(function (key) { panelIds[TABS[key]] = true; });
   assert.strictEqual(run('?theme=light', null, true).attrs['data-theme'], 'light', '?theme=light forces light');
   assert.strictEqual(run('?theme=dark', null, false).attrs['data-theme'], 'dark', '?theme=dark forces dark');
   assert.strictEqual(run('', 'dark', false).attrs['data-theme'], 'dark', 'the stored choice applies');
-  assert.strictEqual(run('', null, true).attrs['data-theme'], undefined, 'no choice follows the system: no attribute');
-  assert.strictEqual(run('?theme=nonsense', null, true).attrs['data-theme'], undefined, 'an unknown choice follows the system');
-  assert(/Theme: Auto/.test(run('', null, true).button.attrs['aria-label']), 'the toggle names the setting');
+  assert.strictEqual(run('', null, false).attrs['data-theme'], 'dark', 'no choice is dark, as Google TV is');
+  assert.strictEqual(run('?theme=nonsense', null, false).attrs['data-theme'], 'dark', 'an unknown choice is dark');
+  assert.strictEqual(run('?theme=auto', null, false).attrs['data-theme'], undefined, 'Auto follows the system: no attribute');
+  assert(/Theme: Dark/.test(run('', null, true).button.attrs['aria-label']), 'the toggle names the setting');
   console.log('  ok: ?theme=, the stored choice and data-theme');
 })();
 

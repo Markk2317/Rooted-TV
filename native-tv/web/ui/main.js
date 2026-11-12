@@ -31,6 +31,17 @@ async function waitForServer() {
   if (saveBtn) { saveBtn.disabled = false; saveBtn.classList.remove('busy'); }
 }
 
+// The bar's clock, as Google TV ends its bar: the time in the browser's own format, kept to the minute.
+(function barClock() {
+  const clock = q('bar-clock');
+  if (!clock) return;
+  const show = () => {
+    clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  show();
+  setTimeout(function next() { show(); setTimeout(next, 60000 - Date.now() % 60000); }, 60000 - Date.now() % 60000);
+})();
+
 /*
  * Which tab to open on. ?tab= names one; the older ?privacy=1 and ?controls=1
  * still work, since they are in bookmarks and in the screenshot tooling. Failing

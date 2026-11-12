@@ -266,11 +266,12 @@ The dashboard no longer checks for or installs Native Tv server releases. Deploy
 
 ## Fonts
 
-Roboto, cut to Latin as WOFF (Regular and Medium, about 17 KB each), under the
-Apache License 2.0. Both the browser dashboard and the TV pages use it, so the
-two surfaces are the same product. It is served by the TV, so the pages need
-no internet access; the licence text ships alongside it in
-`native-tv/assets/fonts/`.
+Google Sans Flex (Regular and Medium, TrueType, OFL-1.1), the TV client's face,
+is the browser dashboard's first font too, so it reads as Google TV's home does;
+Roboto, cut to Latin as WOFF (Regular and Medium, about 17 KB each, Apache
+License 2.0), stands behind it there and is the TV pages' font. Both are served
+by the TV, so the pages need no internet access; the licence texts ship
+alongside them in `native-tv/assets/fonts/`.
 
 ## App icons
 

@@ -115,6 +115,12 @@ function showTab(name) {
   placeTabIndicators();
 
   const button = sectionButton(section);
+  // On a phone the bar's capsule scrolls: the section shown is brought into it.
+  const capsule = button && button.closest('.nav-capsule');
+  if (capsule && button.offsetWidth) {
+    const left = button.offsetLeft;
+    capsule.scrollLeft = Math.max(Math.min(capsule.scrollLeft, left), left + button.offsetWidth - capsule.clientWidth);
+  }
   const label = button && button.querySelector('.nav-label');
   if (label) q('page-title').textContent = label.textContent;
   const help = q('nav-help');
@@ -142,13 +148,15 @@ function showTab(name) {
   else if (typeof scheduleToolsPoll === 'function') { scheduleToolsPoll(); }
 }
 
-// The indicator under the selected tab, for each bar showing.
+// The pill behind the selected tab, as Google TV's bar has one, for each bar showing: moved and
+// sized rather than scaled, so its round ends keep their shape.
 function placeTabIndicators() {
   document.querySelectorAll('.tabs').forEach(bar => {
     const current = bar.querySelector('.tab[aria-selected="true"]');
     const indicator = bar.querySelector('.tab-ind');
     if (!current || !indicator || !current.offsetWidth) return;
-    indicator.style.transform = 'translateX(' + current.offsetLeft + 'px) scaleX(' + current.offsetWidth / 100 + ')';
+    indicator.style.width = current.offsetWidth + 'px';
+    indicator.style.transform = 'translateX(' + current.offsetLeft + 'px)';
     // Scrolls the bar, never the page: scrollIntoView also moves the window, and this runs
     // on every `hidden` write - including a tab re-hidden on each poll on an LCD set.
     bar.scrollLeft = Math.max(Math.min(bar.scrollLeft, current.offsetLeft), current.offsetLeft + current.offsetWidth - bar.clientWidth);
@@ -230,6 +238,8 @@ document.addEventListener('DOMContentLoaded', () => { reportNav(); placeTabIndic
 document.querySelectorAll('.tabs').forEach(bar =>
   new MutationObserver(placeTabIndicators).observe(bar, { attributes: true, attributeFilter: ['hidden'], subtree: true }));
 window.addEventListener('resize', () => { placeTabIndicators(); reportNav(); });
+// The tabs' widths change once Google Sans Flex has loaded over the fallback face.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeTabIndicators);
 
 // The bar takes a surface once the page has scrolled under it.
 new IntersectionObserver(([entry]) => q('appbar').classList.toggle('scrolled', !entry.isIntersecting)).observe(q('sentinel'));

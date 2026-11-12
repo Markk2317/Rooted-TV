@@ -6,7 +6,7 @@ description: "The Native Tv web dashboard for LG webOS TVs: five sections for co
 
 The dashboard has five sections, and tabs inside three of them. Each tab has a deep link, `/?tab=` and its name below, and the links of earlier releases (`control`, `metrics`, `system`) still open the right place. OLED care appears on OLED TVs only, and Game mode and Native Tv Home where the TV offers them.
 
-The sections are a bar along the bottom on a phone, a rail down the left on a tablet and a drawer down the left on a computer. The keys **1** to **5** open them. The **Remote** button, bottom right on every screen, opens the D-pad, the remote's keys and a box to type into the TV's text fields.
+The page is laid out as Google TV's home: across the top, the Native Tv avatar, a capsule holding search and the sections with a light pill on the one shown (it scrolls sideways on a phone), a capsule of round buttons (the theme and, wider than a phone, Help), and on a screen 900 pixels wide or more the clock and the Native Tv name. The tabs inside a section are pills too, and its cards, chips and buttons take Google TV's dark rounded shapes, in Google Sans Flex. The keys **1** to **5** open the sections. The **Remote** button, bottom right on every screen, opens the D-pad, the remote's keys and a box to type into the TV's text fields.
 
 * **Overview**: [Control](control.md) and [Metrics](metrics.md) together, as one screen: what the TV is showing, the volume and power, then the readings
 * **Apps**: [Installed](apps.md) (`apps`), [Catalogue](apps.md#install-homebrew-apps) (`catalogue`), [LG launcher](apps.md#lg-launcher-and-remote) (`homescreen`) and [Native Tv Home](home.md) (`home`)
@@ -16,11 +16,11 @@ The sections are a bar along the bottom on a phone, a rail down the left on a ta
 
 For the app on the TV's home screen, see [The TV app](../apps/tv-app.md).
 
-The page works with no internet access. It follows the system's light or dark setting; the button at the top right steps through Auto, Dark and Light, and `/?theme=light` or `/?theme=dark` sets it for the visit. The choice is kept in the browser. The dashboard is in English and Spanish: it follows the browser's language, and the Language setting on the [Server tab](server.md#native-tv) or `/?lang=es` or `/?lang=en` changes it.
+The page works with no internet access. It is dark, as Google TV is; the button at the top right steps through Dark, Light and Auto (the system's light or dark setting), and `/?theme=light`, `/?theme=dark` or `/?theme=auto` sets it for the visit. The choice is kept in the browser. The dashboard is in English and Spanish: it follows the browser's language, and the Language setting on the [Server tab](server.md#native-tv) or `/?lang=es` or `/?lang=en` changes it.
 
-Use the search button (at the top of the drawer on a computer, in the top bar elsewhere), or press `/` or `Ctrl`/`Cmd` + `K`,
+Use the search button (the magnifier that leads the bar's capsule), or press `/` or `Ctrl`/`Cmd` + `K`,
 to find sections, settings, controls, and installed apps. Useful destinations can be pinned
-with the star beside a search result, keeping shortcuts to them in the drawer.
+with the star beside a search result, keeping shortcuts to them as chips under the bar.
 
 ## Install as an app
 
