@@ -150,7 +150,7 @@ def details(number):
     full = item(number)
     full.update({"cast": [{"name": "Mara Voss"}, {"name": "Tomas Oyelaran"}, {"name": "June Haldane"}],
                  "trailer": "dQw4w9WgXcQ", "overview": full["overview"] + " " + full["overview"],
-                 "similar": [item(number + k) for k in range(1, 9)]})
+                 "similar": [item(number + k) for k in range(1, 9)], "genreKeys": ["drama", "scifi"]})
     return {"ok": True, "enabled": True, "netflixEnabled": False, "item": full}
 
 

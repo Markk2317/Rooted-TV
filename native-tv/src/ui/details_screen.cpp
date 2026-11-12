@@ -13,6 +13,7 @@
 #include "ui/overlay_routes.hpp"
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 
 namespace nativetv {
 namespace {
@@ -25,8 +26,8 @@ constexpr float kSimilarW = layout::cardLW, kSimilarH = layout::cardLH, kSimilar
 // Under a row's items: a cast member's name and part, a title's two lines.
 constexpr float kCastH = layout::castD + layout::castNameGap + 2 * layout::cardCaptionLine,
                 kSimilarItemH = layout::cardLH + layout::cardCaptionGap + 2 * layout::cardCaptionLine;
-constexpr size_t kOverviewPageBytes = 1100;
-constexpr const char *kDetails = "title:details", *kNetflix = "title:netflix";
+constexpr size_t kOverviewPageBytes = 1100, kGenreRows = 2, kGenreTitles = 12;
+constexpr const char *kDetails = "title:details", *kNetflix = "title:netflix", *kGenre = "details:genre:";
 
 bool succeeded(const Response &response, const Json &data) {
     return response.ok() && data.valid() && (!data.has("ok") || data["ok"].boolean());
@@ -65,11 +66,27 @@ bool listed(const Json &keys, const std::string &key) {
 bool sameTitle(const Json &item, const std::string &type, const std::string &id) {
     return item["id"].string() == id && (type.empty() || item["type"].string() == type);
 }
+// A genre's titles for a title's row of them, as Google TV mixes films and shows: one of each in
+// turn, the title's own kind first, without the title itself.
+Json genreTitles(const Json &found, const Json &item) {
+    std::vector<Json> kinds[2];
+    for (const auto &entry : found.items())
+        if (!(entry["type"].string() == item["type"].string() && entry["id"].string() == item["id"].string()))
+            kinds[entry["type"].string() == item["type"].string() ? 0 : 1].push_back(entry);
+    Json titles = Json::array();
+    for (size_t i = 0; titles.size() < kGenreTitles && (i < kinds[0].size() || i < kinds[1].size()); ++i)
+        for (const auto &kind : kinds)
+            if (i < kind.size() && titles.size() < kGenreTitles)
+                titles.add(kind[i]);
+    return titles;
+}
 kit::Enter enterOf(const Motion &motion, int block) {
     double hidden = motion.value("details:t:" + std::to_string(block));
     return {static_cast<float>(1 - hidden), static_cast<float>(18 * hidden)};
 }
 } // namespace
+
+constexpr int DetailsScreen::kCastRow; // C++14: push_back takes it by reference
 
 DetailsScreen::DetailsScreen(const std::string &type, const std::string &id, const Json &item,
                              bool embedded)
@@ -97,6 +114,7 @@ void DetailsScreen::enter(ScreenHost &host) {
 void DetailsScreen::leave(ScreenHost &host) {
     host.services().cancel(kDetails);
     host.services().cancel(kNetflix);
+    cancelGenres(host);
     host.motion().erasePrefix("details:");
 }
 void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
@@ -182,6 +200,7 @@ void DetailsScreen::push(ScreenHost &host, const Json &item) {
     rebuildActions(host, title);
     stack_.push_back(title);
     host.services().cancel(kNetflix);
+    cancelGenres(host); // the title underneath asks again for any still on their way when it is back
     load(host);
     for (const char *prefix : {"details:a:", "details:s", "details:c", "details:rg:", "details:vy"})
         host.motion().erasePrefix(prefix);
@@ -207,6 +226,32 @@ void DetailsScreen::load(ScreenHost &host) {
         rebuildActions(host, title);
     }
     host.invalidate();
+}
+void DetailsScreen::fillShelves(ScreenHost &host, Title &title) {
+    title.shelves.clear();
+    Shelf similar;
+    similar.items = title.item["similar"].isArray() ? title.item["similar"] : Json::array();
+    title.shelves.push_back(similar);
+    for (const auto &key : title.item["genreKeys"].items()) {
+        if (title.shelves.size() > kGenreRows || !names::searchGenre(key.string()))
+            continue;
+        Shelf genre;
+        genre.genre = key.string();
+        genre.generation = 1; // asked for below
+        title.shelves.push_back(genre);
+    }
+    askGenres(host, title);
+}
+void DetailsScreen::askGenres(ScreenHost &host, Title &title) {
+    for (size_t k = 0; k < title.shelves.size(); ++k)
+        if (!title.shelves[k].genre.empty() && title.shelves[k].generation)
+            title.shelves[k].generation = host.services().read(
+                kGenre + std::to_string(k), Operation::SearchTitles,
+                fields({{"genre", Json::text(title.shelves[k].genre)}}));
+}
+void DetailsScreen::cancelGenres(ScreenHost &host) {
+    for (size_t k = 1; k <= kGenreRows; ++k)
+        host.services().cancel(kGenre + std::to_string(k));
 }
 void DetailsScreen::response(ScreenHost &host, const Response &response) {
     if (stack_.empty())
@@ -236,6 +281,7 @@ void DetailsScreen::response(ScreenHost &host, const Response &response) {
             if (data["netflixEnabled"].boolean())
                 title.netflixGeneration =
                     host.services().read(kNetflix, Operation::NetflixTitle, title.item);
+            fillShelves(host, title);
         }
         rebuildActions(host, title);
         host.invalidate();
@@ -248,22 +294,49 @@ void DetailsScreen::response(ScreenHost &host, const Response &response) {
             focusMoved(host, false);
             host.invalidate();
         }
+    } else if (response.channel.compare(0, std::strlen(kGenre), kGenre) == 0) {
+        for (size_t k = 0; k < title.shelves.size(); ++k) {
+            Shelf &shelf = title.shelves[k];
+            if (!shelf.generation || response.generation != shelf.generation ||
+                response.channel != kGenre + std::to_string(k))
+                continue;
+            // A row that comes in above the focused one keeps the focus on the row it was on.
+            const int focused = focusedSection(title);
+            shelf.generation = 0;
+            if (succeeded(response, data))
+                shelf.items = genreTitles(data["items"], title.item);
+            const std::vector<int> sections = sectionsOf(title);
+            const auto at = std::find(sections.begin(), sections.end(), focused);
+            if (title.row && at != sections.end())
+                title.row = static_cast<size_t>(at - sections.begin()) + 1;
+            focusMoved(host, false);
+            host.invalidate();
+        }
     }
 }
 
 // ---- Keys ------------------------------------------------------------------------------------
 
-std::vector<DetailsScreen::Section> DetailsScreen::sectionsOf(const Json &item) {
-    std::vector<Section> sections;
-    if (item["cast"].size())
-        sections.push_back(Section::Cast);
-    if (item["similar"].size())
-        sections.push_back(Section::Similar);
+std::vector<int> DetailsScreen::sectionsOf(const Title &title) {
+    std::vector<int> sections;
+    if (title.item["cast"].size())
+        sections.push_back(kCastRow);
+    for (size_t k = 0; k < title.shelves.size(); ++k)
+        if (title.shelves[k].items.size())
+            sections.push_back(static_cast<int>(k));
     return sections;
 }
-bool DetailsScreen::on(const Title &title, Section section) const {
-    const std::vector<Section> sections = sectionsOf(title.item);
-    return title.row > 0 && title.row <= sections.size() && sections[title.row - 1] == section;
+int DetailsScreen::focusedSection(const Title &title) {
+    const std::vector<int> sections = sectionsOf(title);
+    return title.row > 0 && title.row <= sections.size() ? sections[title.row - 1] : kCastRow - 1;
+}
+const DetailsScreen::Shelf *DetailsScreen::focusedShelf(const Title &title) {
+    const int section = focusedSection(title);
+    return section >= 0 ? &title.shelves[static_cast<size_t>(section)] : nullptr;
+}
+DetailsScreen::Shelf *DetailsScreen::focusedShelf(Title &title) {
+    const int section = focusedSection(title);
+    return section >= 0 ? &title.shelves[static_cast<size_t>(section)] : nullptr;
 }
 namespace {
 // The rows' looks with the focus on `row` (0 the actions): their titles at 36 px, the focused
@@ -286,10 +359,10 @@ std::vector<float> rowTopsOf(const std::vector<float> &heights, const std::vecto
     }
     return tops;
 }
-std::vector<float> sectionHeights(const std::vector<DetailsScreen::Section> &sections) {
+std::vector<float> sectionHeights(const std::vector<int> &sections) {
     std::vector<float> heights;
-    for (const auto section : sections)
-        heights.push_back(section == DetailsScreen::Section::Cast ? kCastH : kSimilarItemH);
+    for (const int section : sections)
+        heights.push_back(section < 0 ? kCastH : kSimilarItemH);
     return heights;
 }
 } // namespace
@@ -311,23 +384,27 @@ void DetailsScreen::focusMoved(ScreenHost &host, bool jump) {
     };
     for (size_t i = 0; i < title.actions.size(); ++i)
         glide("details:a:" + std::to_string(i), title.row == 0 && i == title.action ? 1 : 0);
-    const size_t cast = title.item["cast"].size(), similar = title.item["similar"].size();
-    const bool onCast = on(title, Section::Cast), onSimilar = on(title, Section::Similar);
+    const size_t cast = title.item["cast"].size();
+    const int focused = focusedSection(title);
     for (size_t i = 0; i < cast; ++i)
-        glide("details:c:" + std::to_string(i), onCast && i == title.cast ? 1 : 0);
-    for (size_t i = 0; i < similar; ++i)
-        glide("details:s:" + std::to_string(i), onSimilar && i == title.similar ? 1 : 0);
+        glide("details:c:" + std::to_string(i), focused == kCastRow && i == title.cast ? 1 : 0);
     slide("details:cx",
           kit::geometry::rowScrollTarget(static_cast<int>(title.cast), static_cast<int>(cast),
                                          layout::castD, layout::castGap),
           kit::motion::spring::row);
-    slide("details:sx",
-          kit::geometry::rowScrollTarget(static_cast<int>(title.similar), static_cast<int>(similar),
-                                         kSimilarW, kSimilarGap),
-          kit::motion::spring::row);
+    for (size_t k = 0; k < title.shelves.size(); ++k) {
+        const Shelf &shelf = title.shelves[k];
+        const std::string prefix = "details:s" + std::to_string(k);
+        for (size_t i = 0; i < shelf.items.size(); ++i)
+            glide(prefix + ":" + std::to_string(i), focused == static_cast<int>(k) && i == shelf.focus ? 1 : 0);
+        slide(prefix + "x",
+              kit::geometry::rowScrollTarget(static_cast<int>(shelf.focus), static_cast<int>(shelf.items.size()),
+                                             kSimilarW, kSimilarGap),
+              kit::motion::spring::row);
+    }
     // Google TV's details rise as the focus goes down: the focused row's title at the top,
     // large, and the page's head gone above it.
-    const std::vector<Section> sections = sectionsOf(title.item);
+    const std::vector<int> sections = sectionsOf(title);
     const std::vector<home::RowLook> looks = rowLooks(sections.size(), title.row);
     const std::vector<float> tops = rowTopsOf(sectionHeights(sections), looks);
     for (size_t i = 0; i < sections.size(); ++i)
@@ -358,8 +435,8 @@ void DetailsScreen::toggleOverview(ScreenHost &host, bool open) {
 }
 void DetailsScreen::activate(ScreenHost &host) {
     Title &title = top();
-    if (on(title, Section::Similar)) {
-        push(host, title.item["similar"][title.similar]);
+    if (const Shelf *shelf = focusedShelf(title)) {
+        push(host, shelf->items[shelf->focus]);
         return;
     }
     // A person has no page here.
@@ -468,13 +545,11 @@ bool DetailsScreen::key(ScreenHost &host, Key key) {
         return true;
     }
     Title &title = top();
-    const size_t rows = sectionsOf(title.item).size();
-    size_t &index = on(title, Section::Cast)      ? title.cast
-                    : on(title, Section::Similar) ? title.similar
-                                                  : title.action;
-    const size_t count = on(title, Section::Cast)      ? title.item["cast"].size()
-                         : on(title, Section::Similar) ? title.item["similar"].size()
-                                                       : title.actions.size();
+    const size_t rows = sectionsOf(title).size();
+    Shelf *shelf = focusedShelf(title);
+    const bool onCast = focusedSection(title) == kCastRow;
+    size_t &index = onCast ? title.cast : shelf ? shelf->focus : title.action;
+    const size_t count = onCast ? title.item["cast"].size() : shelf ? shelf->items.size() : title.actions.size();
     bool moved = true;
     switch (key) {
     case Key::Up:
@@ -518,6 +593,7 @@ bool DetailsScreen::back(ScreenHost &host) {
     }
     host.services().cancel(kDetails);
     host.services().cancel(kNetflix);
+    cancelGenres(host);
     if (!stack_.empty())
         stack_.pop_back();
     if (stack_.empty()) {
@@ -530,6 +606,7 @@ bool DetailsScreen::back(ScreenHost &host) {
         title.loading = false;
         load(host);
     }
+    askGenres(host, title);
     for (const char *prefix : {"details:a:", "details:s", "details:c", "details:rg:", "details:vy"})
         host.motion().erasePrefix(prefix);
     focusMoved(host, true);
@@ -545,8 +622,8 @@ void DetailsScreen::click(ScreenHost &host, const std::string &id) {
         return;
     }
     Title &title = top();
-    const std::vector<Section> sections = sectionsOf(title.item);
-    const auto rowOf = [&sections](Section section) {
+    const std::vector<int> sections = sectionsOf(title);
+    const auto rowOf = [&sections](int section) {
         return static_cast<size_t>(std::find(sections.begin(), sections.end(), section) -
                                    sections.begin()) + 1;
     };
@@ -554,17 +631,21 @@ void DetailsScreen::click(ScreenHost &host, const std::string &id) {
         title.row = 0;
         title.action = std::min(static_cast<size_t>(std::atoi(id.c_str() + 15)),
                                 title.actions.size() - 1);
-    } else if (id.compare(0, 16, "details:similar:") == 0) {
-        size_t index = static_cast<size_t>(std::atoi(id.c_str() + 16));
-        if (index >= title.item["similar"].size())
+    } else if (id.compare(0, 14, "details:title:") == 0) {
+        // "details:title:<shelf>:<index>"
+        const size_t k = static_cast<size_t>(std::atoi(id.c_str() + 14)), colon = id.find(':', 14);
+        if (k >= title.shelves.size() || colon == std::string::npos)
             return;
-        title.row = rowOf(Section::Similar);
-        title.similar = index;
+        const size_t index = static_cast<size_t>(std::atoi(id.c_str() + colon + 1));
+        if (index >= title.shelves[k].items.size())
+            return;
+        title.row = rowOf(static_cast<int>(k));
+        title.shelves[k].focus = index;
     } else if (id.compare(0, 13, "details:cast:") == 0) {
         size_t index = static_cast<size_t>(std::atoi(id.c_str() + 13));
         if (index >= title.item["cast"].size())
             return;
-        title.row = rowOf(Section::Cast);
+        title.row = rowOf(kCastRow);
         title.cast = index;
     } else
         return;
@@ -576,9 +657,9 @@ Json DetailsScreen::snapshot() const {
     if (stack_.empty())
         return value;
     const Title &title = top();
-    if (on(title, Section::Similar))
-        value.set("focus", Json::text(title.item["similar"][title.similar]["title"].string()));
-    else if (on(title, Section::Cast))
+    if (const Shelf *shelf = focusedShelf(title))
+        value.set("focus", Json::text(shelf->items[shelf->focus]["title"].string()));
+    else if (focusedSection(title) == kCastRow)
         value.set("focus", Json::text(title.item["cast"][title.cast]["name"].string()));
     else if (title.action < title.actions.size())
         value.set("focus", Json::text(title.actions[title.action].label));
@@ -588,6 +669,13 @@ Json DetailsScreen::snapshot() const {
     value.set("contentState", Json::text(title.loading ? "loading" : title.error ? "error" : "ready"));
     value.set("overview", Json::flag(overview_));
     value.set("overviewPage", Json::numeric(static_cast<double>(overviewPage_)));
+    Json rows = Json::array();
+    for (const int section : sectionsOf(title))
+        rows.add(Json::text(section == kCastRow ? "cast"
+                            : title.shelves[static_cast<size_t>(section)].genre.empty()
+                                ? "similar"
+                                : "genre:" + title.shelves[static_cast<size_t>(section)].genre));
+    value.set("rows", rows);
     return value;
 }
 
@@ -829,9 +917,9 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
                           title.error ? kit::color::bad : kit::color::onSurface3);
     endGroup();
     scene.popTransform();
-    // Block 3: the rows under them, Google TV's: the cast and crew, then the titles like it. They
-    // are placed on the screen, risen, since the cards leave out what is off it.
-    const std::vector<Section> sections = sectionsOf(item);
+    // Block 3: the rows under them, Google TV's: the cast and crew, the titles like it, then its
+    // genres' titles. They are placed on the screen, risen, since the cards leave out what is off it.
+    const std::vector<int> sections = sectionsOf(title);
     std::vector<home::RowLook> looks(sections.size());
     for (size_t i = 0; i < sections.size(); ++i) {
         looks[i].up = 1;
@@ -850,12 +938,15 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
         label.y = labelY;
         label.px = home::labelPx(looks[r]);
         label.grow = looks[r].grow;
-        label.label = sections[r] == Section::Cast
-                          ? msg("tv.details.cast", "Cast & crew")
-                          : msg("tv.details.ifYouLiked", "If you liked {title}",
-                                fields({{"title", Json::text(name)}}));
+        const Shelf *shelf = sections[r] >= 0 ? &title.shelves[static_cast<size_t>(sections[r])] : nullptr;
+        const names::SearchGenre *genre = shelf ? names::searchGenre(shelf->genre) : nullptr;
+        label.label = !shelf ? msg("tv.details.cast", "Cast & crew")
+                      : genre ? msg("tv.details.genreRow", "{genre} films and shows",
+                                    fields({{"genre", Json::text(genre->name)}}))
+                              : msg("tv.details.ifYouLiked", "If you liked {title}",
+                                    fields({{"title", Json::text(name)}}));
         kit::row(paint, label);
-        if (sections[r] == Section::Cast) {
+        if (!shelf) {
             const float scroll = static_cast<float>(motion.value("details:cx"));
             for (size_t i = 0; i < item["cast"].size(); ++i) {
                 const Rect rest = {layout::homeX + static_cast<float>(i) * (layout::castD + layout::castGap) + scroll,
@@ -868,23 +959,24 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
             }
             continue;
         }
-        const float scroll = static_cast<float>(motion.value("details:sx"));
-        for (size_t i = 0; i < item["similar"].size(); ++i) {
+        const std::string prefix = "details:s" + std::to_string(sections[r]);
+        const float scroll = static_cast<float>(motion.value(prefix + "x"));
+        for (size_t i = 0; i < shelf->items.size(); ++i) {
             const Rect rest = {layout::homeX + static_cast<float>(i) * (kSimilarW + kSimilarGap) + scroll,
                                itemsY, kSimilarW, kSimilarH};
             if (rest.x + rest.w < -140 || rest.x > kit::canvas::width + 140)
                 continue;
-            const Json similar = item["similar"][i];
+            const Json entry = shelf->items[i];
             kit::PosterCard card;
             card.rest = rest;
-            card.id = "details:similar:" + std::to_string(i);
-            card.image = artwork(similar);
-            card.title = similar["title"].string();
-            card.focus = static_cast<float>(motion.value("details:s:" + std::to_string(i)));
+            card.id = "details:title:" + std::to_string(sections[r]) + ":" + std::to_string(i);
+            card.image = artwork(entry);
+            card.title = entry["title"].string();
+            card.focus = static_cast<float>(motion.value(prefix + ":" + std::to_string(i)));
             // Google TV names the focused title under its card; every card has its line of facts.
             if (card.focus > .5f)
                 card.caption = card.title;
-            card.captionLine = titleFacts(similar, false);
+            card.captionLine = titleFacts(entry, false);
             kit::card(paint, card);
         }
     }

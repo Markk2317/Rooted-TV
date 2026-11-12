@@ -433,6 +433,22 @@ Json detailsValue(const Json &document, const std::string &type,
         }
     }
     item.set("genres", genres);
+    // The Search page's genres the title is in, for its details' rows of each: one key for each of
+    // TMDB's genres, in TMDB's order (a series' Action & Adventure is Action, not Adventure too).
+    Json genreKeys = Json::array();
+    std::vector<int> genreIds;
+    for (const Json &genre : document["genres"].items()) {
+        if (!genre["id"].isNumber()) continue;
+        const int genreId = static_cast<int>(genre["id"].number());
+        if (std::find(genreIds.begin(), genreIds.end(), genreId) != genreIds.end()) continue;
+        for (const names::SearchGenre &entry : names::searchGenres())
+            if ((type == "movie" ? entry.film : entry.series) == genreId) {
+                genreIds.push_back(genreId);
+                genreKeys.add(Json::text(entry.key));
+                break;
+            }
+    }
+    item.set("genreKeys", genreKeys);
 
     // Google TV's Cast & crew: the director first, then the cast, each with their TMDB photo.
     Json cast = Json::array();

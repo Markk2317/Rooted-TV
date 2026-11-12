@@ -1829,7 +1829,10 @@ characters; IDs and types are validated before transport.
 `discover/movie` then `discover/tv` for its genre IDs, most popular first,
 16 of each at most, kept for a day; a genre TMDB has for one kind only
 (History, Horror, Music, Romance and Thriller are films, Reality series) asks
-for that kind alone.
+for that kind alone. A title's details carry `genreKeys`, the grid's keys for
+TMDB's genres of the title in TMDB's order (one per TMDB genre, matched by the
+film or series ID of its kind), which the TV's details page asks this route for
+to fill its rows of the title's first two genres.
 
 `home-content.json` stores up to 40 trimmed replies under hashed request
 keys, atomically written with mode 0600. Details live for a day and search

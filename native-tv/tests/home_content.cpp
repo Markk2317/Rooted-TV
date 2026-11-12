@@ -138,7 +138,9 @@ nativetv::Json responseFor(const std::string &url) {
     Json document = rawTitle(id, type);
     if (type == "movie") document.set("runtime", Json::numeric(121));
     else document.set("episode_run_time", Json::parse("[44]"));
-    document.set("genres", Json::parse("[{\"name\":\"Drama\"}]"));
+    document.set("genres", Json::parse(type == "movie"
+        ? "[{\"id\":18,\"name\":\"Drama\"},{\"id\":12,\"name\":\"Adventure\"},{\"id\":4242,\"name\":\"Odd\"}]"
+        : "[{\"id\":18,\"name\":\"Drama\"},{\"id\":10759,\"name\":\"Action & Adventure\"}]"));
     document.set("credits", Json::parse(
         "{\"cast\":[{\"name\":\"<Actor>\",\"character\":\"A role\",\"profile_path\":\"/actor.jpg\"}],"
         "\"crew\":[{\"name\":\"Writer\",\"job\":\"Writer\"},{\"name\":\"Maker\",\"job\":\"Director\"}]}"));
@@ -199,6 +201,9 @@ int main() {
     assert(item["runtime"].number() == 121);
     assert(item["rating"].number() == 8.0);
     assert(item["genres"][0].string() == "Drama");
+    // The Search page's genres it is in, for the details' rows: TMDB's Odd is none of them.
+    assert(item["genreKeys"].size() == 2 && item["genreKeys"][0].string() == "drama" &&
+           item["genreKeys"][1].string() == "adventure");
     // The director first, as Google TV's Cast & crew lists them, then the cast with their photos.
     assert(item["cast"][0]["name"].string() == "Maker" &&
            item["cast"][0]["character"].string() == "Director" &&
@@ -211,6 +216,10 @@ int main() {
     const size_t afterDetails = asked.size();
     assert(content.details("private-test-key", true, "movie", "7")["netflixEnabled"].boolean());
     assert(asked.size() == afterDetails);
+    // A series' Action & Adventure is the grid's Action, its first genre with that series genre.
+    const Json series = content.details("private-test-key", false, "tv", "8")["item"];
+    assert(series["genreKeys"].size() == 2 && series["genreKeys"][0].string() == "drama" &&
+           series["genreKeys"][1].string() == "action");
 
     const Json search = content.search("private-test-key", "secret phrase & /?");
     assert(search["items"].size() == 2);

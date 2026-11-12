@@ -6,7 +6,7 @@
 namespace nativetv {
 // Title details, as Google TV's: the backdrop, the title, its facts and story, its actions, and
 // under them rows that rise to the top as the focus goes down (the cast and crew, the titles like
-// it), and the full overview. A similar title opens on top of this one (up to eight deep) and Back
+// it, the titles of its first two genres), and the full overview. A similar title opens on top of this one (up to eight deep) and Back
 // peels them off again, as the page did in JavaScript.
 //
 // Reached from Home as "details:<type>:<id>"; the search editor hosts one as a child
@@ -36,10 +36,15 @@ class DetailsScreen final : public ScreenView {
     bool finished() const {
         return finished_;
     }
-    // The rows under the actions, those the title has.
-    enum class Section { Cast, Similar };
-
   private:
+    // A row of titles under the cast: the titles like it, or those of one of its genres, which are
+    // asked for once the details have said its genres.
+    struct Shelf {
+        std::string genre; // the Search page's genre key; empty for the titles like it
+        Json items = Json::array();
+        size_t focus = 0;
+        unsigned generation = 0; // a genre's titles on their way
+    };
     struct Action {
         enum class Kind { Netflix, Service, Trailer, Watchlist, Like, Dislike, Overview, Retry } kind;
         Action(Kind kind, std::string label) : kind(kind), label(std::move(label)) {}
@@ -54,14 +59,24 @@ class DetailsScreen final : public ScreenView {
         bool loading = false, error = false, stale = false, moved = false;
         unsigned detailsGeneration = 0, netflixGeneration = 0;
         // row: 0 for the actions, else the section's place plus one.
-        size_t row = 0, action = 0, cast = 0, similar = 0;
+        size_t row = 0, action = 0, cast = 0;
         std::vector<Action> actions;
+        std::vector<Shelf> shelves;
     };
-    static std::vector<Section> sectionsOf(const Json &item);
-    // The focused row's section; the actions have none.
-    bool on(const Title &title, Section section) const;
+    // The rows under the actions, those the title has: kCastRow, then the shelves with titles (by
+    // their place in `shelves`).
+    static constexpr int kCastRow = -1;
+    static std::vector<int> sectionsOf(const Title &title);
+    // The focused row (kCastRow or a shelf), or none on the actions.
+    static int focusedSection(const Title &title);
+    static Shelf *focusedShelf(Title &title);
+    static const Shelf *focusedShelf(const Title &title);
     void push(ScreenHost &host, const Json &item);
     void load(ScreenHost &host);
+    // The rows of titles once the details are in: the titles like it, and its first genres' asked for.
+    void fillShelves(ScreenHost &host, Title &title);
+    void askGenres(ScreenHost &host, Title &title);
+    void cancelGenres(ScreenHost &host);
     void rebuildActions(ScreenHost &host, Title &title);
     void markTitle(ScreenHost &host, Action::Kind kind);
     // The profile's marks on a title: what is being saved, else what Home's feed last said.

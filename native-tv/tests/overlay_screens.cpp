@@ -303,6 +303,45 @@ void detailsDepthChecks() {
           "A ninth title is refused with a message");
 }
 
+// Google TV's rows of a title's genres, after the titles like it: one per genre the details name
+// (two at most), each a mix of films and shows without the title itself.
+void detailsGenreChecks() {
+    std::string answer = detailsJson;
+    answer.replace(answer.find(R"("cast":)"), 7, R"("genreKeys":["adventure","scifi","drama"],"cast":)");
+    World world;
+    world.openDetails(answer.c_str());
+    check(world.on("details:genre:1").size() == 1 && world.on("details:genre:2").size() == 1 &&
+              world.on("details:genre:3").empty() &&
+              world.on("details:genre:1")[0].operation == Operation::SearchTitles &&
+              world.on("details:genre:1")[0].body["genre"].string() == "adventure" &&
+              world.on("details:genre:2")[0].body["genre"].string() == "scifi",
+          "The details ask for the titles of the title's first two genres");
+    check(world.snapshot()["rows"].size() == 2, "Until they come, the rows are the cast and the titles like it");
+    // The second genre's answer first: its row comes in under the titles like it.
+    world.reply("details:genre:2",
+                R"({"ok":true,"items":[{"id":7,"type":"movie","title":"Coast"},{"id":30,"type":"movie","title":"Orbit"},)"
+                R"({"id":31,"type":"movie","title":"Nova"},{"id":40,"type":"tv","title":"Station"}]})");
+    world.settle(100);
+    check(world.snapshot()["rows"].size() == 3 && world.snapshot()["rows"][2].string() == "genre:scifi",
+          "A genre's row comes in under the titles like it");
+    world.press({Key::Down, Key::Down, Key::Down});
+    world.settle(600);
+    check(world.app.shows("Science fiction films and shows"), "named after its genre");
+    check(world.snapshot()["focus"].string() == "Orbit", "Its titles leave the title itself out");
+    world.press(Key::Right);
+    check(world.snapshot()["focus"].string() == "Station", "and take a film and a show in turn");
+    world.reply("details:genre:1", R"({"ok":true,"items":[{"id":50,"type":"movie","title":"Summit"}]})");
+    world.settle(100);
+    check(world.snapshot()["rows"].size() == 4 && world.snapshot()["rows"][2].string() == "genre:adventure" &&
+              world.snapshot()["focus"].string() == "Station",
+          "A row that comes in above keeps the focus where it was");
+    world.press(Key::Ok);
+    world.reply("title:details", detailsJson);
+    world.settle(300);
+    check(world.snapshot()["depth"].number() == 2 && world.snapshot()["rows"].size() == 2,
+          "A genre's title opens over the page, with rows of its own");
+}
+
 void detailsFocusReturnChecks() {
     World world;
     world.press({Key::Right, Key::Right});
@@ -784,6 +823,7 @@ int main() {
         detailsWatchOptionsChecks();
         detailsOverviewChecks();
         detailsDepthChecks();
+        detailsGenreChecks();
         detailsFocusReturnChecks();
         profileNameChecks();
         profilesChecks();
