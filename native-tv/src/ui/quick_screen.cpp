@@ -875,34 +875,22 @@ class QuickScreen final : public ScreenView {
             Look look = lookOf(motion, i, scroll);
             if (look.at.y + look.at.h < view.y - 20 || look.at.y > view.y + view.h + 20)
                 continue;
-            Transform scale = kit::focus::transformAt(look.at, look.scale);
-            scene.pushTransform(scale);
-            scene.pushOpacity(row.dim ? .6f : 1);
-            surface(scene, look, i, layout::quickItemR);
-            const Color ink = mix(kit::alpha::quickInk, qcolor::quickOnFocus, look.focus);
-            const float textX = look.at.x + layout::quickItemTextX, textW = look.at.w - 2 * layout::quickItemTextX - 72;
-            if (!row.trail.empty()) {
-                paint.glyphs.text(scene, {textX, look.at.y + 18, textW, kit::type::quickItem.line}, row.title,
-                                  kit::type::quickItem, ink);
-                paint.glyphs.text(scene, {textX, look.at.y + 54, textW, kit::type::quickCardSub.line}, row.trail,
-                                  kit::type::quickCardSub, kit::focus::withAlpha(ink, .6f));
-            } else {
-                paint.glyphs.text(scene,
-                                  {textX, look.at.y + (look.at.h - kit::type::quickItem.line) / 2, textW,
-                                   kit::type::quickItem.line},
-                                  row.title, kit::type::quickItem, ink);
+            kit::PanelItem item;
+            item.at = look.at;
+            item.id = "quick:row:" + std::to_string(i);
+            item.title = row.title;
+            item.line = row.trail;
+            item.focus = look.focus;
+            item.scale = look.scale;
+            item.dim = row.dim;
+            if (row.kind == Row::Kind::Switch) {
+                item.mark = kit::PanelItem::Mark::Switch;
+                item.on = static_cast<float>(motion.value("quick:t:" + std::to_string(i)));
+            } else if (row.kind == Row::Kind::Choice) {
+                item.mark = kit::PanelItem::Mark::Radio;
+                item.on = rowOn(host, row) ? 1.0f : 0.0f;
             }
-            const float right = look.at.x + look.at.w - layout::quickItemTextX;
-            if (row.kind == Row::Kind::Switch)
-                kit::toggle(paint,
-                            {right - layout::toggleW, look.at.y + (look.at.h - layout::toggleH) / 2, layout::toggleW,
-                             layout::toggleH},
-                            static_cast<float>(motion.value("quick:t:" + std::to_string(i))), look.focus);
-            else if (row.kind == Row::Kind::Choice)
-                kit::radio(paint, {right - 32, look.at.y + (look.at.h - 32) / 2, 32, 32}, rowOn(host, row) ? 1.0f : 0.0f,
-                           look.focus);
-            scene.popOpacity();
-            scene.popTransform();
+            kit::panelItem(paint, item);
         }
         scene.popClip();
     }

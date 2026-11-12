@@ -85,6 +85,45 @@ void radio(Paint paint, Rect box, float on, float rowFocus) {
     }
 }
 
+void panelItem(Paint paint, const PanelItem &item) {
+    Scene &scene = paint.scene;
+    const float focus = focus::clamp01(item.focus);
+    scene.pushTransform(focus::transformAt(item.at, item.scale));
+    scene.pushOpacity(item.dim ? .6f : 1);
+    scene.shape(item.at, alpha::quickTile, layout::quickItemR);
+    if (focus > 0) {
+        Node &lit = scene.shape(item.at, focus::withAlpha(color::quickFocus, focus), layout::quickItemR);
+        lit.shadow = {0, 4, 16, 0, {0, 0, 0, .32f * focus}};
+    }
+    scene.hits.push_back({focus::scaledAbout(item.at, item.scale), item.id});
+    const Color ink = focus::mix(alpha::quickInk, color::quickOnFocus, focus);
+    float textX = item.at.x + layout::quickItemTextX;
+    if (item.swatch.a > 0) {
+        scene.shape({textX, item.at.y + (item.at.h - layout::panelSwatch) / 2, layout::panelSwatch,
+                     layout::panelSwatch},
+                    item.swatch, layout::panelSwatch / 2);
+        textX += layout::panelSwatch + layout::panelSwatchGap;
+    }
+    const float right = item.at.x + item.at.w - layout::quickItemTextX, textW = right - 72 - textX;
+    if (!item.line.empty()) {
+        paint.glyphs.text(scene, {textX, item.at.y + 18, textW, type::quickItem.line}, item.title, type::quickItem,
+                          ink);
+        paint.glyphs.text(scene, {textX, item.at.y + 54, textW, type::quickCardSub.line}, item.line,
+                          type::quickCardSub, focus::withAlpha(ink, .6f));
+    } else {
+        paint.glyphs.text(scene, {textX, item.at.y + (item.at.h - type::quickItem.line) / 2, textW, type::quickItem.line},
+                          item.title, type::quickItem, ink);
+    }
+    if (item.mark == PanelItem::Mark::Switch)
+        toggle(paint, {right - layout::toggleW, item.at.y + (item.at.h - layout::toggleH) / 2, layout::toggleW,
+                       layout::toggleH},
+               item.on, focus);
+    else if (item.mark == PanelItem::Mark::Radio)
+        radio(paint, {right - 32, item.at.y + (item.at.h - 32) / 2, 32, 32}, item.on, focus);
+    scene.popOpacity();
+    scene.popTransform();
+}
+
 void veil(Paint paint, float alpha) {
     if (alpha <= .002f)
         return;

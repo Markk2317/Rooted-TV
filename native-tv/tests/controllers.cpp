@@ -253,7 +253,7 @@ int main() {
         avatar.key(Key::Left);
         avatar.key(Key::Ok);
         check(avatar.screenName() == "profiles",
-              "The avatar is on the bar's path with one profile, and opens Who's watching?");
+              "The avatar is on the bar's path with one profile, and opens Choose a profile");
 
         std::setlocale(LC_TIME, "C");
         Json twelveHourCatalogue = Json::parse(catalogue);

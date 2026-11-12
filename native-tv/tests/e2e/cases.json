@@ -6723,7 +6723,7 @@
     },
     {
       "id": "E2E-176",
-      "title": "The avatar in the Home bar opens Who's watching? with one profile",
+      "title": "The avatar in the Home bar opens Choose a profile with one profile",
       "purpose": "The avatar before the tabs is on the bar's path whatever the number of profiles (it was a decoration while there was one): from the first tab, Left past Search reaches it and OK opens the profiles page, where that profile's colour and name are edited.",
       "kind": "run",
       "screen": "home",
@@ -6756,14 +6756,14 @@
     {
       "id": "E2E-177",
       "title": "The colour of the profile in use is set from the TV",
-      "purpose": "On Who's watching?, Down from the avatars reaches a row of six swatches and Right then OK sets the second colour on the profile in use: the server's profile list shows #f2b8b5 afterwards. The case expects the profile to start on the first colour (#a8c7fa, what a TV that never changed it has) and puts it back.",
+      "purpose": "On Choose a profile (Left past Search from the first tab, then OK on the avatar), Down from the avatars reaches Manage profile and OK opens the settings panel of the profile in use; Down twice then OK sets the second colour on it: the server's profile list shows #f2b8b5 afterwards. The case expects the profile to start on the first colour (#a8c7fa, what a TV that never changed it has) and puts it back.",
       "kind": "run",
       "requires": [
         "control"
       ],
       "screen": "home",
       "script": "profile-colour.json",
-      "durationMs": 13500,
+      "durationMs": 15000,
       "steps": [
         "Take the lock folder /tmp/nativetv-e2e.lock (mkdir).",
         "Read the server's port from the TV, as deploy.py does (the access token is never read).",
@@ -6777,7 +6777,7 @@
         "checkpoints": [
           {
             "name": "colours",
-            "path": "onColours",
+            "path": "manage",
             "equals": true
           },
           {

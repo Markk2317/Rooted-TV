@@ -668,43 +668,59 @@ void profilesFailureChecks() {
     back.openProfiles();
     back.press(Key::Back);
     check(back.screen() == "home", "Back returns Home");
-    // The colour of the profile in use: Down from the avatars, Left and Right between the swatches, OK picks.
+    // The profile in use's settings: Down from the avatars reaches Manage profile, whose panel holds
+    // Rename and the colours.
     World colour;
     colour.openProfiles();
+    check(colour.app.shows("Choose a profile") && colour.app.shows("Manage profile"),
+          "The page is Google TV's account chooser, with Manage profile under the avatars");
     colour.press(Key::Down);
-    check(colour.snapshot()["onColours"].boolean() && colour.snapshot()["colour"].string() == "#a8c7fa",
-          "Down from the avatars goes to the colours, on the first swatch");
-    colour.press(Key::Right);
-    check(colour.snapshot()["colour"].string() == "#f2b8b5", "Right moves to the next swatch");
+    check(colour.snapshot()["onButton"].boolean() && !colour.snapshot()["manage"].boolean(),
+          "Down from the avatars reaches Manage profile");
+    colour.press(Key::Ok);
+    colour.settle(600);
+    check(colour.snapshot()["manage"].boolean() && colour.snapshot()["row"].number() == 0 &&
+              colour.app.shows("Rename") && colour.app.shows("Purple"),
+          "OK opens the profile's settings panel on Rename, over the colours");
+    colour.press(Key::Down);
+    check(colour.snapshot()["colour"].string() == "#a8c7fa", "Down reaches the first colour");
+    colour.press(Key::Down);
+    check(colour.snapshot()["colour"].string() == "#f2b8b5", "and the next");
     colour.press(Key::Ok);
     check(colour.on("w:profile.colour.main").size() == 1 &&
               colour.on("w:profile.colour.main")[0].operation == Operation::SetProfile &&
               colour.on("w:profile.colour.main")[0].body["action"].string() == "rename" &&
               colour.on("w:profile.colour.main")[0].body["id"].string() == "main" &&
               colour.on("w:profile.colour.main")[0].body["color"].string() == "#f2b8b5" &&
-              colour.screen() == "profiles",
-          "OK saves it on the profile route and stays on the page");
+              colour.screen() == "profiles" && colour.snapshot()["manage"].boolean(),
+          "OK saves it on the profile route and the panel stays");
     colour.answer(colour.on("w:profile.colour.main")[0], false, "Busy");
     check(colour.toasted("The colour could not be saved: Busy"), "A refusal says why");
+    colour.press(Key::Back);
+    check(!colour.snapshot()["manage"].boolean() && colour.snapshot()["onButton"].boolean() &&
+              colour.screen() == "profiles",
+          "Back closes the panel onto Manage profile");
     colour.press(Key::Up);
-    check(!colour.snapshot()["onColours"].boolean(), "Up goes back to the avatars");
-    colour.press({Key::Down, Key::Down});
-    check(colour.snapshot()["onButton"].boolean(), "Down twice reaches Rename profile");
+    check(!colour.snapshot()["onButton"].boolean(), "Up goes back to the avatars");
     World rename;
     rename.openProfiles();
     rename.press(Key::Down);
-    rename.press(Key::Down);
     rename.press(Key::Ok);
-    check(rename.screen() == "rename", "Rename profile opens the editor");
+    rename.press(Key::Ok);
+    check(rename.screen() == "rename", "Rename in the panel opens the editor");
     rename.press(Key::Back);
-    check(rename.screen() == "profiles", "Back from the editor returns to the profiles");
+    check(rename.screen() == "profiles" && rename.snapshot()["manage"].boolean() &&
+              rename.snapshot()["row"].number() == 0,
+          "Back from the editor returns to the profile's settings, on Rename");
+    rename.press({Key::Back, Key::Back});
+    check(rename.screen() == "home", "Back closes the panel, then the page");
 }
 
 void renameChecks() {
     World world;
     world.openProfiles();
     world.press(Key::Down);
-    world.press(Key::Down);
+    world.press(Key::Ok);
     world.press(Key::Ok);
     check(world.screen() == "rename" && world.snapshot()["query"].string() == "LGTV",
           "Rename starts with the name on screen");
@@ -733,7 +749,7 @@ void renameChecks() {
     World ok;
     ok.openProfiles();
     ok.press(Key::Down);
-    ok.press(Key::Down);
+    ok.press(Key::Ok);
     ok.press(Key::Ok);
     ok.app.activate("editor:clear");
     ok.app.input("Ana");
@@ -750,7 +766,7 @@ void renameChecks() {
     World limit;
     limit.openProfiles();
     limit.press(Key::Down);
-    limit.press(Key::Down);
+    limit.press(Key::Ok);
     limit.press(Key::Ok);
     limit.app.input("aaaaaaaaaaaaaaaaaaaaaaaaa");
     check(limit.snapshot()["query"].string() == "LGTV", "A name over twenty characters is not taken whole");

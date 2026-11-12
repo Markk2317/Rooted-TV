@@ -20,6 +20,20 @@ void pillButton(Paint paint, const PillButton &button);
 // A 28 px choice mark: ring, with a dot when `on`. `rowFocus` darkens it once its row turns light.
 void radio(Paint paint, Rect box, float on, float rowFocus = 0);
 
+// An item of Google TV's settings panel (Quick settings' lists, a profile's settings): its rest
+// tint, the light blue the focus brings with a 4 dp lift, its title (and a line under it), and a
+// radio or a switch at the right. `at` is the item at rest on the canvas, `scale` its focus growth.
+struct PanelItem {
+    Rect at;
+    std::string id, title, line;
+    float focus = 0, scale = 1;
+    enum class Mark { None, Radio, Switch } mark = Mark::None;
+    float on = 0;                // the radio's dot, or where the switch's knob is
+    Color swatch = {0, 0, 0, 0}; // a round colour before the title, where its alpha is above 0
+    bool dim = false;
+};
+void panelItem(Paint paint, const PanelItem &item);
+
 // Full-screen black under a drawer or sheet; one quad, nothing at alpha 0.
 void veil(Paint paint, float alpha);
 

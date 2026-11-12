@@ -1,7 +1,11 @@
-// "Who's watching?": the profiles as a row of round avatars, one to add another and a button to
-// rename the one in use. Switching and adding post to the profile route the JavaScript page used,
-// through the optimistic-update layer: the chosen avatar is the one in use at once, a spinner shows
-// until the server answers, and a refusal gives it back and says why.
+// Google TV's account chooser, for the profiles: the wordmark, "Choose a profile", the profiles as
+// round avatars with their names and one to add another, and Manage profile under them, which
+// slides in Google TV's settings panel for the profile in use: its name (OK renames it) and its
+// colour. The focused avatar grows 10 % with a white ring and a glow, as Google TV's does.
+//
+// Switching and adding post to the profile route the JavaScript page used, through the
+// optimistic-update layer: the chosen avatar is the one in use at once, a spinner shows until the
+// server answers, and a refusal gives it back and says why.
 #include "domain/models.hpp"
 #include "domain/say.hpp"
 #include "ui/application.hpp"
@@ -18,14 +22,17 @@
 
 namespace nativetv {
 namespace {
+namespace layout = kit::layout;
 using kit::easing;
 using say::msg;
-constexpr const char *kStats = "profiles:stats", *kGo = "profiles.go", *kStatsMemory = "quick.stats";
-constexpr float kAvatarTop = 380, kGap = 48, kMaxAvatar = 180, kMinAvatar = 120;
-// The avatar colours the server takes (kColors in service/home_profiles.cpp).
+constexpr const char *kStats = "profiles:stats", *kGo = "profiles.go", *kStatsMemory = "quick.stats",
+                     *kManageMemory = "profiles.manage";
+// The avatar colours the server takes (kColors in service/home_profiles.cpp), and their names.
 constexpr const char *kColours[] = {"#a8c7fa", "#f2b8b5", "#6dd58c", "#ffb74d", "#7fcfff", "#d0bcff"};
+constexpr const char *kColourKeys[] = {"blue", "pink", "green", "orange", "lightBlue", "purple"};
+constexpr const char *kColourNames[] = {"Blue", "Pink", "Green", "Orange", "Light blue", "Purple"};
 constexpr size_t kColourCount = sizeof(kColours) / sizeof(kColours[0]);
-constexpr float kSwatch = 52, kSwatchGap = 28;
+constexpr float kPanelX = kit::canvas::width - layout::quickRight - layout::quickW;
 
 Color hexColour(const std::string &value) {
     return kit::rgb(static_cast<unsigned>(std::strtoul(value.c_str() + 1, nullptr, 16)));
@@ -35,7 +42,7 @@ Color profileColor(const Json &person, const std::string &shown = "") {
     std::string value = shown.empty() ? person["color"].string() : shown;
     if (value.size() == 7 && value[0] == '#' &&
         value.find_first_not_of("0123456789abcdefABCDEF", 1) == std::string::npos)
-        return kit::rgb(static_cast<unsigned>(std::strtoul(value.c_str() + 1, nullptr, 16)));
+        return hexColour(value);
     return home::hsl(static_cast<float>(home::hashOf(person["id"].string()) % 360), .5f, .40f);
 }
 std::string initialOf(const std::string &name) {
@@ -58,21 +65,25 @@ class ProfilesScreen final : public ScreenView {
     bool hasBar() const override {
         return false;
     }
+    bool paintsWall() const override {
+        return true;
+    }
     void enter(ScreenHost &host) override {
-        size_t index = 0;
-        std::vector<Json> people = host.view().catalogue["profiles"].items();
-        for (size_t i = 0; i < people.size(); ++i)
-            if (people[i]["active"].boolean())
-                index = i;
-        selected_ = index;
+        size_t count = host.view().catalogue["profiles"].size();
+        selected_ = std::min(activeIndex(host), count);
         active_ = shownActive(host);
         colour_ = colourIndexOf(host);
+        // Back from renaming returns to the profile's settings, where Rename was.
+        manage_ = host.memory().erase(kManageMemory) > 0 && activeIndex(host) < count;
+        onButton_ = manage_;
+        row_ = 0;
+        host.motion().set("profiles:panel", manage_ ? 1 : 0);
         // The first profile is named after the TV: its model comes from the stats.
         if (!host.memory().count(kStatsMemory))
             statsGeneration_ = host.services().read(kStats, Operation::Metrics);
         Timeline timeline;
         Tween rise(1, 0, kit::motion::ms::base, easing(kit::motion::ease::out));
-        for (size_t i = 0; i <= people.size() + 1; ++i) {
+        for (size_t i = 0; i <= count + 1; ++i) {
             host.motion().set(id("e", i), 1);
             timeline.add(id("e", i),
                          rise.delayedBy(kit::motion::stagger::pageBase +
@@ -88,11 +99,13 @@ class ProfilesScreen final : public ScreenView {
     }
     bool update(ScreenHost &host) override {
         // The list can change under the focus (a profile removed from a phone): the focus stays on
-        // a profile or on Add, and the rename button goes with the active profile.
+        // a profile or on Add, and Manage and its panel go with the active profile.
         const size_t count = host.view().catalogue["profiles"].size();
-        if (selected_ > count || (onButton_ && activeIndex(host) >= count)) {
+        if (selected_ > count || ((onButton_ || manage_) && activeIndex(host) >= count)) {
             selected_ = std::min(selected_, count);
             onButton_ = onButton_ && activeIndex(host) < count;
+            if (manage_ && activeIndex(host) >= count)
+                closeManage(host);
             focusMoved(host, true);
         }
         busy_ = host.optimistic().pending("profiles.active") || host.optimistic().pending("profiles.add");
@@ -100,43 +113,29 @@ class ProfilesScreen final : public ScreenView {
         return busy_;
     }
     bool key(ScreenHost &host, Key key) override {
+        if (manage_)
+            return panelKey(host, key);
         size_t count = host.view().catalogue["profiles"].size();
-        bool hasActive = activeIndex(host) < count;
         switch (key) {
         case Key::Left:
-            if (onColours_)
-                colour_ = colour_ ? colour_ - 1 : 0;
-            else if (!onButton_ && selected_)
+            if (!onButton_ && selected_)
                 --selected_;
             break;
         case Key::Right:
-            if (onColours_)
-                colour_ = std::min(colour_ + 1, kColourCount - 1);
-            else if (!onButton_ && selected_ < count)
+            if (!onButton_ && selected_ < count)
                 ++selected_;
             break;
         case Key::Down:
-            // Avatars, then the colours of the profile in use, then Rename.
-            if (!hasActive)
-                break;
-            if (onColours_) {
-                onColours_ = false;
+            // The avatars, then Manage profile while a profile is in use.
+            if (activeIndex(host) < count)
                 onButton_ = true;
-            } else if (!onButton_) {
-                onColours_ = true;
-                colour_ = colourIndexOf(host);
-            }
             break;
         case Key::Up:
-            if (onButton_) {
-                onButton_ = false;
-                onColours_ = true;
-            } else
-                onColours_ = false;
+            onButton_ = false;
             break;
         case Key::Ok:
-            if (onColours_)
-                chooseColour(host);
+            if (onButton_)
+                openManage(host);
             else
                 choose(host);
             return true;
@@ -147,30 +146,33 @@ class ProfilesScreen final : public ScreenView {
         return true;
     }
     bool back(ScreenHost &host) override {
-        leaveFor(host);
+        if (manage_)
+            closeManage(host);
+        else
+            leaveFor(host);
         return true;
     }
     void click(ScreenHost &host, const std::string &hit) override {
-        if (hit == "profiles:back") {
-            leaveFor(host);
+        if (hit == "profiles:close") {
+            closeManage(host);
             return;
         }
-        if (hit.compare(0, 11, "profiles:c:") == 0) {
-            onColours_ = true;
-            onButton_ = false;
-            colour_ = std::min(static_cast<size_t>(std::atoi(hit.c_str() + 11)), kColourCount - 1);
+        if (hit.compare(0, 14, "profiles:item:") == 0) {
+            row_ = std::min(static_cast<size_t>(std::atoi(hit.c_str() + 14)), kColourCount);
             focusMoved(host, false);
-            chooseColour(host);
+            panelKey(host, Key::Ok);
             return;
         }
-        onColours_ = false;
-        onButton_ = hit == "profiles:rename";
+        onButton_ = hit == "profiles:manage";
         if (hit == "profiles:add")
             selected_ = host.view().catalogue["profiles"].size();
         else if (hit.compare(0, 11, "profiles:p:") == 0)
             selected_ = static_cast<size_t>(std::atoi(hit.c_str() + 11));
         focusMoved(host, false);
-        choose(host);
+        if (onButton_)
+            openManage(host);
+        else
+            choose(host);
     }
     void response(ScreenHost &host, const Response &response) override {
         if (response.channel != kStats || response.generation < statsGeneration_)
@@ -182,112 +184,31 @@ class ProfilesScreen final : public ScreenView {
         }
     }
     void build(ScreenHost &host, kit::Paint paint) override {
-        const Motion &motion = host.motion();
         Scene &scene = paint.scene;
         std::vector<Json> people = host.view().catalogue["profiles"].items();
-        size_t count = people.size();
-        const std::string model = modelOf(host), activeId = shownActive(host);
-        float diameter = std::max(kMinAvatar, std::min(kMaxAvatar, (kit::canvas::width - 2 * kit::canvas::safeX -
-                                                                     static_cast<float>(count) * kGap) /
-                                                                        static_cast<float>(count + 1)));
-        float total = static_cast<float>(count + 1) * diameter + static_cast<float>(count) * kGap;
-        float left = (kit::canvas::width - total) / 2;
-        paint.glyphs.text(scene, {0, 170, kit::canvas::width, kit::type::display.line},
-                          msg("tv.profiles.title", "Who’s watching?"), kit::type::display,
-                          kit::color::onSurface, Node::Align::Center);
-        paint.glyphs.text(scene, {0, 258, kit::canvas::width, kit::type::body.line},
-                          msg("tv.profiles.lead", "Each profile has its own Home."), kit::type::body,
-                          kit::color::onSurface2, Node::Align::Center);
-        for (size_t i = 0; i <= count; ++i) {
-            bool add = i == count;
-            Rect rest = {left + static_cast<float>(i) * (diameter + kGap), kAvatarTop, diameter, diameter};
-            float focus = static_cast<float>(motion.value(id("f", i)));
-            double hidden = motion.value(id("e", i));
-            kit::focus::Look look = kit::focus::lookAt(rest, kit::motion::scale::app, focus);
-            scene.pushOpacity(static_cast<float>(1 - hidden) * 1.0f);
-            scene.pushTransform(Transform::translate(0, static_cast<float>(28 * hidden)));
-            scene.pushTransform(kit::focus::transformAt(rest, look.scale));
-            const Color tint = add ? kit::color::surface2 : profileColor(people[i], shownColour(host, people[i]));
-            Node &disc = scene.shape(rest, tint, diameter / 2);
-            if (!add)
-                disc.gradient = Gradient::between(145, tint, kit::focus::mix(tint, kit::color::ink, .45f));
-            else
-                disc.ring = {3, 0, kit::alpha::outlineStrong};
-            if (look.ringAlpha > 0) {
-                disc.ring = {0, look.ringWidth,
-                             kit::focus::withAlpha(kit::elevation::focusRingColor, look.ringAlpha)};
-                disc.shadow = {0, look.shadowDy, look.shadowBlur, 0, {0, 0, 0, look.shadowAlpha}};
-            }
-            if (add)
-                paint.glyphs.icon(scene, {rest.x + diameter / 2 - 26, rest.y + diameter / 2 - 26, 52, 52},
-                                  "add", kit::color::onSurface);
-            else
-                paint.glyphs.text(scene, {rest.x, rest.y + (diameter - kit::type::display.line) / 2, diameter,
-                                          kit::type::display.line},
-                                  initialOf(shownProfileName(host.optimistic(), people[i], model)), kit::type::display,
-                                  {1, 1, 1, 1}, Node::Align::Center);
-            scene.popTransform();
-            bool active = !add && people[i]["id"].string() == activeId;
-            std::string label = add ? msg("tv.profiles.add", "Add profile")
-                                    : shownProfileName(host.optimistic(), people[i], model);
-            Color ink = kit::focus::inkAt(kit::color::onSurface2, kit::color::onSurface, focus);
-            paint.glyphs.text(scene, {rest.x - kGap / 2, rest.y + diameter + 28, diameter + kGap,
-                                      kit::type::title.line},
-                              label, kit::type::title, ink, Node::Align::Center);
-            if (active)
-                paint.glyphs.text(scene, {rest.x - kGap / 2, rest.y + diameter + 28 + kit::type::title.line + 4,
-                                          diameter + kGap, kit::type::labelM.line},
-                                  msg("tv.profiles.current", "Watching now"), kit::type::labelM,
-                                  kit::color::accent, Node::Align::Center);
-            // A change on its way: the avatar turns a spinner where the answer is awaited.
-            if ((active && host.optimistic().pending("profiles.active")) ||
-                (add && host.optimistic().pending("profiles.add")))
-                kit::spinner(paint, {rest.x + diameter - 44, rest.y + diameter - 44, 32, 32}, host.nowMs(),
-                             kit::color::onSurface);
-            scene.popTransform();
-            scene.popOpacity();
-            scene.hits.push_back({look.rect, add ? "profiles:add" : "profiles:p:" + std::to_string(i)});
-        }
-        if (activeIndex(host) < count && !host.optimistic().pending("profiles.active")) {
-            // The colour of the profile in use: a row of round swatches, Left and Right between them.
-            const float swatchesWidth = kColourCount * kSwatch + (kColourCount - 1) * kSwatchGap;
-            const std::string current = shownColour(host, people[activeIndex(host)]);
-            const float swatchTop = kAvatarTop + diameter + 116;
-            const float rise = static_cast<float>(1 - motion.value(id("e", count + 1)));
-            for (size_t i = 0; i < kColourCount; ++i) {
-                Rect box = {(kit::canvas::width - swatchesWidth) / 2 + static_cast<float>(i) * (kSwatch + kSwatchGap),
-                            swatchTop, kSwatch, kSwatch};
-                const float focus = static_cast<float>(motion.value(id("c", i)));
-                kit::focus::Look look = kit::focus::lookAt(box, kit::motion::scale::app, focus);
-                scene.pushOpacity(rise);
-                scene.pushTransform(kit::focus::transformAt(box, look.scale));
-                Node &dot = scene.shape(box, hexColour(kColours[i]), kSwatch / 2);
-                if (look.ringAlpha > 0)
-                    dot.ring = {0, look.ringWidth, kit::focus::withAlpha(kit::elevation::focusRingColor, look.ringAlpha)};
-                if (current == kColours[i])
-                    paint.glyphs.icon(scene, {box.x + 11, box.y + 11, 30, 30}, "check", kit::color::ink);
-                scene.popTransform();
-                scene.popOpacity();
-                scene.hits.push_back({look.rect, "profiles:c:" + std::to_string(i)});
-            }
-            kit::PillButton rename;
-            rename.rest = {kit::canvas::width / 2 - 170, kAvatarTop + diameter + 196, 340, 64};
-            rename.id = "profiles:rename";
-            rename.label = msg("tv.profiles.rename", "Rename profile");
-            rename.icon = "keyboard";
-            rename.focus = static_cast<float>(motion.value("profiles:fb"));
-            rename.enter = {static_cast<float>(1 - motion.value(id("e", count + 1))),
-                            static_cast<float>(28 * motion.value(id("e", count + 1)))};
-            kit::pillButton(paint, rename);
-        }
-        kit::keyHint(paint, kit::canvas::safeX, 1002, "Back", msg("tv.profiles.return", "Return"),
-                     "profiles:back");
+        const size_t count = people.size();
+        scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::color::chooser);
+        paint.glyphs.text(scene, {0, layout::chooserMarkY, kit::canvas::width, kit::type::chooserMark.line}, "Native Tv",
+                          kit::type::chooserMark, kit::color::chooserMark, Node::Align::Center);
+        paint.glyphs.text(scene, {0, layout::chooserTitleY, kit::canvas::width, kit::type::chooserTitle.line},
+                          msg("tv.profiles.title", "Choose a profile"), kit::type::chooserTitle,
+                          kit::color::chooserTitle, Node::Align::Center);
+        const float pitch = layout::chooserAvatar + layout::chooserGap;
+        const float left = (kit::canvas::width - static_cast<float>(count + 1) * pitch + layout::chooserGap) / 2;
+        for (size_t i = 0; i <= count; ++i)
+            drawAvatar(host, paint, i, i < count ? &people[i] : nullptr,
+                       {left + static_cast<float>(i) * pitch, layout::chooserAvatarY, layout::chooserAvatar,
+                        layout::chooserAvatar});
+        if (activeIndex(host) < count)
+            drawManage(host, paint, count);
+        drawPanel(host, paint);
     }
     Json snapshot() const override {
         Json value = Json::object();
         value.set("selected", Json::numeric(static_cast<double>(selected_)));
         value.set("onButton", Json::flag(onButton_));
-        value.set("onColours", Json::flag(onColours_));
+        value.set("manage", Json::flag(manage_));
+        value.set("row", Json::numeric(static_cast<double>(row_)));
         value.set("colour", Json::text(kColours[std::min(colour_, kColourCount - 1)]));
         value.set("busy", Json::flag(busy_));
         value.set("active", Json::text(active_));
@@ -305,19 +226,193 @@ class ProfilesScreen final : public ScreenView {
                 return i;
         return people.size();
     }
+
+    // ---- The chooser ---------------------------------------------------------------------------
+
+    // An avatar (a profile's colour and initial, or Add's dark disc and icon) with its name under
+    // it; the focus grows both about the disc's centre.
+    void drawAvatar(ScreenHost &host, kit::Paint paint, size_t index, const Json *person, Rect rest) {
+        Scene &scene = paint.scene;
+        const Motion &motion = host.motion();
+        const float focus = kit::focus::clamp01(static_cast<float>(motion.value(id("f", index))));
+        const float hidden = static_cast<float>(motion.value(id("e", index)));
+        const float scale = 1 + (kit::motion::scale::chooser - 1) * focus;
+        const std::string model = modelOf(host);
+        scene.pushOpacity(1 - hidden);
+        scene.pushTransform(Transform::translate(0, 28 * hidden));
+        scene.pushTransform(Transform::scaleAbout(rest, .5f, .5f, scale));
+        const Color tint = person ? profileColor(*person, shownColour(host, *person)) : kit::color::chooserAdd;
+        Node &disc = scene.shape(rest, tint, rest.w / 2);
+        if (person)
+            disc.gradient = Gradient::between(145, tint, kit::focus::mix(tint, kit::color::ink, .45f));
+        if (focus > 0) {
+            disc.ring = {layout::chooserRing, 0, kit::focus::withAlpha(kit::color::chooserRing, focus)};
+            disc.shadow = {0, 0, layout::chooserGlow, 0,
+                           kit::focus::withAlpha(kit::alpha::chooserGlow, kit::alpha::chooserGlow.a * focus)};
+        }
+        if (!person)
+            paint.glyphs.icon(scene,
+                              {rest.x + (rest.w - layout::chooserAddIcon) / 2, rest.y + (rest.h - layout::chooserAddIcon) / 2,
+                               layout::chooserAddIcon, layout::chooserAddIcon},
+                              "personadd", kit::color::chooserAddIcon);
+        else
+            paint.glyphs.text(scene, {rest.x, rest.y + (rest.h - kit::type::display.line) / 2, rest.w,
+                                      kit::type::display.line},
+                              initialOf(shownProfileName(host.optimistic(), *person, model)), kit::type::display,
+                              {1, 1, 1, 1}, Node::Align::Center);
+        const std::string label =
+            person ? shownProfileName(host.optimistic(), *person, model) : msg("tv.profiles.add", "Add profile");
+        paint.glyphs.text(scene,
+                          {rest.x + (rest.w - layout::chooserNameW) / 2, layout::chooserNameY, layout::chooserNameW,
+                           kit::type::chooserName.line},
+                          label, kit::type::chooserName, kit::color::chooserName, Node::Align::Center, 2);
+        // A change on its way: a spinner where the answer is awaited.
+        const bool active = person && (*person)["id"].string() == shownActive(host);
+        if ((active && host.optimistic().pending("profiles.active")) ||
+            (!person && host.optimistic().pending("profiles.add")))
+            kit::spinner(paint, {rest.x + rest.w - 44, rest.y + rest.h - 44, 32, 32}, host.nowMs(),
+                         kit::color::onSurface);
+        scene.popTransform();
+        scene.popTransform();
+        scene.popOpacity();
+        scene.hits.push_back({kit::focus::scaledAbout(rest, scale),
+                              person ? "profiles:p:" + std::to_string(index) : std::string("profiles:add")});
+    }
+    // Google TV's Manage accounts: a dark pill under the avatars that turns light with the focus.
+    void drawManage(ScreenHost &host, kit::Paint paint, size_t count) {
+        Scene &scene = paint.scene;
+        const float focus = kit::focus::clamp01(static_cast<float>(host.motion().value("profiles:fb")));
+        const float hidden = static_cast<float>(host.motion().value(id("e", count + 1)));
+        const std::string label = msg("tv.profiles.manage", "Manage profile");
+        const float gap = layout::chooserButtonPad / 2,
+                    width = 2 * layout::chooserButtonPad + layout::chooserButtonIcon + gap +
+                            paint.glyphs.measure(label, kit::type::title);
+        const Rect button = {(kit::canvas::width - width) / 2, layout::chooserButtonY, width, layout::chooserButtonH};
+        scene.pushOpacity(1 - hidden);
+        scene.pushTransform(Transform::translate(0, 28 * hidden));
+        scene.pushTransform(Transform::scaleAbout(button, .5f, .5f, 1 + (kit::motion::scale::chooserButton - 1) * focus));
+        scene.shape(button, kit::focus::mix(kit::color::chooserButton, kit::color::searchButton, focus), button.h / 2);
+        const Color ink = kit::focus::inkAt(kit::color::searchButton, kit::color::onFocus, focus);
+        const float x = button.x + layout::chooserButtonPad, middle = button.y + button.h / 2;
+        paint.glyphs.icon(scene,
+                          {x, middle - layout::chooserButtonIcon / 2, layout::chooserButtonIcon, layout::chooserButtonIcon},
+                          "manageaccounts", ink);
+        paint.glyphs.text(scene,
+                          {x + layout::chooserButtonIcon + gap, middle - kit::type::title.line / 2, width,
+                           kit::type::title.line},
+                          label, kit::type::title, ink);
+        scene.popTransform();
+        scene.popTransform();
+        scene.popOpacity();
+        scene.hits.push_back({button, "profiles:manage"});
+    }
+
+    // ---- The profile's settings --------------------------------------------------------------
+
+    // Google TV's settings panel at the right, over the chooser dimmed as Quick settings dims Home:
+    // the profile's name, then its colours.
+    void drawPanel(ScreenHost &host, kit::Paint paint) {
+        const Motion &motion = host.motion();
+        const float open = kit::focus::clamp01(static_cast<float>(motion.value("profiles:panel")));
+        std::vector<Json> people = host.view().catalogue["profiles"].items();
+        const size_t at = activeIndex(host);
+        if (open <= .002f || at >= people.size())
+            return;
+        Scene &scene = paint.scene;
+        kit::veil(paint, kit::alpha::quickVeil.a * open);
+        const Rect panel = {kPanelX, layout::quickTop, layout::quickW, layout::quickH};
+        for (Rect around : {Rect{0, 0, panel.x, kit::canvas::height},
+                            Rect{panel.x + panel.w, 0, kit::canvas::width - panel.x - panel.w, kit::canvas::height},
+                            Rect{panel.x, 0, panel.w, panel.y},
+                            Rect{panel.x, panel.y + panel.h, panel.w, kit::canvas::height - panel.y - panel.h}})
+            scene.hits.push_back({around, "profiles:close"});
+        scene.pushTransform(Transform::translate((1 - open) * layout::quickW, 0));
+        scene.pushOpacity(open);
+        scene.shape(panel, kit::color::quickPage, layout::quickR);
+        const std::string name = shownProfileName(host.optimistic(), people[at], modelOf(host)),
+                          current = shownColour(host, people[at]);
+        paint.glyphs.text(scene, {panel.x, panel.y + layout::quickTitleTop, panel.w, kit::type::quickTitle.line}, name,
+                          kit::type::quickTitle, kit::color::quickTitle, Node::Align::Center);
+        for (size_t i = 0; i <= kColourCount; ++i) {
+            kit::PanelItem item;
+            item.at = {panel.x + layout::quickPad,
+                       panel.y + layout::quickItemsTop + static_cast<float>(i) * layout::quickItemPitch,
+                       layout::quickW - 2 * layout::quickPad, layout::quickItemH};
+            item.id = "profiles:item:" + std::to_string(i);
+            item.focus = static_cast<float>(motion.value(id("r", i)));
+            item.scale = 1 + (kit::motion::scale::quickTile - 1) * kit::focus::clamp01(item.focus);
+            if (i == 0) {
+                item.title = msg("tv.profiles.rename", "Rename");
+                item.line = name;
+            } else {
+                item.title = msg(std::string("tv.profiles.colour.") + kColourKeys[i - 1], kColourNames[i - 1]);
+                item.swatch = hexColour(kColours[i - 1]);
+                item.mark = kit::PanelItem::Mark::Radio;
+                item.on = current == kColours[i - 1] ? 1 : 0;
+            }
+            kit::panelItem(paint, item);
+        }
+        scene.popOpacity();
+        scene.popTransform();
+    }
+    bool panelKey(ScreenHost &host, Key key) {
+        switch (key) {
+        case Key::Up:
+            row_ = row_ ? row_ - 1 : 0;
+            break;
+        case Key::Down:
+            row_ = std::min(row_ + 1, kColourCount);
+            break;
+        case Key::Left:
+            closeManage(host);
+            return true;
+        case Key::Right:
+            return true;
+        case Key::Ok:
+            if (row_ == 0) {
+                host.memory()[kManageMemory] = Json::flag(true);
+                host.open("rename");
+            } else {
+                colour_ = row_ - 1;
+                chooseColour(host);
+            }
+            return true;
+        default:
+            return false;
+        }
+        if (row_ > 0)
+            colour_ = row_ - 1;
+        focusMoved(host, false);
+        return true;
+    }
+    void openManage(ScreenHost &host) {
+        manage_ = true;
+        onButton_ = true;
+        row_ = 0;
+        host.motion().tween("profiles:panel", 1, kit::motion::ms::quick, easing(kit::motion::ease::quick));
+        focusMoved(host, false);
+    }
+    void closeManage(ScreenHost &host) {
+        manage_ = false;
+        colour_ = colourIndexOf(host);
+        host.motion().tween("profiles:panel", 0, kit::motion::ms::quick, easing(kit::motion::ease::quick));
+        focusMoved(host, false);
+    }
+
     void focusMoved(ScreenHost &host, bool jump) {
         size_t count = host.view().catalogue["profiles"].size();
-        auto glide = [&](const std::string &name, double to) {
+        auto glide = [&](const std::string &name, double to, int ms, kit::Bezier curve) {
             if (jump)
                 host.motion().set(name, to);
             else
-                host.motion().tween(name, to, kit::motion::ms::focus, easing(kit::motion::ease::out));
+                host.motion().tween(name, to, ms, easing(curve));
         };
         for (size_t i = 0; i <= count; ++i)
-            glide(id("f", i), !onButton_ && !onColours_ && i == selected_ ? 1 : 0);
-        for (size_t i = 0; i < kColourCount; ++i)
-            glide(id("c", i), onColours_ && i == colour_ ? 1 : 0);
-        glide("profiles:fb", onButton_ ? 1 : 0);
+            glide(id("f", i), !onButton_ && !manage_ && i == selected_ ? 1 : 0, kit::motion::ms::focus,
+                  kit::motion::ease::out);
+        glide("profiles:fb", onButton_ && !manage_ ? 1 : 0, kit::motion::ms::focus, kit::motion::ease::out);
+        for (size_t i = 0; i <= kColourCount; ++i)
+            glide(id("r", i), manage_ && i == row_ ? 1 : 0, kit::motion::ms::quickFocus, kit::motion::ease::quickFocus);
         host.invalidate();
     }
     // The colour on screen for a profile: a change that is still on its way shows at once.
@@ -381,10 +476,6 @@ class ProfilesScreen final : public ScreenView {
     }
     void choose(ScreenHost &host) {
         std::vector<Json> people = host.view().catalogue["profiles"].items();
-        if (onButton_) {
-            host.open("rename");
-            return;
-        }
         if (selected_ >= people.size()) {
             Write write = profileWrite(host, "add");
             write.body = [](const Json &) {
@@ -428,9 +519,8 @@ class ProfilesScreen final : public ScreenView {
         host.open(returnRoute(host.cameFrom()));
     }
 
-    size_t selected_ = 0;
-    bool onButton_ = false, onColours_ = false, busy_ = false;
-    size_t colour_ = 0;
+    size_t selected_ = 0, row_ = 0, colour_ = 0;
+    bool onButton_ = false, manage_ = false, busy_ = false;
     std::string active_; // the profile in use as shown, for the snapshot
     unsigned statsGeneration_ = 0;
 };

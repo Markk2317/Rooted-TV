@@ -687,8 +687,8 @@ the texture memory, the checkpoints the script took and the size of the capture.
 | E2E-150 | The pixel refresher is refused by the B3 on schedule and on cancel, and stays Idle (`api`, `control`) | |
 | E2E-170 to 174 | Found by hand on the B3: Settings has no Home bar (170), Left and Right step a choice row (171, `control`), Back from Live returns to the page it was opened from (172), Live reads twice a second (173), Search comes before Quick settings in the Home bar (174, `control`) | `dashboard:game`, `dashboard:system`, `live`, `home` |
 | E2E-175 | The master switch writes all six LG ad and promotion switches on and then off (`api`, `control`) | |
-| E2E-176 | The avatar in the Home bar is on the bar's path with one profile and opens Who's watching? | `home` |
-| E2E-177 | The colour swatches on Who's watching? set the profile's colour on the server and are put back (`control`) | `home` |
+| E2E-176 | The avatar in the Home bar is on the bar's path with one profile and opens Choose a profile | `home` |
+| E2E-177 | The colours in the settings panel of Choose a profile's Manage profile set the profile's colour on the server and are put back (`control`) | `home` |
 | E2E-179 | The Black screen row of the Screen Saver settings makes it the screen saver in use (`control`, `cleanup`) | `dashboard:saver` |
 | E2E-180 | The idle power-off time is saved and read back for each time offered, and 45 minutes is refused (`api`, `control`) | |
 | E2E-181 | The Switch off when idle row of the System settings steps through its times and back to Off, pressed through the TV; the other System sweeps skip it (`control`, `cleanup`) | `dashboard:options` |
