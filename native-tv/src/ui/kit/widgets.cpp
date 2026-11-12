@@ -332,10 +332,17 @@ void topBar(Paint paint, const TopBar &bar) {
     iconButton(index++, "tool:4", "frame", "Screensaver", bar.saverFocus);
     iconButton(index, "nav:settings", "settings", "Settings", bar.settingsFocus);
 
-    // The clock, a divider and the wordmark close the bar at the right margin, translucent.
+    // The clock, a divider and the wordmark close the bar at the right margin, translucent. With
+    // every tab and button on (Films, Shows, Live, Inputs and the assistant) the capsules reach
+    // them, and the wordmark gives way: the clock alone ends the bar.
     const float markWidth = paint.glyphs.measure(bar.wordmark, type::clock);
     Rect clockBox = geometry::clock(markWidth);
+    const bool mark = clockBox.x >= iconCapsule.x + iconCapsule.w + layout::capsuleGap;
+    if (!mark)
+        clockBox.x = canvas::width - layout::homeX - clockBox.w;
     text(paint, clockBox, bar.clock, type::clock, alpha::clockInk, Node::Align::Right);
+    if (!mark)
+        return;
     const float dividerX = clockBox.x + clockBox.w + layout::wordmarkGap;
     scene.shape({dividerX, layout::navTop + (layout::navH - 30) / 2, 2, 30},
                 faded(alpha::clockInk, .7f), 1);

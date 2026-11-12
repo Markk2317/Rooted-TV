@@ -21,8 +21,11 @@ const char *const kFiles[] = {
     "assets/fonts/Figtree-Light.ttf", "assets/fonts/Figtree-Regular.ttf",
     "assets/fonts/Figtree-Medium.ttf", "assets/fonts/Figtree-SemiBold.ttf",
     "assets/fonts/LICENSE-Figtree-OFL.txt",
-    // Google TV sets its titles at optical size 18, so the display cut went.
+    // Google TV sets its titles at optical size 18, so the display cut went. The apps' staged
+    // copies are packaged whole by install-app.sh, so a font left there is installed again.
     "assets/fonts/GoogleSansFlex-Display.ttf",
+    "assets/dashboard-app/assets/fonts/GoogleSansFlex-Display.ttf",
+    "assets/splash-app/assets/fonts/GoogleSansFlex-Display.ttf",
     "assets/google-tv/base.css", "assets/google-tv/tokens.css", "assets/google-tv/text.js",
     "assets/google-tv/kit.html", "assets/google-tv/components/button.css",
     "assets/google-tv/components/card.css", "assets/google-tv/components/chip.css",

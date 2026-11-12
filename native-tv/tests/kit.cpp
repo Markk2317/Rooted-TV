@@ -630,6 +630,18 @@ void barAndHero() {
               near(shifted[0].x, tabs[0].x + 96, .01f) &&
               sameRect(hitFor(searching.scene, "nav:tab:0")->rect, shifted[0]),
           "Search leads the capsule as a 96 px slot and moves the tabs along");
+    Fixture crowded;
+    top.tabs = {"Home", "Films", "Shows", "Live", "Apps", "Inputs"};
+    top.assistant = true;
+    kit::topBar(crowded.paint(), top);
+    const Node *crowdedClock = textAt(crowded.scene, "10:11");
+    check(!textAt(crowded.scene, "Native Tv") && crowdedClock &&
+              near(crowdedClock->rect.x + crowdedClock->rect.w, 1804, .01f) &&
+              crowdedClock->rect.x >=
+                  crowded.scene.nodes[1].rect.x + crowded.scene.nodes[1].rect.w + 24,
+          "With every tab and button on, the wordmark gives way and the clock alone ends the bar");
+    top.tabs = {"Home", "Apps", "Live"};
+    top.assistant = false;
     top.search = false;
     Fixture gone;
     top.pillAlpha = 0;
