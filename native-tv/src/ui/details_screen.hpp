@@ -48,7 +48,7 @@ class DetailsScreen final : public ScreenView {
         unsigned generation = 0; // a genre's titles on their way
     };
     struct Action {
-        enum class Kind { Netflix, Service, Trailer, Watchlist, Like, Dislike, Overview, Retry } kind;
+        enum class Kind { Netflix, Service, Trailer, Watchlist, Watched, Like, Dislike, Overview, Retry } kind;
         Action(Kind kind, std::string label) : kind(kind), label(std::move(label)) {}
         std::string label;
         std::string service; // Service: the streaming service's key
@@ -84,6 +84,7 @@ class DetailsScreen final : public ScreenView {
     // The profile's marks on a title: what is being saved, else what Home's feed last said.
     struct Marks {
         bool watchlisted = false;
+        bool watched = false;
         std::string rating; // "like", "dislike" or ""
     };
     static Marks marksOf(ScreenHost &host, const Json &item);

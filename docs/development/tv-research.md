@@ -1872,3 +1872,45 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   in the page itself. The playlist's variants are fragmented MP4 (an init segment, then
   segments of about 9 s, each several `moof`/`mdat` pairs), H.264 High from 556 to 1912 px wide,
   with the audio apart. The Italian page of a film gives the Italian trailer from the same id.
+
+## LG's catalogue, its links into apps and LG Content Store's installs (C6, webOS 3.4.3)
+
+- `luna://com.webos.service.sdx/send` makes a request to LG's server for the TV's country
+  (`IT.lgtvsdp.com`, from `getHttpHeaderForServiceRequest`'s `HOST`) with the TV's own headers and
+  session, and gives the answer back as text in `serverResponse.response`. Its parameters are
+  `serviceName` (`sdp_secure`), `url` (under `/sdp/v7.0/`), `methodType`
+  (`REQ_SSL_GET_METHOD`, `REQ_SSL_POST_METHOD`) and `bodyData`, a form. LG's Search app
+  (`com.webos.app.voice`, QML) makes all its catalogue requests this way.
+- `search/retrieval` with `service=universal_search&version=v2&query=…&domain=…` searches LG's
+  catalogue: `movie` and `tvshow` give each streaming service's copy of a title separately, with
+  the service's app (`cp_thumbnail[0].cp_id`) and the content ID LG's Search launches it with
+  (`content_id`), named as in the TV's country ("Il cavaliere oscuro"); `app` and `premium` give
+  LG Content Store's apps (`app_id`, `title`, `thumbnail`, `icon_bg_color`, `free_flag`,
+  `star_score` out of 10). No year comes with a title. `content_discovery/cp-list` lists the
+  services it knows in the country (in Italy Netflix, Prime Video, Disney+, Apple TV, Plex,
+  Pluto TV, Rakuten TV, CHILI, MUBI, ARTE, DAZN, YouTube, LG Channels).
+- The content IDs, and what each app does with one as `contentTarget`: Disney+ 24.5.8
+  `page=play&id=<uuid>&distributionPartner=lg` (with `handledBy: app`) plays a film once a
+  profile is chosen; a series comes as `page=browse&id=entity-<uuid>&seasonSequenceNumber=<n>
+  &distributionPartner=lg`. Prime Video 3.12 gets a GTI; its deep-link parsers (in its cached
+  `split.init.js`) also take `detail?gti=` and `watch?gti=`, and `watch?gti=` plays a film once a
+  profile is chosen. Netflix 1.5.1 gets `-Q m=http://api-global.netflix.com/catalog/titles/<movies
+  or series>/<id>&source_type=4&...`; `m=https://www.netflix.com/watch/<id>&source_type=4` (or
+  `source_type=12`) opens the title's page with Play in focus, as `/title/` does, without asking
+  for a profile.
+- `app/app?app_id=<id>` (GET) gives an LG Content Store app's page: name, seller, category,
+  description, version, `bFree`, `displayPrice`, `evaluationAverage` (out of 10),
+  `appPreviewList`, and `appFileList` with its packed and installed sizes. Icons and screenshots
+  are on `ngfts.lge.com/fts/gftsDownload.lge?biz_code=APP_STORE&func_code=APP_ICON` (or
+  `APP_PREVIEW`) `&file_path=/appstore/app/icon/<yyyymmdd>/<n>.png`, over HTTP or HTTPS; icons
+  are 130 × 130.
+- LG Content Store (`com.webos.app.discovery` 1.0.46) is a loader for a page on
+  `<country>.lgrecommends.lgappstv.com/discovery_2016/`. Its Install calls
+  `com.webos.appInstallService/install` with `{"id", "subscribe", "silence", "target":
+  {"deviceId": "INTERNAL_STORAGE"}}`; the install service fetches the package from LG with the
+  TV's credentials, verifies and installs it, and its subscription says how far it has got
+  (`details.simpleStatus` `download` with `progress` and `receivedSize`/`totalSize`, then
+  `install`, then `details.state` `installed`, `statusValue` 30). Called by root with `luna-send`
+  it installs a free app the same way (ARTE, 17 KB, in 4 s). `com.webos.appInstallService/remove`
+  with `{"id", "subscribe": true}` removes it (`statusValue` 31, `removed`). The store opens on an
+  app's page when launched with `{"query": "category/GAME_APPS/<id>"}`.

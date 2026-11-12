@@ -1609,6 +1609,10 @@
         },
         {
           "at": 3240,
+          "key": "right"
+        },
+        {
+          "at": 3300,
           "key": "ok"
         }
       ]
@@ -1857,6 +1861,267 @@
         {
           "at": 4200,
           "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "store-results",
+      "time": 5200,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 2200,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "ok"
+        },
+        {
+          "at": 2600,
+          "text": "st"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        },
+        {
+          "at": 3060,
+          "key": "down"
+        },
+        {
+          "at": 3120,
+          "key": "down"
+        },
+        {
+          "at": 3200,
+          "key": "right"
+        },
+        {
+          "at": 3260,
+          "key": "right"
+        },
+        {
+          "at": 3320,
+          "key": "right"
+        },
+        {
+          "at": 3380,
+          "key": "right"
+        },
+        {
+          "at": 3440,
+          "key": "right"
+        },
+        {
+          "at": 3500,
+          "key": "right"
+        },
+        {
+          "at": 3600,
+          "key": "ok"
+        },
+        {
+          "at": 4200,
+          "key": "down"
+        },
+        {
+          "at": 4400,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "store-app",
+      "time": 6000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 2200,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "ok"
+        },
+        {
+          "at": 2600,
+          "text": "st"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        },
+        {
+          "at": 3060,
+          "key": "down"
+        },
+        {
+          "at": 3120,
+          "key": "down"
+        },
+        {
+          "at": 3200,
+          "key": "right"
+        },
+        {
+          "at": 3260,
+          "key": "right"
+        },
+        {
+          "at": 3320,
+          "key": "right"
+        },
+        {
+          "at": 3380,
+          "key": "right"
+        },
+        {
+          "at": 3440,
+          "key": "right"
+        },
+        {
+          "at": 3500,
+          "key": "right"
+        },
+        {
+          "at": 3600,
+          "key": "ok"
+        },
+        {
+          "at": 4200,
+          "key": "down"
+        },
+        {
+          "at": 4400,
+          "key": "down"
+        },
+        {
+          "at": 4600,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "store-installing",
+      "time": 7800,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 2200,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "ok"
+        },
+        {
+          "at": 2600,
+          "text": "st"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        },
+        {
+          "at": 3060,
+          "key": "down"
+        },
+        {
+          "at": 3120,
+          "key": "down"
+        },
+        {
+          "at": 3200,
+          "key": "right"
+        },
+        {
+          "at": 3260,
+          "key": "right"
+        },
+        {
+          "at": 3320,
+          "key": "right"
+        },
+        {
+          "at": 3380,
+          "key": "right"
+        },
+        {
+          "at": 3440,
+          "key": "right"
+        },
+        {
+          "at": 3500,
+          "key": "right"
+        },
+        {
+          "at": 3600,
+          "key": "ok"
+        },
+        {
+          "at": 4200,
+          "key": "down"
+        },
+        {
+          "at": 4400,
+          "key": "down"
+        },
+        {
+          "at": 4600,
+          "key": "ok"
+        },
+        {
+          "at": 5600,
+          "key": "ok"
         }
       ]
     },

@@ -127,7 +127,30 @@ int main() {
 
         const Json summary = HomeTitles::summary(state);
         assert(summary["watchlist"][0].string() == "tv:2" && summary["liked"][0].string() == "movie:3" &&
-               summary["disliked"][0].string() == "tv:5");
+               summary["disliked"][0].string() == "tv:5" && summary["watched"].size() == 0);
+
+        // Watched, as on Google TV: it leaves the top picks, stays in the other rows, and unseen
+        // takes the mark off.
+        assert(titles.apply("main", "seen", title(40), error));
+        assert(titles.apply("main", "seen", title(4), error));
+        assert(titles.apply("main", "seen", title(40), error));
+        state = titles.state("main");
+        assert(state["watched"].size() == 2 && state["watched"][0].string() == "movie:40");
+        Json otherRow = Json::object();
+        otherRow.set("key", Json::text("on:prime"));
+        otherRow.set("items", trendingItems);
+        picksFeed.add(otherRow);
+        const Json seenRows = HomeTitles::personalRows(picksFeed, state);
+        for (const Json &row : seenRows.items()) {
+            if (row["key"].string() == "trending")
+                for (const Json &item : row["items"].items())
+                    assert(item["id"].number() != 40 && item["id"].number() != 4);
+            if (row["key"].string() == "on:prime") assert(row["items"][0]["id"].number() == 40);
+        }
+        assert(HomeTitles::summary(state)["watched"][1].string() == "movie:4");
+        assert(titles.apply("main", "unseen", title(4), error));
+        assert(titles.state("main")["watched"].size() == 1);
+        assert(!titles.apply("main", "watched", title(4), error));
     }
     // Kept for the next start, readable by root alone.
     struct stat info = {};

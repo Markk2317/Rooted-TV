@@ -1,5 +1,6 @@
 #include "service/home_open.hpp"
 #include "domain/names.hpp"
+#include "service/lg_catalog.hpp"
 #include "domain/say.hpp"
 #include <cctype>
 
@@ -175,7 +176,21 @@ HomeOpenPlan planHomeServiceOpen(const std::string &service, const Json &apps) {
     return plan;
 }
 
-void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup) {
+bool resolveHomeCatalogueOpen(HomeOpenPlan &plan, const Json &ids, const std::string &type) {
+    if (!plan.handled || !plan.ok || plan.appId.empty()) return false;
+    const std::string service = plan.service.empty() && plan.appId == kNetflixApp ? "netflix"
+                                                                                 : plan.service;
+    const std::string target = lgCatalogTarget(service, type, ids[plan.appId].string());
+    if (target.empty()) return false;
+    plan.action = "launch";
+    plan.launchParams = Json::object();
+    plan.launchParams.set("contentTarget", Json::text(target));
+    // As Disney+'s appinfo.json asks for its links.
+    if (service == "disney") plan.launchParams.set("handledBy", Json::text("app"));
+    return true;
+}
+
+void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup, const std::string &type) {
     if (!plan.handled || !plan.ok || plan.service.empty() || !lookup["ok"].boolean() ||
         !lookup["enabled"].boolean())
         return;
@@ -183,10 +198,10 @@ void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup) {
     if (plan.service == "netflix" && validNetflixId(lookup["netflixId"].string()))
         target = "m=https://www.netflix.com/title/" + lookup["netflixId"].string() +
                  "&source_type=4";
-    // Tried on webOS 3.4's Prime Video 3.12: the GTI alone opens the title's page once a
-    // profile is chosen.
+    // Tried on webOS 3.4's Prime Video 3.12: a film plays from "watch?gti=", and the GTI alone opens
+    // a title's page, each once a profile is chosen.
     if (plan.service == "prime" && validPrimeGti(lookup["gti"].string()))
-        target = lookup["gti"].string();
+        target = lgCatalogTarget("prime", type, lookup["gti"].string());
     if (target.empty()) return;
     plan.launchParams = Json::object();
     plan.launchParams.set("contentTarget", Json::text(target));

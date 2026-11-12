@@ -3,6 +3,7 @@
 #include "ui/pin_screen.hpp"
 #include "ui/screen.hpp"
 #include "ui/setup_screen.hpp"
+#include "ui/store_app_screen.hpp"
 
 namespace nativetv {
 // Each task adds its screens here, with the file that defines them in CMake's
@@ -22,6 +23,7 @@ void registerScreens(ScreenRegistry &registry) {
     registry.add(makeEditorScreen);
     registry.add(makeSearchScreen);
     registry.add(makeAppsCategoryScreen);
+    registry.add(makeStoreAppScreen);
     registry.add(makePinScreen);
 }
 } // namespace nativetv

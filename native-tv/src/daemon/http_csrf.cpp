@@ -43,6 +43,7 @@ const GuardedRoute kGuardedRoutes[] = {
     {"/api/home/enable", ContentTypeRule::JsonPrefix},
     {"/api/home/disable", ContentTypeRule::JsonPrefix},
     {"/api/home/open", ContentTypeRule::JsonPrefix},
+    {"/api/apps/store/install", ContentTypeRule::JsonPrefix},
     {"/api/home/recents", ContentTypeRule::JsonPrefix},
     {"/api/home/beat", ContentTypeRule::JsonPrefix},
     {"/api/home/wallpapers/upload", ContentTypeRule::JpegExact},

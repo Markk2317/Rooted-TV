@@ -760,7 +760,10 @@ struct Walk {
             anchor.valid = false;
             return;
         }
-        if (before == "home" && isOverlay(after) && action.compare(0, 10, "click:card") != 0) {
+        // Search reached along the bar is a tab, not a page over Home: Back leaves it for the first
+        // tab with the focus in its content, as from any other tab.
+        const bool searchTab = after == "search" && (action == "Left" || action == "Right");
+        if (before == "home" && isOverlay(after) && action.compare(0, 10, "click:card") != 0 && !searchTab) {
             const bool onNoCard = focusBefore.size() >= 7 && focusBefore.compare(focusBefore.size() - 7, 7, ", card ") == 0;
             anchor = {calm && !onNoCard, after, focusBefore};
             return;

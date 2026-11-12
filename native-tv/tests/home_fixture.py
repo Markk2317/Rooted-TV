@@ -162,6 +162,43 @@ def search(query):
     return {"ok": True, "enabled": True, "items": found}
 
 
+# LG Content Store's apps, for words with "st" in them (Search's store rows), and how far the one
+# being installed has got: each read of its page moves it on.
+STORE = [("com.example.streamline", "Streamline", "#C62828", 7.6),
+         ("com.example.stadium", "Stadium Live", "#1565C0", 6.2),
+         ("com.example.storyhour", "Story Hour", "#2E7D32", 8.4)]
+INSTALLS = {}
+
+
+def store_search(query):
+    if "st" not in query.lower():
+        return {"ok": True, "apps": [], "homebrew": []}
+    apps = [{"id": a, "title": t, "icon": "lgstore:icon/20240101/%d.png" % n, "color": c, "price": "EUR 0,00",
+             "free": True, "rating": r, "installed": False} for n, (a, t, c, r) in enumerate(STORE)]
+    return {"ok": True, "apps": apps,
+            "homebrew": [{"id": "org.example.stremio", "title": "Stremio", "description": "Media center",
+                          "installed": False}]}
+
+
+def store_app(app_id):
+    n = next((i for i, entry in enumerate(STORE) if entry[0] == app_id), 0)
+    a, t, c, r = STORE[n]
+    app = {"id": a, "title": t, "icon": "lgstore:icon/20240101/%d.png" % n, "color": c, "seller": "Example Media",
+           "category": "Entertainment", "description": "Films, series and live channels on the big screen, "
+           "with a guide to what is on and a list of what to watch next.", "version": "3.2.1",
+           "price": "EUR 0,00", "free": True, "premium": False, "rating": r, "ratings": 1520,
+           "size": 4200000, "installedSize": 9800000,
+           "pictures": ["lgstore:preview/20240101/%d.png" % i for i in range(1, 5)]}
+    result = {"ok": True, "app": app, "installed": False}
+    steps = INSTALLS.get(a)
+    if steps is not None:
+        INSTALLS[a] = steps + 1
+        state = [("downloading", 0), ("downloading", 45), ("installing", 100), ("installed", 100)][min(steps, 3)]
+        result["install"] = {"state": state[0], "progress": state[1]}
+        result["installed"] = state[0] == "installed"
+    return result
+
+
 def genre(key):
     """A genre of Search's grid: every third title from one that depends on the genre, then as many
     again further on (other ids, the same names), which a details page's similar titles do not have."""
@@ -258,8 +295,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             name = query.get("id", [""])[0]
             index = [a for a, _, _ in APPS].index(name) if name in [a for a, _, _ in APPS] else 0
             self.send(200, icon(110, APPS[index][2], index), "image/png")
+        elif url.path == "/api/home/image" and "APP_ICON" in query.get("u", [""])[0]:
+            number = int("".join(ch for ch in query["u"][0].rsplit("/", 1)[-1] if ch.isdigit()) or 0)
+            self.send(200, icon(130, STORE[number % len(STORE)][2], number), "image/png")
         elif url.path == "/api/home/image":
             target = urllib.parse.urlsplit(query.get("u", [""])[0]).path
+            if "APP_PREVIEW" in query.get("u", [""])[0]:
+                target = query["u"][0].rsplit("/", 1)[-1]
             self.picture(os.path.basename(target), "w1920_and_h1080_bestv2" in target)
         elif url.path == "/api/stats":
             self.json(stats())
@@ -269,6 +311,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.json(genre(query["genre"][0]))
         elif url.path == "/api/home/search":
             self.json(search(query.get("q", [""])[0]))
+        elif url.path == "/api/apps/store/search":
+            self.json(store_search(query.get("q", [""])[0]))
+        elif url.path == "/api/apps/store/app":
+            self.json(store_app(query.get("id", [""])[0]))
         elif url.path == "/api/home/netflix":
             self.json({"ok": True, "netflixId": ""})
         elif url.path == "/api/home/recents":
@@ -294,6 +340,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.json({"ok": True, "titles": [item(n) for n in (3, 8, 1)],
                               "answer": "Three quiet films for tonight: Northbound and Slow Rivers are "
                                         "on Prime Video, and Harbor Lights is on Netflix."})
+        if self.path == "/api/apps/store/install":
+            try:
+                app_id = json.loads(raw or b"{}").get("id", "")
+            except ValueError:
+                app_id = ""
+            INSTALLS[app_id] = 1
+            return self.json({"ok": True, "install": {"state": "downloading", "progress": 0}})
         if self.path == "/api/home/beat":
             self.json({"ok": True, "enabled": True, "build": "fixture@1", "layoutVersion": "1",
                        "wallpapers": {"available": False, "slots": {}, "revision": ""}})
@@ -305,6 +358,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 def serve(art=None, port=0, profiles=1, sort="custom", assistant=False):
     SETTINGS.update(volume=24, muted=False, backlight=70, sleepTimer="off", pictureMode="cinema",
                     soundOutput="tv_speaker")
+    INSTALLS.clear()
     Handler.art = art
     Handler.profiles = profiles
     Handler.sort = sort

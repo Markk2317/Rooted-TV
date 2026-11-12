@@ -118,13 +118,13 @@ void detailsChecks() {
           "and the cast and crew below");
     check(!world.app.shows("Open"), "There is no Open button: a title opens on Netflix or as a trailer");
     world.reply("title:netflix", R"({"ok":true,"netflixId":"80057281"})");
-    check(world.snapshot()["focus"].string() == "Open on Netflix",
+    check(world.snapshot()["focus"].string() == "Watch on Netflix",
           "A late Netflix link is the first action, and has the focus while nothing has moved it");
     world.press(Key::Ok);
     check(world.on("w:details.open").size() == 1 && world.on("w:details.open").back().body["kind"].string() == "netflix" &&
               !world.on("w:details.open").back().body.has("netflixId") &&
               world.on("w:details.open").back().body["id"].string() == "7",
-          "Open on Netflix posts the title and leaves the mapping to the server");
+          "Watch on Netflix posts the title and leaves the mapping to the server");
     world.press(Key::Ok);
     check(world.on("w:details.open").size() == 1, "A second OK while it is opening is ignored");
     world.answer(world.on("w:details.open").back(), false, "Refused");
@@ -218,6 +218,15 @@ void detailsMarksChecks() {
     check(said && world.snapshot()["focus"].string() == "Watchlist",
           "A refusal puts the button back and says why");
     world.press(Key::Right);
+    check(world.snapshot()["focus"].string() == "Watched it?", "Whether it was watched follows, as on Google TV");
+    world.press(Key::Ok);
+    world.settle(50);
+    check(world.snapshot()["focus"].string() == "Watched", "The watched button says so at once");
+    auto seen = world.on("w:details.wa:movie:7");
+    check(seen.size() == 1 && seen.back().body["value"]["op"].string() == "seen" &&
+              seen.back().body["value"]["item"]["title"].string() == "Coast",
+          "The title is marked watched for the profile through the server");
+    world.press(Key::Right);
     check(world.snapshot()["focus"].string() == "Like", "Thumbs up follows, a round button");
     world.press(Key::Ok);
     world.settle(50);
@@ -244,8 +253,8 @@ void detailsWatchOptionsChecks() {
                       R"([{"id":"a","title":"Alpha"},{"id":"amazon.global","title":"Prime Video"}])");
     World world(catalogue.c_str());
     world.openDetails(R"({"ok":true,"enabled":true,"item":{"id":7,"type":"movie","title":"Coast","overview":"A journey.","services":["disney","prime"]}})");
-    check(world.snapshot()["focus"].string() == "Open on Prime Video" && !world.app.shows("Open on Disney+"),
-          "Open on Prime Video leads; Disney+ has no app here");
+    check(world.snapshot()["focus"].string() == "Watch on Prime Video" && !world.app.shows("Watch on Disney+"),
+          "Watch on Prime Video leads; Disney+ has no app here");
     world.press(Key::Ok);
     check(world.on("w:details.open").size() == 1 &&
               world.on("w:details.open").back().body["kind"].string() == "service" &&
@@ -280,7 +289,7 @@ void detailsOverviewChecks() {
     paged.press(Key::Ok);
     paged.reply("title:details", std::string(R"({"ok":true,"enabled":true,"item":{"id":7,"type":"movie","title":"Coast","overview":")") +
                                      long_text + R"("}})");
-    paged.press({Key::Right, Key::Right, Key::Right}); // past the watchlist and the thumbs
+    paged.press({Key::Right, Key::Right, Key::Right, Key::Right}); // past the watchlist, watched and the thumbs
     paged.press(Key::Ok);
     paged.press(Key::PageDown);
     check(paged.snapshot()["overviewPage"].number() == 1, "A long overview has more than one page");
@@ -494,6 +503,59 @@ void searchAppsChecks() {
     check(world.screen() == "search" && world.transport.requests.back().operation == Operation::OpenHomeItem &&
               world.transport.requests.back().body["id"].string() == "a",
           "OK on an app opens it rather than a title's details");
+}
+
+void searchStoreChecks() {
+    World world;
+    world.openSearch();
+    world.press(Key::Ok);
+    world.app.input("al");
+    world.settle(600);
+    check(world.app.activate("search:kb:3:6"), "The search key is on the keyboard");
+    check(world.transport.last("store:search").operation == Operation::StoreSearch &&
+              world.transport.last("store:search").body["query"].string() == "al",
+          "The words are also looked for among the stores' apps");
+    world.reply("title:search", R"({"ok":true,"enabled":true,"items":[{"id":7,"type":"movie","title":"Alien"}]})");
+    world.press(Key::Down);
+    world.settle(300);
+    world.reply("store:search", R"({"ok":true,"apps":[{"id":"com.lg.alarm","title":"Alarm","icon":"lgstore:icon/20240101/1.png","color":"#C62828","free":true,"rating":7,"installed":false}],"homebrew":[{"id":"org.al.brew","title":"Albrew","installed":false}]})");
+    world.settle(300);
+    check(world.snapshot()["results"].number() == 4 && world.app.shows("LG Content Store") &&
+              world.app.shows("Homebrew Channel") && world.snapshot()["row"].number() == 0,
+          "The stores' apps follow the TV's own, and the focus stays on the row it was on");
+    world.press(Key::Down);
+    world.press(Key::Ok);
+    check(world.screen() == "storeapp" && world.transport.last("storeapp:read").operation == Operation::StoreApp &&
+              world.transport.last("storeapp:read").body["id"].string() == "com.lg.alarm",
+          "OK on an app of LG Content Store opens its page over the search");
+    world.reply("storeapp:read", R"({"ok":true,"installed":false,"app":{"id":"com.lg.alarm","title":"Alarm","seller":"LG","category":"Tools","description":"Wakes you.","free":true,"rating":7,"pictures":["lgstore:preview/20240101/1.png"]}})");
+    world.settle(400);
+    check(world.snapshot()["contentState"].string() == "ready" && world.app.shows("Install") &&
+              world.app.shows("Screenshots"),
+          "The page says what the app is, with Install and its screenshots");
+    world.press(Key::Ok);
+    world.settle(50);
+    auto install = world.on("w:storeapp.install.com.lg.alarm");
+    check(install.size() == 1 && install.back().operation == Operation::StoreInstall &&
+              install.back().body["id"].string() == "com.lg.alarm" &&
+              world.snapshot()["install"].string() == "downloading",
+          "Install starts the install, and the button says so at once");
+    world.reply(install.back().channel, R"({"ok":true,"install":{"state":"downloading","progress":0}})", 200,
+                static_cast<int>(install.back().generation));
+    world.settle(1200);
+    check(world.transport.count("storeapp:read") == 2, "The page reads how far the install has got");
+    world.reply("storeapp:read", R"({"ok":true,"installed":true,"install":{"state":"installed","progress":100},"app":{"id":"com.lg.alarm","title":"Alarm","free":true}})");
+    world.settle(300);
+    check(world.snapshot()["installed"].boolean() && world.app.shows("Open") &&
+              world.toasted("Alarm is installed"),
+          "An installed app can be opened, and the TV says it is in");
+    world.press(Key::Back);
+    check(world.screen() == "search" && world.snapshot()["page"].string() == "results",
+          "Back returns to the results as they were");
+    world.press(Key::Down);
+    world.press(Key::Ok);
+    world.settle(100);
+    check(world.screen() == "catalog", "A Homebrew Channel app opens the Homebrew catalogue");
 }
 
 void searchGenreChecks() {
@@ -864,6 +926,7 @@ int main() {
         profilesFailureChecks();
         searchChecks();
         searchAppsChecks();
+        searchStoreChecks();
         assistantChecks();
         searchStateChecks();
         searchRowsChecks();

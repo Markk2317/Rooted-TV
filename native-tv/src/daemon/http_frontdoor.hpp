@@ -5,6 +5,7 @@
 #include "daemon/app_install_upload_reservation.hpp"
 #include "daemon/http_auth.hpp"
 #include "daemon/home_key_watcher.hpp"
+#include "daemon/lg_store_installs.hpp"
 #include "daemon/static_dimming_runner.hpp"
 #include "daemon/hostname_cache.hpp"
 #include "daemon/http_proxy.hpp"
@@ -19,6 +20,7 @@
 #include "service/home_discover.hpp"
 #include "service/youtube_accounts.hpp"
 #include "service/home_titles.hpp"
+#include "service/lg_catalog.hpp"
 #include "service/home_trailers.hpp"
 #include "service/home_watching.hpp"
 #include "service/weather.hpp"
@@ -338,6 +340,11 @@ class HttpFrontDoor {
     void inspectNativeAppPackage(HttpExchange &exchange) const;
     void sendApps(HttpExchange &exchange) const;
     void sendAppCatalog(HttpExchange &exchange) const;
+    // The TV app's app search and app page: LG Content Store's apps (through lgCatalog_) and the
+    // Homebrew Channel's, and installing a free app of LG Content Store.
+    void sendStoreSearch(HttpExchange &exchange) const;
+    void sendStoreApp(HttpExchange &exchange) const;
+    void handleStoreInstallPost(HttpExchange &exchange) const;
     void sendHomeChannels(HttpExchange &exchange) const;
     void sendHomeStatus(HttpExchange &exchange) const;
     void sendHomeCatalogue(HttpExchange &exchange, bool view) const;
@@ -474,6 +481,11 @@ class HttpFrontDoor {
     mutable service::HomeTitles homeTitles_;
     mutable service::HomeWatching homeWatching_;
     mutable service::HomePicks homePicks_;
+    // LG's own catalogue through the TV's sdx service: titles' links into their apps, and LG
+    // Content Store's apps.
+    mutable service::LgCatalog lgCatalog_;
+    // A title's IDs in LG's catalogue, {"<appId>": "<contentId>"}, matched by its names in TMDB.
+    Json homeCatalogueIds(const std::string &type, const std::string &id) const;
     // Top picks for you starting with the ones Gemini chose for the profile (service::HomePicks).
     Json withGeminiPicks(const Json &rows, const std::string &profile, const Json &document) const;
     mutable service::Weather weather_;
@@ -500,6 +512,7 @@ class HttpFrontDoor {
     mutable std::mutex elevatedAppsMutex_;
     mutable std::mutex appElevationRunMutex_;
     mutable std::mutex appInstallRunMutex_;
+    std::unique_ptr<LgStoreInstalls> lgStoreInstalls_;
     mutable std::mutex appInstallActionMutex_;
     mutable std::mutex appInstallDownloadsMutex_;
     mutable std::map<std::string, std::shared_ptr<std::atomic<bool>>>

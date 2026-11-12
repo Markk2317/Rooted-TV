@@ -309,6 +309,49 @@ Json HomeWatching::row(const std::string &profile, int64_t nowMs) {
     return result;
 }
 
+Json HomeWatching::takeFinished(const std::string &profile, int64_t nowMs) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    loadLocked();
+    Json finished = Json::array();
+    Json kept = Json::array();
+    for (const Json &entry : profiles_[profile].items()) {
+        Json copy = copyOf(entry);
+        double watched = entry["watchedMs"].number();
+        if (countingSince_ && profile == activeProfile_ &&
+            HomeTitles::keyOf(entry["item"]) == activeKey_)
+            watched += static_cast<double>(std::min(kSessionMaxMs, std::max<int64_t>(0, nowMs - countingSince_)));
+        if (!entry["finished"].boolean() && watched / runtimeMs(entry) >= kFinished) {
+            copy.set("finished", Json::flag(true));
+            finished.add(copyOf(entry["item"]));
+        }
+        kept.add(copy);
+    }
+    if (finished.size()) {
+        profiles_.set(profile, kept);
+        saveLocked(path_, profiles_);
+    }
+    return finished;
+}
+
+void HomeWatching::forget(const std::string &profile, const std::string &key) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    loadLocked();
+    Json kept = Json::array();
+    bool removed = false;
+    for (const Json &entry : profiles_[profile].items()) {
+        if (HomeTitles::keyOf(entry["item"]) == key) removed = true;
+        else kept.add(copyOf(entry));
+    }
+    if (!removed) return;
+    profiles_.set(profile, kept);
+    if (profile == activeProfile_ && key == activeKey_) {
+        activeKey_.clear();
+        activeApp_.clear();
+        countingSince_ = 0;
+    }
+    saveLocked(path_, profiles_);
+}
+
 Json HomeWatching::services(const std::string &profile, int64_t nowMs) {
     std::lock_guard<std::mutex> lock(mutex_);
     loadLocked();

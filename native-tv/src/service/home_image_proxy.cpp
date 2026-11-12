@@ -1,4 +1,5 @@
 #include "service/home_image_proxy.hpp"
+#include "service/lg_catalog.hpp"
 #include "core/md5.hpp"
 #include <algorithm>
 #include <chrono>
@@ -122,6 +123,9 @@ HomeImageProxy::~HomeImageProxy() {
 }
 
 bool HomeImageProxy::allowedUrl(const std::string &url) {
+    // An app's icon or screenshot on LG Content Store, in the form lgStoreImageUrl makes.
+    if (url.compare(0, 8, "https://") == 0 && !lgStoreImageRef(url).empty())
+        return lgStoreImageUrl(lgStoreImageRef(url)) == url;
     const std::string tmdb = "https://image.tmdb.org/t/p/w";
     const std::string youtube = "https://i.ytimg.com/vi/";
     const auto isName = [](const std::string &name) {

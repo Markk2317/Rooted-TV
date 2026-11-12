@@ -425,6 +425,14 @@ Json detailsValue(const Json &document, const std::string &type,
     // For matching the title in Apple's charts, whose names are the store's own.
     item.set("originalTitle", Json::text(jsString(type == "movie" ? document["original_title"]
                                                                   : document["original_name"])));
+    // As it is called in the TV's country, for LG's catalogue, which names titles that way.
+    std::string localTitle;
+    for (const Json &translation : document["translations"]["translations"].items())
+        if (!region.empty() && translation["iso_3166_1"].string() == region) {
+            localTitle = utf16Prefix(jsString(translation["data"][type == "movie" ? "title" : "name"]), 200);
+            if (!localTitle.empty()) break;
+        }
+    item.set("localTitle", Json::text(localTitle));
     Json runtime = Json::parse("null");
     if (type == "movie") {
         const Json minutes = document["runtime"];
@@ -630,7 +638,7 @@ Json HomeContent::details(const std::string &tmdbKey, bool netflixEnabled,
                          region.empty()
                              ? "&append_to_response=credits,videos,similar,external_ids"
                              : "&append_to_response=credits,videos,similar,external_ids,"
-                               "watch/providers&watch_region=" + region,
+                               "watch/providers,translations&watch_region=" + region,
                          kDayMs, [type, id, region](const Json &document) {
                              return detailsValue(document, type, id, region);
                          });

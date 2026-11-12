@@ -71,7 +71,9 @@ struct App {
 class CatalogScreen final : public ScreenView {
   public:
     // The install steps' list is the left half of the page; the kit's panel is the right.
-    CatalogScreen() : list_("catl", {{64, 288, 896, 740}, 80, 816, false}) {}
+    // `wanted`: an app to put the focus on once the catalogue is in, as Search opens it.
+    explicit CatalogScreen(std::string wanted = "")
+        : list_("catl", {{64, 288, 896, 740}, 80, 816, false}), wanted_(std::move(wanted)) {}
     std::string name() const override {
         return "catalog";
     }
@@ -160,6 +162,11 @@ class CatalogScreen final : public ScreenView {
                 sortApps(data);
             else
                 error_ = data["error"].string();
+            for (size_t i = 0; good && !wanted_.empty() && i < apps_.size(); ++i)
+                if (apps_[i].id == wanted_) {
+                    focusTile(host, i, true);
+                    wanted_.clear();
+                }
             refresh(host);
         } else if (channel == "catalog:status") {
             statusReading_ = false;
@@ -928,7 +935,7 @@ class CatalogScreen final : public ScreenView {
     SettingsList list_;
     Json catalog_, inst_;
     std::vector<App> apps_;
-    std::string job_, dismissed_, error_;
+    std::string job_, dismissed_, error_, wanted_;
     size_t focus_ = 0;
     View shown_ = View::List;
     // What the person asked for and the TV has not yet answered: the page already shows it.
@@ -941,6 +948,11 @@ class CatalogScreen final : public ScreenView {
 } // namespace
 
 std::unique_ptr<ScreenView> makeCatalogScreen(const std::string &route) {
-    return route == "catalog" ? std::unique_ptr<ScreenView>(new CatalogScreen()) : nullptr;
+    if (route == "catalog")
+        return std::unique_ptr<ScreenView>(new CatalogScreen());
+    // "catalog:<id>": with that app in focus, from Search's Homebrew Channel row.
+    if (route.compare(0, 8, "catalog:") == 0 && route.size() > 8)
+        return std::unique_ptr<ScreenView>(new CatalogScreen(route.substr(8)));
+    return nullptr;
 }
 } // namespace nativetv

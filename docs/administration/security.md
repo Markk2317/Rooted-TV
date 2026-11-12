@@ -367,5 +367,25 @@ Netflix ID and constructs the native Netflix launch target itself; the page
 cannot supply an arbitrary deep-link URL. Saved mappings can be used offline.
 The option defaults off. `primeDeepLinks: true` does the same for Prime Video,
 when a title from its row is opened: the server accepts only one `P14462` GTI
-(`amzn1.dv.gti.` and a UUID) and passes it to the installed app as it is. It
-also defaults off; Disney+ is never looked up.
+(`amzn1.dv.gti.` and a UUID) and passes it to the installed app, as it is or,
+for a film, as `watch?gti=`. It also defaults off.
+
+## LG's catalogue and LG Content Store
+
+Opening a title from Home in Netflix, Prime Video or Disney+, and Search's
+row of LG Content Store apps, ask LG's own catalogue, the one LG's Search and
+LG Content Store answer from. The server asks through the TV's
+`com.webos.service.sdx/send`, as LG's Search app does: the TV's sdx service
+adds the TV's LG credentials and sends the request to LG's server for the TV's
+country, so the server never reads, keeps or sends those credentials. LG
+receives the title's name (in the TV's country, in English and in its original
+language) or the words searched, as LG's Search would. The server takes from
+the answer only a content ID each app accepts (a GTI for Prime Video, an ID of
+letters, digits and `=&-_` for Disney+, a numeric Netflix title), builds the
+launch target itself, and remembers it for a day. An app page's pictures come
+only from LG's store host (`ngfts.lge.com`), by a reference the image proxy
+checks. **Install** (`POST /api/apps/store/install`, the same guards as
+opening a Home tile) installs a free app through
+`com.webos.appInstallService/install`, which downloads and checks LG's own
+package as LG Content Store does; a paid app is refused, since buying needs
+LG's account.

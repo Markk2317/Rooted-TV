@@ -121,6 +121,28 @@ int main() {
     (void)unlink(path.c_str());
     (void)unlink(playsPath.c_str());
     (void)rmdir(directory.c_str());
+    {
+        char finishedPattern[] = "/tmp/nativetv-home-finished-XXXXXX";
+        const std::string finishedDirectory = mkdtemp(finishedPattern);
+        HomeWatching watching(finishedDirectory);
+        // A title played to 90% is handed over once, to be marked watched; one marked watched by
+        // hand leaves the row.
+        assert(!watching.takeFinished("main", now).size());
+        watching.opened("main", title(1, 100), "prime", "amazon.global", now);
+        watching.opened("main", title(7, 20), "prime", "amazon.global", now);
+        watching.foreground("amazon.global", "prime", "main", now);
+        watching.playing(true, now);
+        now += 19 * kMinute;
+        const Json finished = watching.takeFinished("main", now);
+        assert(finished.size() == 1 && finished[0]["id"].number() == 7);
+        assert(!watching.takeFinished("main", now).size());
+        watching.forget("main", "movie:7");
+        assert(!watching.takeFinished("main", now + kMinute).size());
+        watching.foreground("", "", "main", now);
+        (void)unlink((finishedDirectory + "/home-watching.json").c_str());
+        (void)unlink((finishedDirectory + "/home-plays.json").c_str());
+        (void)rmdir(finishedDirectory.c_str());
+    }
     std::printf("Home watching passed.\n");
     return 0;
 }

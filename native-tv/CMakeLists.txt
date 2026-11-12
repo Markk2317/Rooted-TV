@@ -49,6 +49,7 @@ target_compile_options(nativetv_state PRIVATE -Wall -Wextra -Werror)
 add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/app_install_upload_reservation.cpp
   src/daemon/app_install_executor.cpp
+  src/daemon/lg_store_installs.cpp
   src/daemon/app_elevation_executor.cpp
   src/daemon/app_elevation_store.cpp
   src/daemon/install_job_store.cpp
@@ -149,7 +150,7 @@ add_library(nativetv_tv_services src/service/control_commands.cpp
   src/service/home_titles.cpp src/service/home_watching.cpp
   src/service/screensaver_photos.cpp src/service/weather.cpp src/service/assistant.cpp
   src/service/home_picks.cpp src/service/screen_title.cpp
-  src/service/home_trailers.cpp)
+  src/service/home_trailers.cpp src/service/lg_catalog.cpp)
 target_link_libraries(nativetv_tv_services PUBLIC nativetv_core nativetv_names
   PkgConfig::CURL ZLIB::ZLIB)
 target_compile_options(nativetv_tv_services PRIVATE -Wall -Wextra -Werror)
@@ -405,6 +406,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-home-open-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-open-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
   add_test(NAME native-home-open COMMAND native-home-open-tests)
+  add_executable(native-lg-catalog-tests tests/lg_catalog.cpp)
+  target_link_libraries(native-lg-catalog-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-lg-catalog-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+  add_test(NAME native-lg-catalog COMMAND native-lg-catalog-tests)
   add_executable(native-home-content-tests tests/home_content.cpp)
   target_link_libraries(native-home-content-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-content-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
@@ -928,6 +933,7 @@ if(NATIVETV_BUILD_CLIENT)
     src/ui/kit/overlay.cpp src/ui/quick_screen.cpp src/ui/profiles_screen.cpp
     src/ui/details_screen.cpp src/ui/editor_screen.cpp src/ui/pin_screen.cpp
     src/ui/apps_category_screen.cpp
+    src/ui/store_app_screen.cpp
     src/ui/search_screen.cpp)
   target_link_libraries(nativetv_presentation PUBLIC nativetv_models nativetv_motion nativetv_say qrcodegen)
   target_compile_options(nativetv_presentation PRIVATE -Wall -Wextra -Werror)

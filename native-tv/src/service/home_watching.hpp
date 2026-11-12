@@ -49,6 +49,11 @@ class HomeWatching {
     Json watched(const std::string &profile, size_t limit);
     // The services the profile played in the last 30 days, most first: [{"service", "playedMs"}].
     Json services(const std::string &profile, int64_t nowMs);
+    // The titles that have played to 90% since the last call, each once: [item]. Home marks them
+    // watched for the profile, as Google TV does when a film ends.
+    Json takeFinished(const std::string &profile, int64_t nowMs);
+    // The title leaves Continue watching: marked watched, or no longer being watched.
+    void forget(const std::string &profile, const std::string &key);
 
   private:
     void loadLocked();
@@ -61,7 +66,8 @@ class HomeWatching {
     std::string path_, playsPath_;
     std::mutex mutex_;
     bool loaded_ = false;
-    Json profiles_; // {profile: [{"item", "service", "appId", "openedAt", "watchedMs", "seenAt"}]}
+    // {profile: [{"item", "service", "appId", "openedAt", "watchedMs", "seenAt", "finished"}]}
+    Json profiles_;
     Json plays_;    // {profile: [{"service", "appId", "startedAt", "endedAt", "playedMs", "titled"}]}
     std::string frontApp_;
     bool knowsPlayback_ = false, playing_ = false;

@@ -38,10 +38,13 @@ HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
 void resolveHomeNetflixOpen(HomeOpenPlan &plan, const Json &lookup);
 
 // A title from a streaming service's row opens the service's app, which must be installed.
-// resolveHomeServiceOpen then puts it on the title where a lookup gave its ID there (Netflix's
-// numeric ID, Prime Video's GTI); without one, the app opens on its own Home.
+// resolveHomeCatalogueOpen puts it on the title where LG's catalogue has it in that app
+// (service::LgCatalog's IDs, {"<appId>": "<contentId>"}), playing it where the app can; failing
+// that, resolveHomeServiceOpen does where a lookup gave its ID there (Netflix's numeric ID, Prime
+// Video's GTI). Without either, the app opens on its own Home. `type` is "movie" or "tv".
 HomeOpenPlan planHomeServiceOpen(const std::string &service, const Json &apps);
-void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup);
+bool resolveHomeCatalogueOpen(HomeOpenPlan &plan, const Json &ids, const std::string &type);
+void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup, const std::string &type = "");
 
 // An opened row is recorded only while Native Tv Home is on and the row sorts
 // by Last opened.

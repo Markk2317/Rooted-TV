@@ -1773,6 +1773,12 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       homeImageProxy_(dataRoot_),
       youtubeAccounts_(dataRoot_), homeTitles_(dataRoot_), homeWatching_(dataRoot_),
       homePicks_(dataRoot_),
+      lgCatalog_([this](const Json &payload, Json &reply) {
+          LunaReply answer;
+          if (!waitForLuna(luna_, "com.webos.service.sdx/send", payload, answer)) return false;
+          reply = answer.response;
+          return true;
+      }),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
       hiddenAppsPath_(dataFilePath(dataRoot_, "hidden_apps")),
@@ -1798,6 +1804,12 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       systemRoot_(std::move(systemRoot)), cpuWindowMs_(cpuWindowMs) {
     if (!appPackageFetcher_)
         appPackageFetcher_ = service::AppPackageFetcher::download;
+    {
+        const char *configuredLunaSend = std::getenv("TVWEB_LUNA_SEND");
+        lgStoreInstalls_.reset(new LgStoreInstalls(
+            children_, configuredLunaSend && configuredLunaSend[0] ? configuredLunaSend
+                                                                   : "/usr/bin/luna-send"));
+    }
     // The store's country is the one the routes that queue trailers last set (sendHomeDiscover,
     // sendHomeTrailer).
     homeTrailers_.reset(new service::HomeTrailers(dataRoot_, [this](const std::string &id) {
@@ -3021,7 +3033,8 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         return true;
     }
     if (action == "setHomeTitle") {
-        // From a title's details on the TV: {"op": watch, unwatch, like, dislike or unrate, "item"}.
+        // From a title's details on the TV: {"op": watch, unwatch, like, dislike, unrate, seen or
+        // unseen, "item"}.
         // A like or a watch keeps the titles TMDB finds similar, from the details the page has just
         // shown, for the profile's top picks.
         Json item = value["item"].isObject() ? Json::parse(value["item"].dump()) : Json();
@@ -3036,6 +3049,8 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         }
         std::string error;
         if (!homeTitles_.apply(activeHomeProfile(dataRoot_), op, item, error)) return fail(error);
+        // Watched, as on Google TV, it leaves Continue watching.
+        if (op == "seen") homeWatching_.forget(activeHomeProfile(dataRoot_), key);
         Json done = Json::object();
         done.set("ok", Json::flag(true));
         response = done;
@@ -17453,6 +17468,11 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     // The profile's own titles: its watchlist and likes, what it said was not for it, and what it
     // is watching.
     if (result["titlesEnabled"].boolean()) {
+        // A title Home opened that has played to its end is watched.
+        for (const Json &item : homeWatching_.takeFinished(profile, homeNowMilliseconds()).items()) {
+            std::string ignored;
+            (void)homeTitles_.apply(profile, "seen", item, ignored);
+        }
         const Json titles = homeTitles_.state(profile);
         Json rows = service::HomeTitles::personalRows(result["rows"], titles);
         const Json watching = homeWatching_.row(profile, homeNowMilliseconds());
@@ -18866,23 +18886,29 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
         return;
     }
     service::HomeOpenPlan resolved = plan;
-    if (resolved.ok && resolved.action == "netflix") {
+    // A title goes to its app through LG's own catalogue first, the IDs LG's Search opens it with
+    // in the TV's country, and through Wikidata's where LG has none.
+    const bool catalogued = (kind == "service" || kind == "netflix") && resolved.ok &&
+                            service::resolveHomeCatalogueOpen(resolved, homeCatalogueIds(type, id),
+                                                              type);
+    if (!catalogued && resolved.ok && resolved.action == "netflix") {
         const Json lookup = homeContent_.netflix(
             currentConfigDocument()["tmdbKey"].string(),
             config_.document["netflixDeepLinks"].boolean(), type, id);
         service::resolveHomeNetflixOpen(resolved, lookup);
     }
-    if (resolved.ok && !resolved.service.empty()) {
+    if (!catalogued && resolved.ok && !resolved.service.empty()) {
         // The live file, so that a link switched on applies without a restart.
         const Json live = currentConfigDocument();
         const std::string tmdbKey = live["tmdbKey"].string();
         if (resolved.service == "netflix")
             service::resolveHomeServiceOpen(
                 resolved, homeContent_.netflix(tmdbKey, live["netflixDeepLinks"].boolean(),
-                                               type, id));
+                                               type, id), type);
         if (resolved.service == "prime")
             service::resolveHomeServiceOpen(
-                resolved, homeContent_.prime(tmdbKey, live["primeDeepLinks"].boolean(), type, id));
+                resolved, homeContent_.prime(tmdbKey, live["primeDeepLinks"].boolean(), type, id),
+                type);
     }
     if (!resolved.ok) {
         fail(resolved.error);
@@ -18952,6 +18978,22 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     Json success = Json::object();
     success.set("ok", Json::flag(true));
     respond(200, success);
+}
+
+Json HttpFrontDoor::homeCatalogueIds(const std::string &type, const std::string &id) const {
+    const std::string tmdbKey = currentConfigDocument()["tmdbKey"].string();
+    if (tmdbKey.empty() || (type != "movie" && type != "tv")) return Json::object();
+    homeContent_.setRegion(tvRegion(dataRoot_));
+    const Json item = homeContent_.details(tmdbKey, false, type, id)["item"];
+    // LG names a title as it is called in the TV's country, so that name is looked for first.
+    std::vector<std::string> titles;
+    for (const char *field : {"localTitle", "title", "originalTitle"}) {
+        const std::string title = item[field].string();
+        if (!title.empty() && std::find(titles.begin(), titles.end(), title) == titles.end())
+            titles.push_back(title);
+    }
+    if (titles.empty()) return Json::object();
+    return lgCatalog_.titleIds(type + ":" + id, type, titles);
 }
 
 void HttpFrontDoor::sendApps(HttpExchange &exchange) const {
@@ -19129,6 +19171,176 @@ void HttpFrontDoor::sendAppCatalog(HttpExchange &exchange) const {
                               .count();
     const Json result = appCatalog_.get(configuredRepos, appReply.response, force, nowMs);
     sendMetricsJson(exchange, result.dump());
+}
+
+namespace {
+// An LG Content Store app ID: the store's own are a name ("dazn", "cdp-30") or reverse-DNS.
+bool validStoreAppId(const std::string &id) {
+    return !id.empty() && id.size() <= 128 && id[0] != '.' && id[0] != '-' &&
+           std::all_of(id.begin(), id.end(), [](unsigned char c) {
+               return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+                      c == '.' || c == '-' || c == '_';
+           });
+}
+
+std::string lowerAscii(std::string text) {
+    std::transform(text.begin(), text.end(), text.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return text;
+}
+
+void respondJson(HttpExchange &exchange, int status, const Json &body) {
+    (void)exchange.respond(status,
+                           {{"Content-Type", "application/json; charset=utf-8"},
+                            {"Cache-Control", "no-store"},
+                            {"X-Content-Type-Options", "nosniff"}},
+                           body.dump());
+}
+
+Json failure(const std::string &message) {
+    Json body = Json::object();
+    body.set("ok", Json::flag(false));
+    body.set("error", Json::text(message));
+    return body;
+}
+} // namespace
+
+void HttpFrontDoor::sendStoreSearch(HttpExchange &exchange) const {
+    std::string query;
+    if (!uniqueQueryParameter(exchange.request().query, "q", query) || query.empty() ||
+        query.size() > 80 ||
+        std::any_of(query.begin(), query.end(), [](unsigned char c) { return c < 0x20 || c == 0x7f; })) {
+        respondJson(exchange, 400, failure("q must be the words to look for"));
+        return;
+    }
+    LunaReply installedReply;
+    if (!waitForLuna(luna_, "com.webos.applicationManager/listApps", Json::object(), installedReply))
+        installedReply.response = Json::object();
+    std::set<std::string> installed;
+    for (const Json &app : installedReply.response["apps"].items()) installed.insert(app["id"].string());
+
+    Json result = Json::object();
+    result.set("ok", Json::flag(true));
+    const Json found = lgCatalog_.searchApps(query, 20);
+    Json apps = Json::array();
+    for (const Json &app : found.items()) {
+        Json entry = Json::parse(app.dump());
+        entry.set("installed", Json::flag(installed.count(app["id"].string()) > 0));
+        apps.add(entry);
+    }
+    result.set("apps", apps);
+    if (!found.valid())
+        result.set("appsError", Json::text(say::msg("srv.store.lgUnavailable",
+                                                    "LG Content Store did not answer")));
+
+    // The Homebrew Channel's catalogue, whose names hold the words.
+    Json configuredRepos;
+    {
+        std::lock_guard<std::mutex> lock(appCatalogReposMutex_);
+        configuredRepos = appCatalogRepos_;
+    }
+    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              std::chrono::system_clock::now().time_since_epoch()).count();
+    const Json catalog = appCatalog_.get(configuredRepos, installedReply.response, false, nowMs);
+    const std::string wanted = lowerAscii(query);
+    Json homebrew = Json::array();
+    for (const Json &app : catalog["apps"].items()) {
+        const std::string title = app["title"].string(app["id"].string());
+        if (homebrew.size() >= 20 || lowerAscii(title).find(wanted) == std::string::npos ||
+            app["state"].string() == "hbc")
+            continue;
+        Json entry = Json::object();
+        entry.set("id", app["id"]);
+        entry.set("title", Json::text(title));
+        entry.set("description", Json::text(app["description"].string()));
+        entry.set("installed", Json::flag(app["installedVersion"].isString()));
+        homebrew.add(entry);
+    }
+    result.set("homebrew", homebrew);
+    respondJson(exchange, 200, result);
+}
+
+void HttpFrontDoor::sendStoreApp(HttpExchange &exchange) const {
+    std::string id;
+    if (!uniqueQueryParameter(exchange.request().query, "id", id) || !validStoreAppId(id)) {
+        respondJson(exchange, 400, failure("id must be an LG Content Store app"));
+        return;
+    }
+    const Json app = lgCatalog_.app(id);
+    if (!app.valid()) {
+        respondJson(exchange, 502, failure(say::msg("srv.store.lgUnavailable",
+                                                    "LG Content Store did not answer")));
+        return;
+    }
+    LunaReply info;
+    Json request = Json::object();
+    request.set("id", Json::text(id));
+    const bool installed = waitForLuna(luna_, "com.webos.applicationManager/getAppInfo", request, info) &&
+                           info.response["appInfo"].isObject();
+    Json result = Json::object();
+    result.set("ok", Json::flag(true));
+    result.set("app", app);
+    result.set("installed", Json::flag(installed));
+    const Json install = lgStoreInstalls_->status(id);
+    if (install.valid()) result.set("install", install);
+    respondJson(exchange, 200, result);
+}
+
+void HttpFrontDoor::handleStoreInstallPost(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    if (!config_.allowControl && !isLoopbackPeer(request.remoteAddress)) {
+        respondJson(exchange, 403, failure(say::msg("srv.controlsOff", "controls disabled in config")));
+        return;
+    }
+    if (rejectCrossSitePost(exchange)) return;
+    if (!setupJsonContentType(request)) {
+        respondJson(exchange, 415, failure("Content-Type must be application/json"));
+        return;
+    }
+    if (!exchange.setBodyLimit(1024)) {
+        respondJson(exchange, 413, failure("request body too large"));
+        return;
+    }
+    std::string body;
+    char buffer[512];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0) break;
+        if (count < 0) {
+            respondJson(exchange, exchange.bodyLimitExceeded() ? 413 : 400,
+                        failure(exchange.bodyLimitExceeded() ? "request body too large" : "malformed JSON"));
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    const Json payload = Json::parse(body);
+    const std::string id = payload["id"].string();
+    if (!payload.isObject() || !validStoreAppId(id)) {
+        respondJson(exchange, 400, failure("id must be an LG Content Store app"));
+        return;
+    }
+    // A paid app needs LG's account and payment, which only LG Content Store asks for.
+    const Json app = lgCatalog_.app(id);
+    if (!app.valid()) {
+        respondJson(exchange, 502, failure(say::msg("srv.store.lgUnavailable",
+                                                    "LG Content Store did not answer")));
+        return;
+    }
+    if (!app["free"].boolean()) {
+        respondJson(exchange, 409, failure(say::msg("srv.store.paid",
+                                                    "This app is paid: buy it in LG Content Store")));
+        return;
+    }
+    std::string error;
+    if (!lgStoreInstalls_->start(id, error)) {
+        respondJson(exchange, 409, failure(say::msg("srv.store.busy", "Another app is being installed")));
+        return;
+    }
+    if (logger_) logger_->info("store: installing " + id + " from LG Content Store");
+    Json result = Json::object();
+    result.set("ok", Json::flag(true));
+    result.set("install", lgStoreInstalls_->status(id));
+    respondJson(exchange, 200, result);
 }
 
 void HttpFrontDoor::handleLanIcon(HttpExchange &exchange) const {
@@ -19545,6 +19757,18 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/open" && request.method == "POST") {
         handleHomeOpenPost(exchange);
+        return;
+    }
+    if (request.uri == "/api/apps/store/search" && request.method == "GET") {
+        sendStoreSearch(exchange);
+        return;
+    }
+    if (request.uri == "/api/apps/store/app" && request.method == "GET") {
+        sendStoreApp(exchange);
+        return;
+    }
+    if (request.uri == "/api/apps/store/install" && request.method == "POST") {
+        handleStoreInstallPost(exchange);
         return;
     }
     if (request.uri == "/api/home/recents/image" && request.method == "GET") {

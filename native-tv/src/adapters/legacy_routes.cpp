@@ -14,6 +14,15 @@ std::string legacyAssetRoute(const std::string &asset) {
     if (asset.compare(0, 8, "youtube:") == 0)
         return "/api/home/image?u=" +
                encode("https://i.ytimg.com/vi/" + asset.substr(8) + "/mqdefault.jpg");
+    // "lgstore:icon/<day>/<file>": an app's icon or screenshot on LG Content Store
+    // (service::lgStoreImageRef), which the server's image proxy checks again.
+    if (asset.compare(0, 8, "lgstore:") == 0) {
+        const std::string path = asset.substr(8);
+        return "/api/home/image?u=" +
+               encode("https://ngfts.lge.com/fts/gftsDownload.lge?biz_code=APP_STORE&func_code=" +
+                      std::string(path.compare(0, 5, "icon/") == 0 ? "APP_ICON" : "APP_PREVIEW") +
+                      "&file_path=/appstore/app/" + path);
+    }
     if (asset.compare(0, 5, "tmdb:") == 0) {
         size_t split = asset.find(':', 5);
         if (split == std::string::npos)
@@ -110,6 +119,12 @@ std::string legacyRoute(Operation operation, const Json &arguments) {
         return "/api/apps/catalog";
     case Operation::InstallStatus:
         return "/api/apps/install/status";
+    case Operation::StoreSearch:
+        return "/api/apps/store/search?q=" + encode(arguments["query"].string());
+    case Operation::StoreApp:
+        return "/api/apps/store/app?id=" + encode(arguments["id"].string());
+    case Operation::StoreInstall:
+        return "/api/apps/store/install";
     case Operation::TitleDetails:
         return "/api/home/details?type=" + encode(arguments["type"].string()) +
                "&id=" + encode(arguments["id"].string());

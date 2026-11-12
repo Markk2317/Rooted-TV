@@ -14,6 +14,7 @@ namespace {
 const size_t kWatchlistMax = 60;
 const size_t kLikedMax = 30;
 const size_t kDislikedMax = 300;
+const size_t kWatchedMax = 500;
 const size_t kSimilarMax = 12;
 const size_t kPicksMax = 10;     // of the profile's own in its top picks
 const size_t kTopPicksMax = 16;  // the row, as the feed makes it
@@ -70,6 +71,7 @@ Json emptyProfile() {
     profile.set("watchlist", Json::array());
     profile.set("liked", Json::array());
     profile.set("disliked", Json::array());
+    profile.set("watched", Json::array());
     return profile;
 }
 } // namespace
@@ -145,10 +147,21 @@ Json HomeTitles::personalRows(const Json &rows, const Json &state) {
             if (wanted(item)) kept.add(item);
         return kept;
     };
+    // What it has watched leaves its picks, as on Google TV, and stays in the other rows.
+    std::vector<std::string> watched;
+    for (const Json &key : state["watched"].items()) watched.push_back(key.string());
+    const auto unwatched = [&watched](const Json &items) {
+        Json kept = Json::array();
+        for (const Json &item : items.items())
+            if (std::find(watched.begin(), watched.end(), keyOf(item)) == watched.end())
+                kept.add(item);
+        return kept;
+    };
     // The profile's own top picks, as Google TV's are an account's: the titles like the ones it
     // liked, newest like first, then like the ones on its watchlist, one from each in turn, and none
     // it has already marked. The week's trending titles fill the row after them.
     std::vector<std::string> known(disliked);
+    known.insert(known.end(), watched.begin(), watched.end());
     for (const char *list : {"liked", "watchlist"})
         for (const Json &entry : state[list].items()) known.push_back(keyOf(entry));
     std::vector<std::vector<Json>> sources;
@@ -177,6 +190,7 @@ Json HomeTitles::personalRows(const Json &rows, const Json &state) {
         for (const std::string &name : row.keys())
             if (name != "items") copy.set(name, row[name]);
         Json items = filtered(row["items"]);
+        if (row["key"].string() == "trending") items = unwatched(items);
         if (row["key"].string() == "trending" && !picks.empty()) {
             Json blended = Json::array();
             for (const Json &pick : picks) blended.add(pick);
@@ -204,7 +218,7 @@ Json HomeTitles::personalRows(const Json &rows, const Json &state) {
         result.add(row);
     }
     for (const Json &liked : state["liked"].items()) {
-        const Json similar = filtered(liked["similar"]);
+        const Json similar = unwatched(filtered(liked["similar"]));
         if (!similar.size()) continue;
         Json row = Json::object();
         row.set("key", Json::text("liked"));
@@ -218,7 +232,7 @@ Json HomeTitles::personalRows(const Json &rows, const Json &state) {
 
 Json HomeTitles::summary(const Json &state) {
     Json result = Json::object();
-    for (const char *list : {"watchlist", "liked", "disliked"}) {
+    for (const char *list : {"watchlist", "liked", "disliked", "watched"}) {
         Json keys = Json::array();
         for (const Json &entry : state[list].items())
             keys.add(Json::text(entry.isString() ? entry.string() : keyOf(entry)));
@@ -232,7 +246,7 @@ Json HomeTitles::state(const std::string &profile) {
     loadLocked();
     Json result = emptyProfile();
     const Json stored = profiles_[profile];
-    for (const char *list : {"watchlist", "liked", "disliked"})
+    for (const char *list : {"watchlist", "liked", "disliked", "watched"})
         if (stored[list].isArray()) result.set(list, copyOf(stored[list]));
     return result;
 }
@@ -245,14 +259,15 @@ bool HomeTitles::apply(const std::string &profile, const std::string &op, const 
         error = "that is not a film or series";
         return false;
     }
-    if (op != "watch" && op != "unwatch" && op != "like" && op != "dislike" && op != "unrate") {
-        error = "op must be watch, unwatch, like, dislike or unrate";
+    if (op != "watch" && op != "unwatch" && op != "like" && op != "dislike" && op != "unrate" &&
+        op != "seen" && op != "unseen") {
+        error = "op must be watch, unwatch, like, dislike, unrate, seen or unseen";
         return false;
     }
     std::lock_guard<std::mutex> lock(mutex_);
     loadLocked();
     Json current = emptyProfile();
-    for (const char *list : {"watchlist", "liked", "disliked"})
+    for (const char *list : {"watchlist", "liked", "disliked", "watched"})
         if (profiles_[profile][list].isArray()) current.set(list, copyOf(profiles_[profile][list]));
     // A title liked or put on the watchlist keeps the titles TMDB finds similar, from which the
     // profile's top picks are drawn.
@@ -278,6 +293,9 @@ bool HomeTitles::apply(const std::string &profile, const std::string &op, const 
                                           op == "dislike" ? Json::text(key) : Json(),
                                           kDislikedMax));
     }
+    if (op == "seen" || op == "unseen")
+        current.set("watched", withFront(current["watched"], key,
+                                         op == "seen" ? Json::text(key) : Json(), kWatchedMax));
     profiles_.set(profile, current);
     saveLocked();
     return true;

@@ -3,9 +3,11 @@
 // "Search by genre" grid, which rises under a large title when it takes the focus, the bar leaving.
 // OK on the field opens the typing page: black, the field at the top left and the TV keyboard at
 // the foot, whose strip suggests titles as one types. Its search key, a suggestion or a genre opens
-// the results page: the query, Edit search, and a row of films and one of series, which rise as
-// Home's rows do and caption the focused one. A result opens its details over the search, which
-// keeps everything for Back.
+// the results page: the query, Edit search, the TV's apps whose name has the words, the apps of LG
+// Content Store and of the Homebrew Channel that have them (as Google TV's results list the Play
+// Store's), and a row of films and one of series, which rise as Home's rows do and caption the
+// focused one. A title opens its details over the search, and an app of LG Content Store its page
+// there, which keep everything for Back; a Homebrew app opens in the Homebrew catalogue.
 //
 // Suggestions are asked for 350 ms after the last key (two characters at least); a reply is taken
 // only if it answers the latest request.
@@ -20,6 +22,7 @@
 #include "ui/kit/tuning.hpp"
 #include "ui/optimistic.hpp"
 #include "ui/overlay_routes.hpp"
+#include "ui/store_app_screen.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -31,7 +34,8 @@ namespace layout = kit::layout;
 using kit::easing;
 using say::msg;
 
-constexpr const char *kResults = "title:search", *kSuggest = "title:suggest", *kPad = "search:kb";
+constexpr const char *kResults = "title:search", *kSuggest = "title:suggest", *kPad = "search:kb",
+                      *kStore = "store:search";
 constexpr double kDebounceMs = 350;
 constexpr size_t kQueryMax = 80, kMinQuery = 2, kSuggestionsMax = 8, kGenreColumns = 6;
 
@@ -80,11 +84,11 @@ class SearchScreen final : public ScreenView {
 
   public:
     std::string name() const override {
-        return details_ ? "details" : "search";
+        return details_ ? "details" : storeApp_ ? "storeapp" : "search";
     }
     // Only the Search tab's own page has the bar; the typing and results pages fill the screen.
     bool hasBar() const override {
-        return !details_ && page_ == Page::Tab;
+        return !details_ && !storeApp_ && page_ == Page::Tab;
     }
     bool barSearch() const override {
         return true;
@@ -113,6 +117,11 @@ class SearchScreen final : public ScreenView {
             details_->leave(host);
             details_.reset();
         }
+        if (storeApp_) {
+            storeApp_->leave(host);
+            storeApp_.reset();
+        }
+        host.services().cancel(kStore);
         host.services().cancel(kResults);
         host.services().cancel(kSuggest);
         host.motion().erasePrefix("search:");
@@ -120,6 +129,8 @@ class SearchScreen final : public ScreenView {
     bool update(ScreenHost &host) override {
         if (details_)
             return false;
+        if (storeApp_)
+            return storeApp_->update(host);
         const double now = host.nowMs();
         if (suggestAt_ > 0 && now >= suggestAt_)
             suggest(host);
@@ -141,13 +152,15 @@ class SearchScreen final : public ScreenView {
     bool key(ScreenHost &host, Key key) override {
         if (details_)
             return details_->key(host, key);
+        if (storeApp_)
+            return storeApp_->key(host, key);
         bool used = true;
         if (page_ == Page::Tab)
             used = tabKey(host, key);
         else if (page_ == Page::Typing)
             typingKey(host, key);
-        else
-            resultsKey(host, key);
+        else if (resultsKey(host, key))
+            return true; // another screen has taken this one's place
         retarget(host, false);
         host.invalidate();
         return used;
@@ -155,6 +168,11 @@ class SearchScreen final : public ScreenView {
     bool back(ScreenHost &host) override {
         if (details_) {
             details_->back(host);
+            dropFinishedDetails(host);
+            return true;
+        }
+        if (storeApp_) {
+            storeApp_->back(host);
             dropFinishedDetails(host);
             return true;
         }
@@ -177,7 +195,7 @@ class SearchScreen final : public ScreenView {
         return true;
     }
     bool text(ScreenHost &host, const std::string &typed) override {
-        if (details_)
+        if (details_ || storeApp_)
             return true;
         if (page_ != Page::Typing)
             openTyping(host, "");
@@ -188,6 +206,10 @@ class SearchScreen final : public ScreenView {
         if (details_) {
             details_->click(host, id);
             dropFinishedDetails(host);
+            return;
+        }
+        if (storeApp_) {
+            storeApp_->click(host, id);
             return;
         }
         const std::string pad = std::string(kPad) + ":";
@@ -215,7 +237,8 @@ class SearchScreen final : public ScreenView {
                 row_ = row;
                 columns_[row_] = std::min(static_cast<size_t>(std::atoi(colon + 1)),
                                           rows_[row_].cards.size() - 1);
-                openDetails(host);
+                if (openDetails(host))
+                    return; // another screen has taken this one's place
             }
         }
         retarget(host, false);
@@ -229,7 +252,41 @@ class SearchScreen final : public ScreenView {
             details_->response(host, response);
             dropFinishedDetails(host);
         }
+        if (storeApp_)
+            storeApp_->response(host, response);
         const Json data = response.json();
+        if (response.channel == kStore && storeGeneration_ && response.generation == storeGeneration_) {
+            storeGeneration_ = 0;
+            storeRows_.clear();
+            if (response.ok() && data["ok"].boolean()) {
+                CardRow lg, homebrew;
+                lg.key = "search:store";
+                lg.title = msg("tv.search.lgStore", "LG Content Store");
+                homebrew.key = "search:homebrew";
+                homebrew.title = msg("tv.search.homebrew", "Homebrew Channel");
+                for (const auto &app : data["apps"].items()) {
+                    Card card;
+                    card.id = app["id"].string();
+                    card.kind = "store";
+                    card.title = app["title"].string();
+                    card.image = app["icon"].string();
+                    card.data = app;
+                    lg.cards.push_back(card);
+                }
+                for (const auto &app : data["homebrew"].items()) {
+                    Card card;
+                    card.id = app["id"].string();
+                    card.kind = "homebrew";
+                    card.title = app["title"].string();
+                    card.data = app;
+                    homebrew.cards.push_back(card);
+                }
+                for (CardRow *row : {&lg, &homebrew})
+                    if (!row->cards.empty())
+                        storeRows_.push_back(*row);
+            }
+            composeRows(host);
+        }
         const bool usable = response.ok() && data.valid() && data["ok"].boolean() && data["enabled"].boolean();
         if (response.channel == kSuggest && suggestGeneration_ &&
             response.generation == suggestGeneration_) {
@@ -252,12 +309,7 @@ class SearchScreen final : public ScreenView {
             resultsGeneration_ = 0;
             loading_ = false;
             failed_ = !usable;
-            rows_.clear();
-            // The TV's own apps whose name has the words lead, as Google TV's Apps results do.
-            CardRow apps = matchingApps(host);
-            if (!apps.cards.empty())
-                rows_.push_back(apps);
-            failed_ = failed_ && rows_.empty();
+            titleRows_.clear();
             if (usable) {
                 // Google TV's results come in rows; TMDB's are films and series, a row of each.
                 CardRow films, series;
@@ -269,13 +321,9 @@ class SearchScreen final : public ScreenView {
                     (item["type"].string() == "tv" ? series : films).cards.push_back(resultCard(item));
                 for (CardRow *row : {&films, &series})
                     if (!row->cards.empty())
-                        rows_.push_back(*row);
+                        titleRows_.push_back(*row);
             }
-            columns_.assign(rows_.size(), 0);
-            row_ = 0;
-            onButton_ = true;
-            retarget(host, true);
-            host.invalidate();
+            composeRows(host);
         }
     }
 
@@ -285,6 +333,10 @@ class SearchScreen final : public ScreenView {
         barAway_ = 0;
         if (details_) {
             details_->build(host, paint);
+            return;
+        }
+        if (storeApp_) {
+            storeApp_->build(host, paint);
             return;
         }
         Scene &scene = paint.scene;
@@ -301,8 +353,8 @@ class SearchScreen final : public ScreenView {
         scene.popOpacity();
     }
     Json snapshot() const override {
-        if (details_) {
-            Json value = details_->snapshot();
+        if (details_ || storeApp_) {
+            Json value = details_ ? details_->snapshot() : storeApp_->snapshot();
             value.set("origin", Json::text("search"));
             return value;
         }
@@ -362,6 +414,8 @@ class SearchScreen final : public ScreenView {
         query_ = query;
         genre_ = genre;
         rows_.clear();
+        titleRows_.clear();
+        storeRows_.clear();
         columns_.clear();
         row_ = 0;
         onButton_ = true;
@@ -369,6 +423,11 @@ class SearchScreen final : public ScreenView {
         failed_ = false;
         suggestAt_ = 0;
         host.services().cancel(kSuggest);
+        host.services().cancel(kStore);
+        // A genre has no apps; words may name one to install.
+        storeGeneration_ =
+            genre.empty() ? host.services().read(kStore, Operation::StoreSearch, fields({{"query", Json::text(query)}}))
+                          : 0;
         resultsGeneration_ = host.services().read(
             kResults, Operation::SearchTitles,
             genre.empty() ? fields({{"query", Json::text(query)}}) : fields({{"genre", Json::text(genre)}}));
@@ -439,13 +498,15 @@ class SearchScreen final : public ScreenView {
         }
         afterPad(host, result);
     }
-    void resultsKey(ScreenHost &host, Key key) {
+    // True when OK opened another screen, which has taken this one's place: nothing of it may be
+    // touched after.
+    bool resultsKey(ScreenHost &host, Key key) {
         if (onButton_) {
             if (key == Key::Down && !rows_.empty())
                 onButton_ = false;
             else if (key == Key::Ok)
                 editSearch(host);
-            return;
+            return false;
         }
         size_t &column = columns_[row_];
         if (key == Key::Left && column > 0)
@@ -459,7 +520,8 @@ class SearchScreen final : public ScreenView {
         else if (key == Key::Down && row_ + 1 < rows_.size())
             ++row_;
         else if (key == Key::Ok)
-            openDetails(host);
+            return openDetails(host);
+        return false;
     }
     // What a key of the pad did: a change asks for suggestions, its search key searches.
     void afterPad(ScreenHost &host, KeyboardPad::Result result) {
@@ -506,15 +568,56 @@ class SearchScreen final : public ScreenView {
                 row.cards.push_back(card);
         return row;
     }
-    // OK on a result: an app opens, a title opens its details over the search.
-    void openDetails(ScreenHost &host) {
+    // The rows in Google TV's order, the focus kept on the row it was on as the replies come in: the
+    // TV's apps, the stores' apps, then the films and series.
+    void composeRows(ScreenHost &host) {
+        const std::string focusedKey = row_ < rows_.size() ? rows_[row_].key : "";
+        const size_t focusedColumn = row_ < columns_.size() ? columns_[row_] : 0;
+        rows_.clear();
+        // The TV's own apps whose name has the words lead, as Google TV's Apps results do.
+        CardRow apps = matchingApps(host);
+        if (!apps.cards.empty())
+            rows_.push_back(apps);
+        for (const CardRow &row : storeRows_)
+            rows_.push_back(row);
+        for (const CardRow &row : titleRows_)
+            rows_.push_back(row);
+        failed_ = failed_ && rows_.empty();
+        columns_.assign(rows_.size(), 0);
+        row_ = 0;
+        for (size_t r = 0; r < rows_.size(); ++r)
+            if (!onButton_ && rows_[r].key == focusedKey) {
+                row_ = r;
+                columns_[r] = std::min(focusedColumn, rows_[r].cards.size() - 1);
+            }
+        if (rows_.empty())
+            onButton_ = true;
+        retarget(host, true);
+        host.invalidate();
+    }
+    // OK on a result: an app opens, a title opens its details over the search, an app of a store its
+    // page. True when another screen took this one's place.
+    bool openDetails(ScreenHost &host) {
         if (row_ >= rows_.size() || columns_[row_] >= rows_[row_].cards.size())
-            return;
+            return false;
+        const Card &chosen = rows_[row_].cards[columns_[row_]];
+        if (rows_[row_].key == "search:store") {
+            storeApp_.reset(new StoreAppScreen(chosen.id, chosen.data, true));
+            storeApp_->enter(host);
+            host.invalidate();
+            return false;
+        }
+        if (rows_[row_].key == "search:homebrew") {
+            const std::string route = "catalog:" + chosen.id;
+            host.open(route);
+            return true;
+        }
         if (rows_[row_].key == "search:apps") {
             const Command &command = rows_[row_].cards[columns_[row_]].command;
             if (!command.route.empty()) {
-                host.open(command.route);
-                return;
+                const std::string route = command.route;
+                host.open(route);
+                return true;
             }
             const Json body = command.body;
             Write write;
@@ -522,14 +625,21 @@ class SearchScreen final : public ScreenView {
             write.body = [body](const Json &) { return body; };
             write.failure = msg("tv.apps.openFailed", "That did not open");
             host.optimistic().run("search.open", write);
-            return;
+            return false;
         }
         const Json &item = rows_[row_].cards[columns_[row_]].data;
         details_.reset(new DetailsScreen(item["type"].string(), item["id"].string(), item, true));
         details_->enter(host);
         host.invalidate();
+        return false;
     }
     void dropFinishedDetails(ScreenHost &host) {
+        if (storeApp_ && storeApp_->finished()) {
+            storeApp_->leave(host);
+            storeApp_.reset();
+            retarget(host, true);
+            host.invalidate();
+        }
         if (!details_ || !details_->finished())
             return;
         details_->leave(host);
@@ -731,13 +841,13 @@ class SearchScreen final : public ScreenView {
                     continue;
                 const Card &card = row.cards[c];
                 const float focus = static_cast<float>(motion.value("search:f:" + std::to_string(r) + "." + std::to_string(c)));
-                if (row.key == "search:apps") {
+                if (row.key == "search:apps" || row.key == "search:store" || row.key == "search:homebrew") {
                     kit::AppCard app;
                     app.rest = rest;
                     app.id = "search:card:" + std::to_string(r) + ":" + std::to_string(c);
                     app.name = card.title;
                     app.image = card.image;
-                    app.icon = card.id == "lg-home" ? "home" : "apps";
+                    app.icon = card.id == "lg-home" ? "home" : card.kind == "homebrew" ? "extension" : "apps";
                     app.color = home::appColor(card);
                     app.focus = focus;
                     app.caption = std::min(look.captions, focus);
@@ -793,6 +903,9 @@ class SearchScreen final : public ScreenView {
     unsigned suggestGeneration_ = 0, resultsGeneration_ = 0;
     float barAway_ = 0;
     std::unique_ptr<DetailsScreen> details_;
+    std::unique_ptr<StoreAppScreen> storeApp_;
+    std::vector<CardRow> titleRows_, storeRows_;
+    unsigned storeGeneration_ = 0;
 };
 } // namespace
 

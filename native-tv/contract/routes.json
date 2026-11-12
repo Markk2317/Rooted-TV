@@ -735,7 +735,25 @@
       "csrf": "JSON body guard and same-origin Origin/Host comparison when Origin is present; requires allowControl unless from TV loopback",
       "bodyLimit": {"max": 8192, "unit": "JS string code units"},
       "owner": "native",
-      "notes": "The daemon opens listed apps, HDMI devices and channels, YouTube videos and Netflix titles. A feed title has no other app to open in: kind title is refused with 400. Netflix uses the native Wikidata P1874 result and existing contentTarget format. Kind service with service netflix, prime or disney opens that service's installed app, on the title where Netflix's P1874 or Prime Video's P14462 GTI is known and its option is on, else on the app's own Home. LG Home escape releases the managed takeover and launches LG Home natively; a secret-guarded Node bridge updates the remaining managed escape-state observer. Node retains standalone fallback."
+      "notes": "The daemon opens listed apps, HDMI devices and channels, YouTube videos and Netflix titles. A feed title has no other app to open in: kind title is refused with 400. Kind service with service netflix, prime or disney (and kind netflix) opens that service's installed app on the title where LG's own catalogue has it in the TV's country (com.webos.service.sdx/send search, matched by the title's names in TMDB): Prime Video plays a film from watch?gti=, Disney+ plays LG's page=play ID, Netflix opens the title's page. Without a catalogue match, Netflix's P1874 or Prime Video's P14462 GTI is used where known and its option is on, else the app opens on its own Home. LG Home escape releases the managed takeover and launches LG Home natively; a secret-guarded Node bridge updates the remaining managed escape-state observer. Node retains standalone fallback."
+    },
+    {
+      "paths": ["/api/apps/store/search", "/api/apps/store/app"],
+      "methods": ["GET"],
+      "auth": "token",
+      "csrf": "not applicable",
+      "bodyLimit": {"max": 0, "unit": "bytes"},
+      "owner": "native",
+      "notes": "The TV app's app search and app page. search?q= answers LG Content Store's apps whose name has the words (LG's own search, through the TV's com.webos.service.sdx/send, which signs the request with the TV's credentials) and the Homebrew Channel's (the cached catalogue), each with whether it is installed. app?id= answers an LG Content Store app's page and the state of its install. Store pictures come as lgstore: references the image proxy accepts."
+    },
+    {
+      "paths": ["/api/apps/store/install"],
+      "methods": ["POST"],
+      "auth": "token",
+      "csrf": "JSON body guard and same-origin Origin/Host comparison when Origin is present; requires allowControl unless from TV loopback",
+      "bodyLimit": {"max": 1024, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Installs a free LG Content Store app ({\"id\"}) as the store's Install button does: com.webos.appInstallService/install to internal storage, followed by its subscription; one install at a time (409 while another runs), and a paid app is refused with 409. Its progress is read back with /api/apps/store/app."
     },
     {
       "paths": ["/api/home/profile"],

@@ -22,6 +22,9 @@ enum class Operation {
     Setup,
     AppCatalog,
     InstallStatus,
+    StoreSearch,  // /api/apps/store/search: LG Content Store's and the Homebrew Channel's apps
+    StoreApp,     // /api/apps/store/app: an LG Content Store app's page and its install
+    StoreInstall, // /api/apps/store/install: install a free app of LG Content Store
     TitleDetails,
     SearchTitles,
     NetflixTitle,

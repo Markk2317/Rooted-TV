@@ -163,6 +163,11 @@ nativetv::Json responseFor(const std::string &url) {
     document.set("watch/providers", Json::parse(
         "{\"results\":{\"IT\":{\"flatrate\":[{\"provider_id\":119},{\"provider_id\":999},"
         "{\"provider_id\":8},{\"provider_id\":9}]},\"FR\":{\"flatrate\":[{\"provider_id\":337}]}}}"));
+    // The title as each country calls it; LG's catalogue is searched under the TV's.
+    document.set("translations", Json::parse(
+        type == "movie" ? "{\"translations\":[{\"iso_3166_1\":\"FR\",\"data\":{\"title\":\"Le Titre\"}},"
+                          "{\"iso_3166_1\":\"IT\",\"data\":{\"title\":\"Il Titolo\"}}]}"
+                        : "{\"translations\":[{\"iso_3166_1\":\"IT\",\"data\":{\"name\":\"La Serie\"}}]}"));
     document.set("similar", Json::parse("{\"results\":["
         "{\"id\":7,\"media_type\":\"movie\",\"poster_path\":\"/abcdefghijklmnop.jpg\"},"
         "{\"id\":20,\"media_type\":\"movie\",\"poster_path\":\"/abcdefghijklmnop.jpg\"},"
@@ -320,13 +325,16 @@ int main() {
         assert(regional.details("private-test-key", false, "movie", "31")["item"]["services"].size() == 0);
         regional.setRegion("IT");
         const Json italian = regional.details("private-test-key", false, "movie", "31");
-        assert(asked.back().find("watch/providers&watch_region=IT") != std::string::npos);
+        assert(asked.back().find("watch/providers,translations&watch_region=IT") != std::string::npos);
+        assert(italian["item"]["localTitle"].string() == "Il Titolo");
         const Json services = italian["item"]["services"];
         assert(services.size() == 2 && services[0].string() == "prime" &&
                services[1].string() == "netflix");
         regional.setRegion("FR");
         assert(regional.details("private-test-key", false, "movie", "31")["item"]["services"][0].string() ==
                "disney");
+        assert(regional.details("private-test-key", false, "movie", "31")["item"]["localTitle"].string() ==
+               "Le Titre");
         regional.setRegion("italy");
         assert(regional.details("private-test-key", false, "movie", "31")["item"]["services"].size() == 0);
     }

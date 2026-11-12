@@ -133,7 +133,7 @@ void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
     const std::string keepService = kept ? title.actions[title.action].service : "";
     title.actions.clear();
     if (!item["netflixId"].string().empty())
-        title.actions.push_back({Action::Kind::Netflix, msg("tv.details.netflix", "Open on Netflix")});
+        title.actions.push_back({Action::Kind::Netflix, msg("tv.details.netflix", "Watch on Netflix")});
     if (!title.actions.empty())
         title.actions.back().icon = "play";
     // As Google TV's watch options: each service that has the title in the TV's country and whose
@@ -151,7 +151,7 @@ void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
             names::streamingApp(*service, view.catalogue["apps"]).empty())
             continue;
         Action open{Action::Kind::Service,
-                    msg("tv.details.service", "Open on {service}",
+                    msg("tv.details.service", "Watch on {service}",
                         fields({{"service", Json::text(service->name)}}))};
         open.service = key;
         open.icon = "play";
@@ -161,7 +161,8 @@ void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
         title.actions.push_back({Action::Kind::Trailer, msg("tv.details.trailer", "Trailer")});
         title.actions.back().icon = "movie";
     }
-    // The profile's own marks, as on Google TV's details: the watchlist, then thumbs up and down.
+    // The profile's own marks, as on Google TV's details: the watchlist, whether it has watched the
+    // title, then thumbs up and down.
     if (view.discover["titlesEnabled"].boolean() && !title.error) {
         const Marks marks = marksOf(host, item);
         Action watchlist{Action::Kind::Watchlist,
@@ -169,6 +170,10 @@ void DetailsScreen::rebuildActions(ScreenHost &host, Title &title) {
                                            : msg("tv.details.watchlist", "Watchlist")};
         watchlist.icon = marks.watchlisted ? "bookmarked" : "bookmarkadd";
         title.actions.push_back(watchlist);
+        Action watched{Action::Kind::Watched, marks.watched ? msg("tv.details.watched", "Watched")
+                                                            : msg("tv.details.watch", "Watched it?")};
+        watched.icon = marks.watched ? "checkcircle" : "circle";
+        title.actions.push_back(watched);
         Action like{Action::Kind::Like, marks.rating == "like" ? msg("tv.details.liked", "Liked")
                                                                : msg("tv.details.like", "Like")};
         like.icon = "thumbup";
@@ -470,6 +475,7 @@ void DetailsScreen::activate(ScreenHost &host) {
         toggleOverview(host, true);
         return;
     case Action::Kind::Watchlist:
+    case Action::Kind::Watched:
     case Action::Kind::Like:
     case Action::Kind::Dislike:
         markTitle(host, title.actions[title.action].kind);
@@ -505,14 +511,16 @@ DetailsScreen::Marks DetailsScreen::marksOf(ScreenHost &host, const Json &item) 
     Marks marks;
     marks.watchlisted =
         host.optimistic().flag("details.wl:" + key, listed(feed["watchlist"], key));
+    marks.watched = host.optimistic().flag("details.wa:" + key, listed(feed["watched"], key));
     marks.rating = host.optimistic().text("details.rt:" + key,
                                           listed(feed["liked"], key)      ? "like"
                                           : listed(feed["disliked"], key) ? "dislike"
                                                                           : "");
     return marks;
 }
-// The watchlist and the thumbs change at once on the page and are saved for the profile behind
-// it; Home's feed is read back after, so its rows follow, and a refusal puts the mark back.
+// The watchlist, the watched mark and the thumbs change at once on the page and are saved for the
+// profile behind it; Home's feed is read back after, so its rows follow, and a refusal puts the
+// mark back.
 void DetailsScreen::markTitle(ScreenHost &host, Action::Kind kind) {
     Title &title = top();
     const std::string key = titleKey(title.item);
@@ -521,10 +529,13 @@ void DetailsScreen::markTitle(ScreenHost &host, Action::Kind kind) {
     for (const char *field : {"id", "type", "title", "year", "rating", "overview", "poster", "backdrop"})
         item.set(field, title.item[field]);
     const bool watch = kind == Action::Kind::Watchlist;
+    const bool seen = kind == Action::Kind::Watched;
     Write write;
     write.operation = Operation::Control;
-    write.body = [item, watch](const Json &target) {
-        std::string op = watch ? (target.boolean() ? "watch" : "unwatch") : target.string();
+    write.body = [item, watch, seen](const Json &target) {
+        std::string op = watch  ? (target.boolean() ? "watch" : "unwatch")
+                         : seen ? (target.boolean() ? "seen" : "unseen")
+                                : target.string();
         if (op.empty())
             op = "unrate";
         return fields({{"action", Json::text("setHomeTitle")},
@@ -538,6 +549,10 @@ void DetailsScreen::markTitle(ScreenHost &host, Action::Kind kind) {
         const Json server = Json::flag(listed(feed["watchlist"], key));
         host.optimistic().set("details.wl:" + key, Json::flag(!shown.watchlisted), server, write);
         host.optimistic().commit("details.wl:" + key);
+    } else if (seen) {
+        const Json server = Json::flag(listed(feed["watched"], key));
+        host.optimistic().set("details.wa:" + key, Json::flag(!shown.watched), server, write);
+        host.optimistic().commit("details.wa:" + key);
     } else {
         const std::string wanted = kind == Action::Kind::Like ? "like" : "dislike";
         const Json server = Json::text(listed(feed["liked"], key)      ? "like"
