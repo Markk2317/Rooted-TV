@@ -132,12 +132,12 @@ constexpr float stackTarget(int contentRow) {
     return contentRow <= 0 ? 0 : -layout::rowPitch * contentRow;
 }
 // Everything the stack offset `y` (<= 0) drives while the rows scroll over the hero.
-// scrimOpacity is the page colour's opacity over the banner once the rows have risen: Google TV's
-// scrolled page is near-black, a trace of the art left.
+// scrimOpacity is how far the focused card's colour has taken the art's place once the rows have
+// risen: Google TV's page full of rows shows no art, only that colour's gradient.
 struct HeroParallax {
     float textY, textAlpha, artY, scrimOpacity;
 };
-constexpr float scrimMaxOpacity = .95f;
+constexpr float scrimMaxOpacity = 1;
 constexpr HeroParallax heroParallax(float y) {
     // Only rows that rise move the banner; rows that drop under it leave it in place.
     return {std::min(y, 0.0f) * .5f, 1 - focus::clamp01(-y / 150), std::min(y, 0.0f) * .12f,

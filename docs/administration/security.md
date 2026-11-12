@@ -346,8 +346,8 @@ three decimals, go to `api.open-meteo.com` at most every half hour while the scr
 asks for the weather; Open-Meteo takes no key. The screen saver reads its photos and the
 weather from the server on the TV itself, with the token in `k`.
 
-With a TMDB key and `homeTrailers` on (the default), the films among the top picks, and a
-film that stays in Home's carousel, are looked up for a trailer: the film's exact Wikidata
+With a TMDB key and `homeTrailers` on (the default), the films of Home's carousel, and a
+film whose details page opens, are looked up for a trailer: the film's exact Wikidata
 QID (from TMDB) goes to `www.wikidata.org` for its `P6398` iTunes movie ID, which goes to
 `itunes.apple.com/lookup` with the TV's country (then `us`); a film without one is matched
 by title and year in `itunes.apple.com/<country>/rss/topmovies`, fetched at most every six

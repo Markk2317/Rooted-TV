@@ -82,6 +82,9 @@ Application::Application(Services &services, const std::string &initial)
     capsAt_ = 2000;
     route(initial);
 }
+ImageView Application::picture(const std::string &id, int width, int height) {
+    return pictures_ ? pictures_->view(id, width, height, ImageFit::Cover, now_) : ImageView();
+}
 void Application::toast(const std::string &value) {
     state_.toast = value;
     toastUntil_ = now_ + 4000;

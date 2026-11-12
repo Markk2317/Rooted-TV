@@ -284,8 +284,8 @@ void scrolling() {
                                 gone = geometry::heroParallax(-251),
                                 mid = geometry::heroParallax(-126);
     check(none.textAlpha == 1 && none.scrimOpacity == 0 && near(gone.textY, -125.5f) &&
-              gone.textAlpha == 0 && near(gone.artY, -30.12f) && near(gone.scrimOpacity, .95f) &&
-              near(mid.textAlpha, 1 - 126.0f / 150) && near(mid.scrimOpacity, 126.0f / 251 * .95f),
+              gone.textAlpha == 0 && near(gone.artY, -30.12f) && near(gone.scrimOpacity, 1) &&
+              near(mid.textAlpha, 1 - 126.0f / 150) && near(mid.scrimOpacity, 126.0f / 251),
           "Hero parallax follows the stack offset");
     kit::geometry::HeroParallax dropped = geometry::heroParallax(kit::layout::bannerDrop);
     check(dropped.textY == 0 && dropped.artY == 0 && dropped.textAlpha == 1 &&
@@ -594,18 +594,18 @@ void barAndHero() {
           "TV");
     const Node *pill = &bar.scene.nodes[2];
     check(sameRect(pill->rect, {tabs[0].x, 72, tabs[0].w, 72}) && pill->radius == 36 &&
-              sameColor(pill->color, kit::color::tabSelected),
-          "The pill rests on the selected tab, light as Google TV's");
+              sameColor(pill->color, kit::alpha::tabRest),
+          "Without the focus the pill rests on the selected tab as Google TV's faint grey one");
     const Node *mark = textAt(bar.scene, "Native Tv");
     check(mark && near(mark->rect.x + mark->rect.w, 1804, .01f) && textAt(bar.scene, "10:11") &&
               sameRect(textAt(bar.scene, "10:11")->rect, kit::geometry::clock(mark->rect.w)) &&
               textAt(bar.scene, "10:11")->align == Node::Align::Right &&
               sameColor(textAt(bar.scene, "10:11")->color, kit::alpha::clockInk) &&
               sameColor(mark->color, kit::alpha::clockInk) &&
-              sameColor(textAt(bar.scene, "Home")->color, kit::color::onFocus) &&
+              sameColor(textAt(bar.scene, "Home")->color, kit::alpha::clockInk) &&
               sameColor(textAt(bar.scene, "Apps")->color, kit::alpha::clockInk),
-          "The wordmark ends at 1804 after the clock, both 60% white; the selected tab is dark on "
-          "its pill, the others 60% white");
+          "The wordmark ends at 1804 after the clock, both 60% white, and so are the tabs while "
+          "the focus is elsewhere");
     check(!textAt(bar.scene, "Settings") && !textAt(bar.scene, "Screensaver"),
           "No tooltip shows while no icon button has the focus");
     Fixture hot;
@@ -618,6 +618,12 @@ void barAndHero() {
           "With focus on the bar the pill turns to the focused tab colour and the other tabs "
           "white");
     check(near(hot.scene.nodes[3].group.sx, 1.12f, 1e-5f), "A focused round button grows 12%");
+    const Node *face = shapeAt(hot.scene, kit::geometry::avatar());
+    check(face && face->gradient.stops > 1 && near(face->ring.inner, 3) &&
+              sameColor(face->ring.color, kit::color::avatarRing) &&
+              !shapeWith(hot.scene, kit::geometry::avatar(), kit::color::focusFill) &&
+              sameColor(textAt(hot.scene, "I")->color, kit::color::onSurface),
+          "The focused avatar keeps its face and initial and gains a light ring, as Google TV's");
     Fixture saver;
     top.pillHot = 0;
     top.avatarFocus = 0;
@@ -631,19 +637,7 @@ void barAndHero() {
               shapeWith(saver.scene, saverButton, kit::color::tabSelected),
           "A focused icon button turns light and names itself in a tooltip under it");
     top.saverFocus = 0;
-    Fixture assisted;
-    top.assistant = true;
-    kit::topBar(assisted.paint(), top);
-    check(hitFor(assisted.scene, "tool:3") &&
-              sameRect(hitFor(assisted.scene, "tool:3")->rect,
-                       kit::geometry::iconButton(tabsRight, 0)) &&
-              sameRect(hitFor(assisted.scene, "tool:4")->rect,
-                       kit::geometry::iconButton(tabsRight, 1)) &&
-              sameRect(hitFor(assisted.scene, "nav:settings")->rect,
-                       kit::geometry::iconButton(tabsRight, 2)) &&
-              near(assisted.scene.nodes[1].rect.w, 12 + 3 * 64 + 2 * 16 + 12),
-          "The assistant leads the icon capsule, before the screen saver and the gear");
-    top.assistant = false;
+    check(!hitFor(saver.scene, "tool:3"), "The bar has no assistant button");
     Fixture searching;
     top.search = true;
     kit::topBar(searching.paint(), top);
@@ -653,18 +647,31 @@ void barAndHero() {
               near(shifted[0].x, tabs[0].x + 96, .01f) &&
               sameRect(hitFor(searching.scene, "nav:tab:0")->rect, shifted[0]),
           "Search leads the capsule as a 96 px slot and moves the tabs along");
+    Fixture onSearch;
+    top.searchSelected = true;
+    top.pillHot = 1;
+    kit::topBar(onSearch.paint(), top);
+    const Node *searchIcon = nullptr;
+    for (const Node &node : onSearch.scene.nodes)
+        if (node.value == "local:icons/material/search.svg")
+            searchIcon = &node;
+    check(searchIcon && sameColor(searchIcon->color, kit::color::onFocus) &&
+              sameColor(textAt(onSearch.scene, "Home")->color, kit::color::onSurface) &&
+              !shapeAt(onSearch.scene, kit::geometry::searchButton()),
+          "With the pill on search its icon is dark and the selected tab's text is white like the "
+          "others; search draws no fill of its own");
+    top.searchSelected = false;
+    top.pillHot = 0;
     Fixture crowded;
-    top.tabs = {"Home", "Films", "Shows", "Live", "Apps", "Inputs"};
-    top.assistant = true;
+    top.tabs = {"Home", "Films", "Shows", "Live", "Apps", "Inputs", "Kids"};
     kit::topBar(crowded.paint(), top);
     const Node *crowdedClock = textAt(crowded.scene, "10:11");
     check(!textAt(crowded.scene, "Native Tv") && crowdedClock &&
               near(crowdedClock->rect.x + crowdedClock->rect.w, 1804, .01f) &&
               crowdedClock->rect.x >=
                   crowded.scene.nodes[1].rect.x + crowded.scene.nodes[1].rect.w + 24,
-          "With every tab and button on, the wordmark gives way and the clock alone ends the bar");
+          "With more tabs than fit beside it, the wordmark gives way and the clock alone ends the bar");
     top.tabs = {"Home", "Apps", "Live"};
-    top.assistant = false;
     top.search = false;
     Fixture gone;
     top.pillAlpha = 0;
@@ -809,11 +816,18 @@ void barAndHero() {
 
     Fixture scrolled;
     hero.stackY = -kit::layout::rowPitch;
+    hero.rowsFocus = 1;
+    hero.slot[0].tint = kit::rgb(0x324010);
+    kit::heroWall(scrolled.paint(), hero);
     kit::hero(scrolled.paint(), hero);
+    bool sheen = false;
+    for (const auto &node : scrolled.scene.nodes)
+        sheen = sheen || (node.gradient.stops == 2 && node.gradient.color[0].r == 1 &&
+                          node.gradient.color[0].b == 1 && node.gradient.color[0].a > 0);
     check(!textAt(scrolled.scene, "Harbor Lights") &&
-              sameColor(scrolled.scene.nodes.back().color,
-                        kit::focus::withAlpha(kit::color::page, .95f)),
-          "Scrolled a full row the hero text is gone and the page-coloured veil is up at 95%");
+              shapeWith(scrolled.scene, {0, 0, 1920, 1080}, kit::rgb(0x324010)) && !sheen,
+          "Scrolled a full row the hero text is gone and the focused card's colour has taken the "
+          "art's place, under the backdrop without the sheen");
     hero.stackY = 0;
     Fixture faded;
     hero.textAlpha = .5f;

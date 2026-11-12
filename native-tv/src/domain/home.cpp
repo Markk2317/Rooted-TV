@@ -404,10 +404,38 @@ std::string titleCaption(const Card &card) {
 }
 namespace {
 // Google TV's Apps tab: large banners over Your apps, a bar that searches the apps, a button for
-// each category and a row of each category's apps. Google's banners and rows come from the Play
-// Store; here they are the TV's own apps: the banners its apps of films, music and games in Your
-// apps' order, the rows its apps by kind in the owner's order of the kinds.
+// each category, the stores to get more apps from and a row of each category's apps. Google's
+// banners and rows come from the Play Store; here they are the TV's own apps: the banners its apps
+// of films, music and games in Your apps' order, the rows its apps by kind in the owner's order of
+// the kinds. In the Play Store's place, LG Content Store (opened like any app, hidden or not) and
+// the Homebrew Channel's catalogue, which installs its apps from Native Tv.
 constexpr size_t kAppBanners = 6;
+constexpr const char *kLgStoreApp = "com.webos.app.discovery", *kHomebrewApp = "org.webosbrew.hbchannel";
+CardRow storesRow(const Json &catalogue) {
+    CardRow row;
+    row.key = "appstore";
+    row.title = "Get more apps";
+    for (const auto &app : catalogue["apps"].items()) {
+        const std::string id = app["id"].string();
+        if (id != kLgStoreApp && id != kHomebrewApp)
+            continue;
+        Card card;
+        card.id = id;
+        card.kind = "app";
+        card.data = app;
+        card.image = "app:" + id;
+        card.title = id == kHomebrewApp ? "Homebrew Channel" : app["title"].string("LG Content Store");
+        card.command = id == kHomebrewApp ? navigate("catalog")
+                                          : post(Operation::OpenHomeItem,
+                                                 fields({{"kind", Json::text("app")}, {"id", Json::text(id)}}));
+        // LG's store first, as the TV's own.
+        if (id == kLgStoreApp)
+            row.cards.insert(row.cards.begin(), card);
+        else
+            row.cards.push_back(card);
+    }
+    return row;
+}
 std::vector<CardRow> appsTabRows(const Json &catalogue, const Json &guide) {
     std::vector<CardRow> result;
     CardRow apps = appsRow(catalogue, guide, false, "appsTab");
@@ -457,6 +485,9 @@ std::vector<CardRow> appsTabRows(const Json &catalogue, const Json &guide) {
     }
     if (!chips.cards.empty())
         result.push_back(chips);
+    CardRow stores = storesRow(catalogue);
+    if (!stores.cards.empty())
+        result.push_back(stores);
     result.insert(result.end(), kinds.begin(), kinds.end());
     return result;
 }

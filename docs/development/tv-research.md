@@ -1847,3 +1847,14 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   host's json-c answers `968`. A TMDB id passed through the feed came back as
   `968.0` and the details lookup refused it, so `Json::string()` reads a whole
   double as the integer it is.
+
+## The launch splash (C6, webOS 3.4.3)
+
+- `applicationManager/launch` covers the screen with the app's `splashBackground` from its
+  `appinfo.json` while the app starts. Netflix's (`Netflix_Splash.png`, 1920 × 1080) is LG's
+  dark grey (`#232323`) with lighter squares at the lower right, shown for about two seconds
+  of a cold start before Netflix draws its own logo on black.
+- `"noSplash": true` in the launch payload leaves it out: the app in front stays until the new
+  app draws, and Netflix's logo then follows straight away. sam accepts it on webOS 3.4.3
+  (`returnValue: true`).
+- The capture service's `DISPLAY` method gives black frames where the splash shows.

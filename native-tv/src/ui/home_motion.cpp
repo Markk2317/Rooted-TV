@@ -38,13 +38,6 @@ bool isTitle(const Card &card) {
 std::string artOf(const Card &card) {
     return isTitle(card) ? (card.backdrop.empty() ? card.image : card.backdrop) : "";
 }
-// A film's trailer, where the server offers them (Apple's previews are of films only).
-std::string trailerOf(const ViewState &state, const Card &card) {
-    if (!state.discover["trailers"].boolean() || card.data["type"].string() != "movie" ||
-        (card.kind != "title" && card.kind != "netflix" && card.kind != "continue"))
-        return "";
-    return "trailer:movie:" + card.id;
-}
 // A deep, quiet colour per card: the prototype tints the wall with the artwork's darkest tone,
 // and the server sends no palette, so the tone comes from the app's colour or the title. An app
 // has no picture of its own behind its lines, so its tint is stronger.
@@ -222,7 +215,7 @@ void Application::homeStart() {
     if (!flow_.beatAt)
         flow_.beatAt = now_ + kBeatMs;
     for (const char *prefix :
-         {"f:", "rx", "rd", "rg", "rn", "rs", "ru", "bd", "he", "hb", "ht", "hn", "hu", "ba", "E", "ha", "hx", "hv", "dot",
+         {"f:", "rx", "rd", "rg", "rn", "rs", "ru", "bd", "he", "hb", "ht", "hn", "hu", "ba", "E", "ha", "hx", "dot",
           "pgx", "pgs", "dim", "sy"})
         motion_.erasePrefix(prefix);
     home.art = HeroArt();
@@ -336,13 +329,19 @@ void Application::homePlayEntrance(size_t firstRow, size_t endRow) {
 
 void Application::homeRetargetPill(bool jump) {
     auto &home = state_.home;
-    std::vector<Rect> boxes =
-        kit::tabRects(*glyphs_, flow_.tabTitles, state_.discover["titlesEnabled"].boolean());
+    const bool search = state_.discover["titlesEnabled"].boolean();
+    std::vector<Rect> boxes = kit::tabRects(*glyphs_, flow_.tabTitles, search);
+    const bool onSearch = home.navigation && home.nav == home.tabs.size() + 2;
     bool onTab = home.navigation && home.nav < home.tabs.size();
     size_t target = onTab ? home.nav : home.tab;
-    // A registered screen keeps the pill under its own tab.
+    // A registered screen keeps the pill under its own tab, and search's page under search.
     if (!onTab && screen_ && screen_->barTab() >= 0)
         target = static_cast<size_t>(screen_->barTab());
+    if (search && (onSearch || (!onTab && screen_ && screen_->barSearch()))) {
+        boxes = {kit::geometry::searchButton()};
+        target = 0;
+    }
+    onTab = onTab || onSearch;
     if (target < boxes.size()) {
         float left = boxes[target].x, right = boxes[target].x + boxes[target].w;
         if (jump || motion_.value("pill:1") < 1) {
@@ -388,8 +387,6 @@ void Application::homeFocus(bool jump) {
             now = "f:gr";
         else if (home.nav == home.tabs.size() + 2)
             now = "f:sr";
-        else if (home.nav == home.tabs.size() + 3)
-            now = "f:as";
         else if (home.nav == home.tabs.size() + 4)
             now = "f:sv";
     } else if (home.heroFocus)
@@ -475,7 +472,7 @@ void Application::homeFocus(bool jump) {
         look.risen = risen ? 1 : 0;
         look.grow = risen && r == home.row ? 1 : 0;
         look.names = home::isApps(home.rows[r]) && risen && r == home.row ? 1 : 0;
-        look.captions = titles || home.rows[r].key == "appkind" ? look.grow : 0;
+        look.captions = titles || home::isAppCards(home.rows[r]) ? look.grow : 0;
         tween(home::id("rg", r), look.grow);
         tween(home::id("rn", r), look.names);
         looks.push_back(look);
@@ -758,9 +755,6 @@ void Application::homeUpdate() {
             motion_.play("hp", Tween(0, 1, ms::heroAdvance, Easing::linear()));
         }
     }
-    // The trailer plays while the hero is on screen: Home's page, rows not scrolled past it.
-    homeTrailer(heroTab && flow_.entered && !screen_ && state_.screen == Screen::Home &&
-                motion_.value("wall") > .5 && motion_.value("sy") > kBannerCoveredY);
     if (flow_.textPending && due(now_, flow_.textSwapAt))
         homeSwapText();
     // The Ken Burns of a layer that has been replaced stops once it is invisible.
@@ -790,7 +784,7 @@ void Application::homeHeroKey(Key key) {
     }
     if (key == Key::Down || !count) {
         home.heroFocus = home.rows.empty() && count;
-        home.row = defaultRow(home);
+        homeEnterRow(defaultRow(home));
         return;
     }
     const size_t index = std::min(home.spotIndex, count - 1);
@@ -805,49 +799,21 @@ void Application::homeHeroKey(Key key) {
     }
 }
 
-// Google TV's trailers in the hero: after the hero has rested on a film for trailerDelay its clip
-// fades in over the picture and holds the slideshow until it ends, then fades back. Off screen it
-// fades out and is not played again for that card.
-void Application::homeTrailer(bool visible) {
-    auto &art = state_.home.art;
-    if (!art.trailerShown.empty() && art.trailerShown != art.trailer && !motion_.moving("hv") &&
-        motion_.value("hv") <= .002)
-        art.trailerShown.clear();
-    if (art.trailer.empty() || !pictures_)
+void Application::homeEnterRow(size_t row) {
+    auto &home = state_.home;
+    auto identity = [](const CardRow &of) { return of.key + "|" + of.group + "|" + of.title; };
+    if (home.row < home.rows.size() && home.column < home.rows[home.row].cards.size())
+        home.rowFocus[identity(home.rows[home.row])] = home.rows[home.row].cards[home.column].id;
+    home.row = std::min(row, home.rows.empty() ? 0 : home.rows.size() - 1);
+    home.column = 0;
+    if (home.row >= home.rows.size())
         return;
-    if (!visible) {
-        if (art.trailerShown == art.trailer) {
-            motion_.tween("hv", 0, ms::fast, easing(ease::out));
-            art.trailer.clear();
-        } else
-            art.trailerAt = now_ + static_cast<uint32_t>(ms::trailerDelay);
-        return;
-    }
-    // The clip of the card before is still fading out.
-    if (!due(now_, art.trailerAt) || (!art.trailerShown.empty() && art.trailerShown != art.trailer))
-        return;
-    const ImageView view = pictures_->view(art.trailer, kHeroWidth, kHeroHeight, ImageFit::Cover, now_);
-    if (art.trailerShown.empty()) {
-        if (view.failed) {
-            art.trailer.clear(); // no trailer: the picture stays
-            return;
-        }
-        if (!view.texture)
-            return;
-        art.trailerShown = art.trailer;
-        motion_.play("hv", Tween(0, 1, ms::hero, easing(ease::inOut)));
-        // The slideshow waits for the clip.
-        if (view.remainingMs > 0)
-            motion_.play("hp", Tween(static_cast<float>(motion_.value("hp")), 1,
-                                     static_cast<float>(view.remainingMs), Easing::linear()));
-    } else if (!view.texture) {
-        // Asked again after a spell away (another screen), the clip starts over and fades in anew.
-        art.trailerShown.clear();
-        motion_.set("hv", 0);
-    } else if (view.failed) {
-        motion_.tween("hv", 0, ms::hero, easing(ease::inOut));
-        art.trailer.clear();
-    }
+    auto remembered = home.rowFocus.find(identity(home.rows[home.row]));
+    const auto &cards = home.rows[home.row].cards;
+    if (remembered != home.rowFocus.end())
+        for (size_t i = 0; i < cards.size(); ++i)
+            if (cards[i].id == remembered->second)
+                home.column = i;
 }
 
 void Application::homeRetargetHero(const Card &card, bool instant) {
@@ -862,12 +828,6 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
     }
     art.shownId = card.kind + ":" + card.id;
     home.hero = card;
-    // A film's trailer takes over from its picture once the hero has rested on it a while; the
-    // clip of the card before fades out as the new picture fades in.
-    art.trailer = trailerOf(state_, card);
-    art.trailerAt = now_ + static_cast<uint32_t>(ms::trailerDelay);
-    if (!art.trailerShown.empty())
-        motion_.tween("hv", 0, ms::hero, easing(ease::inOut));
     // The slideshow resumes from whichever card the hero now shows.
     for (size_t i = 0; i < home.spotlight.size(); ++i)
         if (home.spotlight[i].id == card.id && home.spotlight[i].kind == card.kind)
@@ -883,6 +843,7 @@ void Application::homeRetargetHero(const Card &card, bool instant) {
                              ? pictures_->view(path, kHeroWidth, kHeroHeight, ImageFit::Cover, now_).tone
                              : -1;
         art.wallTint = tone >= 0 && isTitle(card) ? scrimOf(tone) : tintOf(card);
+        art.tint[incoming] = art.wallTint;
         std::string in = home::id("ha", incoming), out = home::id("ha", outgoing);
         if (instant || !hadArt) {
             motion_.set(in, 1);

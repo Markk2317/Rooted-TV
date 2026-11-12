@@ -22,7 +22,7 @@ class Weather {
     // {"ok", "city", "country", "latitude", "longitude"} for the best match of `name`, or
     // {"ok": false, "error"}.
     Json find(const std::string &name);
-    // {"ok", "temperature" (°C, whole), "words", "day"} at the place, or {"ok": false}.
+    // {"ok", "temperature" (°C, whole), "words", "day", "icon"} at the place, or {"ok": false}.
     Json current(double latitude, double longitude);
 
   private:
@@ -39,6 +39,10 @@ class Weather {
 // Open-Meteo's weather code as a word or two, in English as the TV's screens are: "Clear",
 // "Rain", "Snow" ... (WMO 4677 codes as Open-Meteo gives them).
 std::string weatherWords(int code);
+// The screen saver's picture for it, as Google TV's ambient mode draws one beside the temperature:
+// "clear-day", "clear-night", "partly-day", "partly-night", "cloudy", "fog", "drizzle", "rain",
+// "snow" or "storm" (assets/screensavers/weather-<icon>.png); "" for a code it does not know.
+std::string weatherIcon(int code, bool day);
 
 } // namespace service
 } // namespace nativetv

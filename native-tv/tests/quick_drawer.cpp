@@ -32,7 +32,7 @@ struct Quick : World {
     // The keys from Volume, where the panel opens, to an item of its grid.
     void focusOn(const std::string &title) {
         static const std::map<std::string, std::vector<Key>> paths = {
-            {"Home settings", {Key::Up}},
+            {"All settings", {Key::Up}},
             {"Profile", {Key::Up, Key::Right}},
             {"OLED light", {Key::Down}},
             {"Picture mode", {Key::Down, Key::Down}},
@@ -355,52 +355,14 @@ void choiceChecks() {
     check(levels.screen() == "quick", "so does Left");
 }
 
-void switchChecks() {
+void settingsChecks() {
     Quick world;
-    world.focusOn("Home settings");
+    world.focusOn("All settings");
     world.settle(400);
-    check(world.app.shows("Home settings"), "The gear says what it opens under it");
+    check(world.app.shows("All settings"), "The gear says what it opens under it, as Google TV's");
     world.press(Key::Ok);
-    world.settle(400);
-    check(world.screen() == "quick:layout" && world.app.shows("24-hour clock") && world.app.shows("App names"),
-          "Home settings lists the switches");
-    world.press(Key::Down);
-    world.press(Key::Ok);
-    world.settle(300);
-    check(world.motion("quick:t:1") < .5, "A switch moves the moment OK is pressed");
-    check(world.on("w:layout.appNames").size() == 1 && world.on("w:layout.appNames")[0].operation == Operation::SetHomeLayout &&
-              world.on("w:layout.appNames")[0].body["appNames"].isBoolean() &&
-              !world.on("w:layout.appNames")[0].body["appNames"].boolean(),
-          "and posts its new value to the layout route");
-    // A read of the old layout while the write is on its way does not switch it back.
-    world.reply("catalogue", catalogueJson);
-    world.settle(300);
-    check(world.motion("quick:t:1") < .5, "A catalogue read meanwhile does not move it back");
-    // Pressed twice in a row: the last value is the one sent, the older reply is ignored.
-    world.press(Key::Ok);
-    world.press(Key::Ok);
-    world.settle(200);
-    auto writes = world.on("w:layout.appNames");
-    check(writes.back().body["appNames"].boolean() == false, "The last press decides what is sent");
-    world.answer(writes.front());
-    check(world.motion("quick:t:1") < .5, "A reply to an older press changes nothing");
-    size_t catalogues = world.transport.count("catalogue");
-    world.answer(writes.back());
     world.settle(900);
-    check(world.transport.count("catalogue") > catalogues, "The layout is read once to settle it");
-    std::string changed = catalogueJson;
-    changed.insert(changed.find("\"clockFormat\""), "\"appNames\":false,");
-    world.reply("catalogue", changed);
-    world.settle(300);
-    check(world.motion("quick:t:1") < .5, "The catalogue that says it too leaves it off");
-    // Refusal.
-    world.press(Key::Up);
-    world.press(Key::Ok);
-    world.answer(world.on("w:layout.clockFormat")[0], false, "Read-only");
-    world.settle(300);
-    check(world.on("w:layout.clockFormat")[0].body["clockFormat"].string() == "24h" && world.motion("quick:t:0") < .5 &&
-              world.toasted("That did not work: Read-only"),
-          "A refused switch moves back and says why");
+    check(world.screen() == "dashboard", "OK on it opens Native Tv's Settings");
 }
 
 // ---- Actions ----------------------------------------------------------------------------------------
@@ -505,7 +467,7 @@ int main() {
         heldChecks(true, false);
         failureChecks();
         choiceChecks();
-        switchChecks();
+        settingsChecks();
         actionChecks();
         navigationChecks();
         std::printf("%d native quick-drawer checks passed\n", checkCount());

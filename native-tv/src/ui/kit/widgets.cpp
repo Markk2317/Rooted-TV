@@ -222,9 +222,9 @@ void tabPill(Paint paint, float left, float right, float hot, float alphaFactor)
     if (right - left < 1 || alphaFactor <= .002f)
         return;
     Rect area = geometry::pill(left, right);
-    // Google TV's selected tab is a light pill with dark text, focused or not.
-    paint.scene.shape(area,
-                      faded(focus::mix(color::tabSelected, color::tabFocused, hot), alphaFactor),
+    // Google TV's selected tab is a light pill while it has the focus and a faint grey one once
+    // the focus has gone down into the page or along the bar.
+    paint.scene.shape(area, faded(focus::mix(alpha::tabRest, color::tabFocused, hot), alphaFactor),
                       roundRadius(area));
 }
 void roundButton(Paint paint, const RoundButton &button) {
@@ -238,9 +238,11 @@ void roundButton(Paint paint, const RoundButton &button) {
     Node &base = scene.shape(button.rest, button.fill, rounding);
     if (button.avatar)
         base.gradient = avatarGradient();
-    if (button.focus > 0)
+    if (button.focus > 0 && button.ring)
+        base.ring = {layout::avatarRing, 0, faded(color::avatarRing, focus::clamp01(button.focus))};
+    else if (button.focus > 0)
         scene.shape(button.rest, faded(button.focusFill, focus::clamp01(button.focus)), rounding);
-    Color ink = focus::inkAt(button.ink, color::onFocus, button.focus);
+    Color ink = button.ring ? button.ink : focus::inkAt(button.ink, color::onFocus, button.focus);
     paint.glyphs.icon(scene, centreOf(button.rest, std::min(button.rest.h * .5f, 36.0f)), button.icon,
                       ink);
     if (!button.tooltip.empty() && button.focus > .004f) {
@@ -267,8 +269,8 @@ void topBar(Paint paint, const TopBar &bar) {
     const float tabsRight = tabs.empty() ? geometry::tabsLeft(bar.search) : tabs.back().x + tabs.back().w;
     Rect tabCapsule = geometry::capsule(geometry::capsuleLeft(), tabsRight + layout::capsulePad);
     scene.shape(tabCapsule, alpha::capsule, roundRadius(tabCapsule));
-    // Google TV's second capsule: the assistant where there is one, the screen saver, the gear.
-    const int buttons = bar.assistant ? 3 : 2;
+    // Google TV's second capsule: the screen saver and the gear.
+    const int buttons = 2;
     const Rect firstIcon = geometry::iconButton(tabsRight, 0),
                lastIcon = geometry::iconButton(tabsRight, buttons - 1);
     Rect iconCapsule = geometry::capsule(firstIcon.x - layout::iconPad,
@@ -281,28 +283,24 @@ void topBar(Paint paint, const TopBar &bar) {
     avatar.id = "nav:avatar";
     avatar.text = bar.avatarInitial;
     avatar.avatar = true;
+    avatar.ring = true;
     avatar.focus = bar.avatarFocus;
     roundButton(paint, avatar);
 
+    // The tabs' text, and search's icon, are white while a tab has the focus and dimmer without
+    // it; the one under the light pill is dark.
+    const Color rest = focus::inkAt(alpha::clockInk, color::onSurface, bar.pillHot);
+    const Color marked = focus::inkAt(alpha::clockInk, color::onFocus, bar.pillHot);
     if (bar.search) {
-        // Search is a slot of the capsule, lit like a tab when focused.
-        RoundButton search;
-        search.rest = geometry::searchButton();
-        search.id = "tool:2";
-        search.icon = "search";
-        search.fill = bar.searchSelected ? color::searchSlot : clear;
-        search.focusFill = color::tabFocused;
-        search.focus = bar.searchFocus;
-        roundButton(paint, search);
+        // Search is a slot of the capsule that the pill marks as it marks a tab.
+        const Rect slot = geometry::searchButton();
+        paint.glyphs.icon(scene, centreOf(slot, std::min(slot.h * .5f, 36.0f)), "search",
+                          bar.searchSelected ? marked : rest);
+        hit(scene, slot, "tool:2");
     }
 
     for (size_t i = 0; i < tabs.size(); ++i) {
-        // The selected tab's text is dark on its light pill; the others are white while the bar
-        // has the focus and dimmer without it.
-        Color ink = static_cast<int>(i) == bar.selected
-                        ? focus::inkAt(color::onSurface, color::onFocus,
-                                       focus::clamp01(bar.pillAlpha))
-                        : focus::inkAt(alpha::clockInk, color::onSurface, bar.pillHot);
+        Color ink = static_cast<int>(i) == bar.selected && !bar.searchSelected ? marked : rest;
         text(paint,
              {tabs[i].x, layout::navTop + (layout::navH - type::nav.line) / 2, tabs[i].w,
               type::nav.line},
@@ -326,15 +324,12 @@ void topBar(Paint paint, const TopBar &bar) {
         }
         roundButton(paint, button);
     };
-    int index = 0;
-    if (bar.assistant)
-        iconButton(index++, "tool:3", "sparkle", "Gemini", bar.assistantFocus);
-    iconButton(index++, "tool:4", "frame", "Screensaver", bar.saverFocus);
-    iconButton(index, "nav:settings", "settings", "Settings", bar.settingsFocus);
+    iconButton(0, "tool:4", "frame", "Screensaver", bar.saverFocus);
+    iconButton(1, "nav:settings", "settings", "Settings", bar.settingsFocus);
 
     // The clock, a divider and the wordmark close the bar at the right margin, translucent. With
-    // every tab and button on (Films, Shows, Live, Inputs and the assistant) the capsules reach
-    // them, and the wordmark gives way: the clock alone ends the bar.
+    // every tab on (Films, Shows, Live and Inputs) the capsules reach them, and the wordmark gives
+    // way: the clock alone ends the bar.
     const float markWidth = paint.glyphs.measure(bar.wordmark, type::clock);
     Rect clockBox = geometry::clock(markWidth);
     const bool mark = clockBox.x >= iconCapsule.x + iconCapsule.w + layout::capsuleGap;
@@ -379,13 +374,19 @@ void heroWall(Paint paint, const Hero &hero) {
                 scene.popTransform();
                 scene.popOpacity();
             }
-            if (!hero.trailer.empty() && hero.trailerAlpha > .002f) {
-                scene.pushOpacity(hero.trailerAlpha);
-                scene.picture(screen, 0).value = hero.trailer;
-                scene.popOpacity();
-            }
             scene.popClip();
             scene.popTransform();
+        }
+        // Once the rows cover the banner Google TV shows no art behind them: the focused card's
+        // colour takes its place, and the washes over it darken it toward the bottom left.
+        const float veil = parallax.scrimOpacity;
+        if (veil > .002f) {
+            scene.pushOpacity(veil);
+            scene.shape(screen, color::page);
+            for (const HeroSlot &slot : hero.slot)
+                if (slot.opacity > .002f)
+                    scene.shape(screen, faded(slot.tint, slot.opacity));
+            scene.popOpacity();
         }
         // The art fills the screen under washes of the page's colour, Google TV's launcher's
         // layer styles: with the bar or the banner focused 60% at the left edge to none at the
@@ -405,16 +406,16 @@ void heroWall(Paint paint, const Hero &hero) {
             scene.pushOpacity(rows);
             Node &backdrop = scene.shape(screen, clear);
             backdrop.gradient = gradient(239, {{faded(color::page, .38f), 0}, {color::page, 1}});
-            Node &sheen = scene.shape(screen, clear);
-            sheen.gradient = gradient(240, {{faded(white, .1f), 0}, {faded(white, 0), 1}});
+            // The sheen lights the art, not the colour that replaces it.
+            if (veil < 1) {
+                Node &sheen = scene.shape(screen, clear);
+                sheen.gradient =
+                    gradient(240, {{faded(white, .1f * (1 - veil)), 0}, {faded(white, 0), 1}});
+            }
             scene.popOpacity();
         }
         scene.popOpacity();
     }
-    // Rises with the rows so cards stay legible once the hero has scrolled away.
-    const float veil = parallax.scrimOpacity;
-    if (veil > .002f)
-        scene.shape(screen, faded(color::page, veil));
 }
 void ambientWall(Paint paint, float amount, Color tint) {
     if (amount <= .002f)

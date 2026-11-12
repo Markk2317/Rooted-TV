@@ -1,6 +1,7 @@
 #pragma once
 #include "core/json.hpp"
 #include "core/services.hpp"
+#include "graphics/image_loader.hpp"
 #include "ui/kit/widgets.hpp"
 #include "ui/motion/motion.hpp"
 #include <functional>
@@ -47,6 +48,11 @@ class ScreenHost {
     // The one way to change something on the TV or the server: the value shows at once and the
     // write is sent, ordered, retried and taken back behind it (optimistic.hpp).
     virtual Optimistic &optimistic() = 0;
+    // Where a picture or a trailer the page draws has got to (asked for at the size it is drawn,
+    // covering it): not ready, ready, ended or failed. Without pictures (tests) it never arrives.
+    virtual ImageView picture(const std::string &, int, int) {
+        return ImageView();
+    }
 };
 
 class ScreenView {

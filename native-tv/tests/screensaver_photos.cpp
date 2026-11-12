@@ -77,7 +77,7 @@ int main() {
     const size_t before = asked.size();
     Json now = weather.current(45.46427, 9.18951);
     assert(now["ok"].boolean() && now["temperature"].number() == 18 && now["words"].string() == "Rain" &&
-           now["day"].boolean());
+           now["day"].boolean() && now["icon"].string() == "rain");
     assert(asked.back().find("latitude=45.464&longitude=9.190") != std::string::npos);
     (void)weather.current(45.46427, 9.18951);
     assert(asked.size() == before + 1);
@@ -86,6 +86,10 @@ int main() {
     assert(asked.size() == before + 2);
     assert(weatherWords(0) == "Clear" && weatherWords(3) == "Cloudy" && weatherWords(73) == "Snow" &&
            weatherWords(96) == "Thunderstorm" && weatherWords(4).empty());
+    assert(weatherIcon(0, true) == "clear-day" && weatherIcon(0, false) == "clear-night" &&
+           weatherIcon(2, false) == "partly-night" && weatherIcon(81, true) == "rain" &&
+           weatherIcon(53, true) == "drizzle" && weatherIcon(86, true) == "snow" &&
+           weatherIcon(99, true) == "storm" && weatherIcon(4, true).empty());
     std::printf("Screensaver photos passed.\n");
     return 0;
 }

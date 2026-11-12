@@ -261,7 +261,6 @@ void Application::screenKey(Key key) {
             route(home.nav == home.tabs.size()       ? "profiles"
                   : home.nav == home.tabs.size() + 1 ? "quick"
                   : home.nav == home.tabs.size() + 2 ? "search"
-                  : home.nav == home.tabs.size() + 3 ? "assistant"
                                                      : "dashboard");
         return;
     }

@@ -56,7 +56,6 @@ void Application::key(Key key) {
                     route(home.nav == home.tabs.size()       ? "profiles"
                           : home.nav == home.tabs.size() + 1 ? "quick"
                           : home.nav == home.tabs.size() + 2 ? "search"
-                          : home.nav == home.tabs.size() + 3 ? "assistant"
                                                              : "dashboard");
             }
         } else if (home.heroFocus) {
@@ -71,14 +70,14 @@ void Application::key(Key key) {
         } else {
             if (key == Key::Up) {
                 if (home.row)
-                    --home.row;
+                    homeEnterRow(home.row - 1);
                 else if (homeHeroOffered())
                     home.heroFocus = true; // the banner is above the first row, as on Google TV
                 else
                     home.navigation = true;
             }
             if (key == Key::Down && home.row + 1 < home.rows.size())
-                ++home.row;
+                homeEnterRow(home.row + 1);
             if (key == Key::Left && home.column)
                 --home.column;
             if (key == Key::Right && home.column + 1 < home.rows[home.row].cards.size())
@@ -199,7 +198,6 @@ void Application::click(float x, float y) {
                 route(index == 0   ? "profiles"
                       : index == 1 ? "quick"
                       : index == 2 ? "search"
-                      : index == 3 ? "assistant"
                                    : "dashboard");
             } else if (type == "edit") {
                 if (state_.home.editing)

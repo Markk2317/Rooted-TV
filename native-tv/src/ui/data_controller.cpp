@@ -15,6 +15,7 @@ void Application::rebuildHome() {
     if (home.rowsTab != tab) {
         // Another tab's rows: its focus starts on the first card, wherever the last tab's was.
         home.row = home.column = 0;
+        home.rowFocus.clear();
     } else if (home.row < home.rows.size() && home.column < home.rows[home.row].cards.size())
         oldId = home.rows[home.row].cards[home.column].id;
     home.rows = homeRows(tab, state_.catalogue, state_.discover, state_.guide);

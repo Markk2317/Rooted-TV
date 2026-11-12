@@ -1924,7 +1924,7 @@ lookup in the TV's country, then `us`; else Apple's top-movies RSS chart matched
 key and a year within one), and `service::HomeTrailers` keeps the first 6 MB of each in
 `home-trailers/`, one download at a time, six files, least recently served first out. The
 feed carries `trailers: true` (TMDB key set, `homeTrailers` not false) and prewarms the
-films among the first six top picks. `GET /api/home/trailer?type=movie&id=N` answers the
+carousel's films (up to six). `GET /api/home/trailer?type=movie&id=N` answers the
 clip, 202 while it downloads, or 404. In the client the id `trailer:movie:<id>` goes to
 `VideoLoader` (`graphics/video_player`) instead of the image loader: `parseMp4Video`
 (`graphics/mp4`) reads the H.264 track's sample table and keeps the samples the bytes hold,
@@ -1932,10 +1932,18 @@ clip, 202 while it downloads, or 404. In the client the id `trailer:movie:<id>` 
 reached through their leading fields), and a thread decodes from the first key frame 2 s in,
 skips dark pictures for up to 4 s, crops to 16:9 (letterbox bars and the pixel aspect
 applied) and converts to RGBA with NEON, three pictures ahead. The render thread uploads the
-newest one due into a texture. The hero asks for the clip `trailerDelay` (3.5 s) after it
-retargets to a film, fades it in over the art (`hv`), replays the slideshow's progress over
-the clip's length, and fades back when it ends or the hero leaves the screen; while a clip
-plays the loop draws at the display's rate instead of the ambient 30 fps.
+newest one due into a texture. The details page (`DetailsScreen::update`) asks for the clip
+`trailerDelay` (3.5 s) after it opens on a film, through `ScreenHost::picture`, and fades it
+in over the art (`details:tv`) once a picture is ready; `trailerLower` (4 s) after the clip
+starts, or after the last key, it lowers the page (`details:low`: the title at half size and
+its facts at the foot, the rest slid off the screen, the diagonal fade swapped for a shade at
+the foot), and a key raises it again and does nothing else. The clip fades back to the art
+when it ends or the rows or the full overview take the page. Home's carousel plays none.
+While a clip plays the loop draws at the display's rate instead of the ambient 30 fps.
+
+Every launch `/api/home/open` asks of sam carries `noSplash: true`, so webOS puts no splash
+between Home and the app (Netflix's is LG's grey one; see [the launch
+splash](tv-research.md#the-launch-splash-c6-webos-343)).
 
 `POST /api/home/open` with `kind: 'service'`, the service's key, type and
 TMDB ID opens the service's installed app (`netflix`; `amazon` or

@@ -77,11 +77,10 @@ kit::Hero heroOf(const Frame &frame) {
         hero.slot[i].opacity = static_cast<float>(motion.value(home::id("ha", layer)));
         hero.slot[i].kenBurns = static_cast<float>(motion.value(home::id("hk", layer)));
         hero.slot[i].artAlpha = home.art.artAlpha[layer];
+        hero.slot[i].tint = home.art.tint[layer];
     }
     hero.wallAlpha = static_cast<float>(motion.value("wall"));
     hero.stackY = static_cast<float>(motion.value("sy"));
-    hero.trailer = home.art.trailerShown;
-    hero.trailerAlpha = static_cast<float>(motion.value("hv"));
     hero.source = home.art.text.source;
     hero.title = home.art.text.title;
     hero.facts = home.art.text.facts;
@@ -118,9 +117,11 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab, float away) {
         bar.tabs.push_back(tab.title);
     bar.selected = home.navigation && home.nav < home.tabs.size() ? static_cast<int>(home.nav)
                                                                   : pageTab;
-    bar.pillAlpha = bar.selected < 0 ? 0.0f : 1.0f;
     const bool searchPage = state.screen == Screen::Kit && state.kitComponent == "search";
-    bar.searchSelected = searchPage;
+    // The pill sits on search while it has the focus or its page shows, as on a tab.
+    const bool onTab = home.navigation && home.nav < home.tabs.size();
+    bar.searchSelected = (home.navigation && home.nav == home.tabs.size() + 2) || (searchPage && !onTab);
+    bar.pillAlpha = bar.selected < 0 && !bar.searchSelected ? 0.0f : 1.0f;
     bar.settingsSelected = pageTab < 0 && !home.navigation && !searchPage;
     bar.pillLeft = static_cast<float>(motion.value("pill:0"));
     bar.pillRight = static_cast<float>(motion.value("pill:1"));
@@ -128,9 +129,6 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab, float away) {
     bar.avatarFocus = static_cast<float>(motion.value("f:av"));
     bar.settingsFocus = static_cast<float>(motion.value("f:gr"));
     bar.search = state.discover["titlesEnabled"].boolean();
-    bar.searchFocus = static_cast<float>(motion.value("f:sr"));
-    bar.assistant = state.discover["assistant"].boolean();
-    bar.assistantFocus = static_cast<float>(motion.value("f:as"));
     bar.saverFocus = static_cast<float>(motion.value("f:sv"));
     bar.clock = clockText(state);
     bar.enter = {1 - away, -kBarRise * away};
@@ -158,7 +156,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         look.risen = risen;
         look.grow = static_cast<float>(motion.value(home::id("rg", ri)));
         look.names = static_cast<float>(motion.value(home::id("rn", ri)));
-        look.captions = titles || home.rows[ri].key == "appkind" ? look.grow : 0;
+        look.captions = titles || home::isAppCards(home.rows[ri]) ? look.grow : 0;
         looks.push_back(look);
     }
     const std::vector<float> tops = home::rowTops(home.rows, looks);
@@ -213,7 +211,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
             std::string id = home::hit(ri, ci);
             float focus = static_cast<float>(motion.value(home::id("f", ri, ci)));
             kit::Enter enter = enterOf(motion, home::id("EC", ri, ci));
-            if (row.key == "appfeature" || row.key == "appkind") {
+            if (row.key == "appfeature" || home::isAppCards(row)) {
                 // Google TV's Apps tab: its banners, and the wide cards of its rows of apps with the
                 // focused one's name under it.
                 const bool banner = row.key == "appfeature";

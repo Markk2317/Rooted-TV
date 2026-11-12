@@ -100,6 +100,10 @@ assets/google-tv/pages/setup-phone/index.html assets/google-tv/pages/setup-phone
 assets/screensavers/clock.qml assets/screensavers/fireworks.qml \
 assets/screensavers/starfield.qml assets/screensavers/vitals.qml assets/screensavers/photos.qml assets/screensavers/ambient.qml assets/screensavers/star.png \
 assets/screensavers/bokeh.qml assets/screensavers/bokeh.png \
+assets/screensavers/weather-clear-day.png assets/screensavers/weather-clear-night.png assets/screensavers/weather-partly-day.png \
+assets/screensavers/weather-partly-night.png assets/screensavers/weather-cloudy.png assets/screensavers/weather-fog.png \
+assets/screensavers/weather-drizzle.png assets/screensavers/weather-rain.png assets/screensavers/weather-snow.png \
+assets/screensavers/weather-storm.png \
 assets/screensavers/harmonograph.qml assets/screensavers/black.qml \
 assets/screensavers/clock-date.qml assets/screensavers/filament.qml \
 assets/screensavers/currents.qml assets/screensavers/veils.qml \

@@ -76,6 +76,22 @@ int main() {
         check(kinds[4].key == "appkind" && kinds[4].group == "tools" && kinds[4].title == "Tools" &&
                   kinds[4].cards.size() == 1 && kinds[5].cards.size() == 2 && kinds[5].cards[1].id == "c",
               "Apps sorted by kind come as one row per kind, in the owner's order");
+        // The stores to get more apps from, after the buttons: LG Content Store first, opened
+        // like an app even while it is hidden, and the Homebrew Channel's catalogue.
+        Json withStores = byKind;
+        Json storeApps = byKind["apps"];
+        storeApps.add(Json::parse(R"({"id":"org.webosbrew.hbchannel","title":"Homebrew Channel","kind":"tools"})"));
+        storeApps.add(Json::parse(R"({"id":"com.webos.app.discovery","title":"LG Content Store"})"));
+        withStores.set("apps", storeApps);
+        auto stored = homeRows("apps", withStores, Json(), Json());
+        check(stored.size() == 7 && stored[4].key == "appstore" && stored[4].title == "Get more apps" &&
+                  stored[4].cards.size() == 2 && stored[4].cards[0].id == "com.webos.app.discovery" &&
+                  stored[4].cards[0].image == "app:com.webos.app.discovery" &&
+                  stored[4].cards[0].command.body["kind"].string() == "app" &&
+                  stored[4].cards[0].command.body["id"].string() == "com.webos.app.discovery" &&
+                  stored[4].cards[1].title == "Homebrew Channel" && stored[4].cards[1].command.route == "catalog" &&
+                  stored[5].key == "appkind",
+              "Get more apps follows the buttons: LG Content Store, then the Homebrew Channel's catalogue");
         auto flat = homeRows("home", byKind, Json(), Json());
         check(flat.size() == 1 && flat[0].cards.size() == 3 && flat[0].cards[0].id == "b",
               "Home's apps row follows the kinds' order");

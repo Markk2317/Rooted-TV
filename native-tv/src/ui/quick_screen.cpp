@@ -1,10 +1,10 @@
 // The Quick settings panel, after Google TV's (launcherx's DashboardActivity, read off a Chromecast
-// with Google TV): a floating panel at the right with the date and the clock over a gear (Home's
-// settings) and the profile; a grid of tiles under them, the volume and the light as tiles across the
-// grid that Left and Right adjust, the picture mode, sound output, input and sleep timer with what is
-// set now, the screensaver and Screen off; and Recent apps as a wide card. Their lists (picture
-// modes, outputs, inputs, sleep times, Home's switches) take the panel's place, as Google TV's sleep
-// timer does.
+// with Google TV): a floating panel at the right with the date and the clock over a gear (All
+// settings, which opens Settings) and the profile; a grid of tiles under them, the volume and the
+// light as tiles across the grid that Left and Right adjust, the picture mode, sound output, input
+// and sleep timer with what is set now, the screensaver and Screen off; and Recent apps as a wide
+// card. Their lists (picture modes, outputs, inputs, sleep times) take the panel's place, as Google
+// TV's sleep timer does.
 //
 // Opening it shows each value last read at once (kept in the application between openings) or a
 // spinner where there is none yet, and reads the TV behind it. Every change goes through the
@@ -41,7 +41,7 @@ constexpr double kRetryMs = 3000;
 constexpr const char *kStats = "quick:stats", *kNow = "quick:now";
 constexpr const char *kStatsMemory = "quick.stats", *kNowMemory = "quick.now";
 
-enum class Level { Main, Picture, Sound, Input, Sleep, Layout };
+enum class Level { Main, Picture, Sound, Input, Sleep };
 const char *levelName(Level level) {
     switch (level) {
     case Level::Picture:
@@ -52,8 +52,6 @@ const char *levelName(Level level) {
         return "input";
     case Level::Sleep:
         return "sleep";
-    case Level::Layout:
-        return "layout";
     default:
         return "quick";
     }
@@ -67,18 +65,10 @@ const char *rowOpening(Level level) {
         return "sound";
     case Level::Input:
         return "input";
-    case Level::Sleep:
-        return "sleep";
     default:
-        return "layout";
+        return "sleep";
     }
 }
-struct LayoutSwitch {
-    const char *key, *icon;
-};
-const LayoutSwitch kSwitches[] = {{"clockFormat", "clock"}, {"appNames", "apps"},
-                                  {"showLive", "tv"},       {"showInputs", "hdmi"},
-                                  {"showLgHome", "home"},   {"picture", "display"}};
 const char *kSleep[] = {"off", "10", "30", "60", "90", "120"};
 
 double clamp(double value, double low, double high) {
@@ -99,18 +89,6 @@ Write controlWrite(const char *action) {
     };
     write.readChannel = kStats;
     write.readOperation = Operation::Metrics;
-    return write;
-}
-Write layoutWrite(const std::string &key) {
-    Write write;
-    write.operation = Operation::SetHomeLayout;
-    write.body = [key](const Json &target) {
-        Json body = Json::object();
-        body.set(key, key == "clockFormat" ? Json::text(target.boolean() ? "24h" : "12h") : target);
-        return body;
-    };
-    write.readChannel = "catalogue";
-    write.readOperation = Operation::HomeCatalogue;
     return write;
 }
 // Items whose value is read from the TV: they wait for the first read.
@@ -137,7 +115,7 @@ std::string clockText(const ViewState &state) {
 
 class QuickScreen final : public ScreenView {
     struct Row {
-        enum class Kind { Plain, Slider, Choice, Switch } kind = Kind::Plain;
+        enum class Kind { Plain, Slider, Choice } kind = Kind::Plain;
         // Google TV's shapes: the head's round buttons, a tile across the grid, a tile in a
         // column, the wide card under the grid, and an item of a list.
         enum class Shape { Button, Wide, Tile, Card, Item } shape = Shape::Item;
@@ -177,7 +155,7 @@ class QuickScreen final : public ScreenView {
         statsGeneration_ = host.services().read(kStats, Operation::Metrics);
         nowGeneration_ = host.services().read(kNow, Operation::HomeNow);
         syncShown(host);
-        rebuild(host, true);
+        rebuild(host);
         focus_ = indexOf("volume", focus_);
         focusMoved(host, true);
     }
@@ -200,14 +178,9 @@ class QuickScreen final : public ScreenView {
         }
         if (needsRebuild_) {
             needsRebuild_ = false;
-            rebuild(host, false);
+            rebuild(host);
         }
         syncShown(host);
-        // The switches follow what is shown, so a refusal that takes one back moves it back.
-        if (level_ == Level::Layout)
-            for (size_t i = 0; i < rows_.size(); ++i)
-                host.motion().tween("quick:t:" + std::to_string(i), layoutFlag(host, rows_[i].id) ? 1 : 0,
-                                    kit::motion::ms::fast, easing(kit::motion::ease::out));
         // The spinner turns while anything is being read.
         return !loaded_ || retryAt_ > 0;
     }
@@ -383,16 +356,6 @@ class QuickScreen final : public ScreenView {
     std::string soundValue(ScreenHost &host) {
         return host.optimistic().text("quick.sound", stats_["sound"]["output_raw"].string());
     }
-    // What the catalogue says of a Home switch; the clock is "24h" or "12h".
-    static bool layoutServer(const ScreenHost &host, const std::string &key) {
-        Json layout = host.view().catalogue["layout"];
-        return key == "clockFormat"                                                 ? layout["clockFormat"].string() == "24h"
-               : key == "appNames" || key == "showInputs" || key == "showLgHome" ? layout[key].boolean(true)
-                                                                                  : layout[key].boolean(false);
-    }
-    bool layoutFlag(ScreenHost &host, const std::string &key) {
-        return host.optimistic().flag("layout." + key, layoutServer(host, key));
-    }
     // For the snapshot and for the held-key checks: what is shown now, and whether it ever went
     // against the key that is held.
     void syncShown(ScreenHost &host) {
@@ -436,8 +399,6 @@ class QuickScreen final : public ScreenView {
             return msg("tv.quick.input", "Input");
         case Level::Sleep:
             return msg("tv.quick.sleep", "Sleep timer");
-        case Level::Layout:
-            return msg("tv.quick.settings", "Home settings");
         default:
             return msg("tv.quick.title", "Quick settings");
         }
@@ -501,8 +462,6 @@ class QuickScreen final : public ScreenView {
         return "";
     }
     bool rowOn(ScreenHost &host, const Row &row) {
-        if (row.kind == Row::Kind::Switch)
-            return layoutFlag(host, row.id);
         if (level_ == Level::Picture)
             return row.raw == pictureValue(host);
         if (level_ == Level::Sound)
@@ -517,7 +476,7 @@ class QuickScreen final : public ScreenView {
                 return i;
         return fallback;
     }
-    void rebuild(ScreenHost &host, bool jump) {
+    void rebuild(ScreenHost &host) {
         std::vector<Row> rows;
         auto add = [&](Row::Kind kind, const std::string &id, const std::string &icon,
                        const std::string &title, const std::string &raw = "", bool go = false,
@@ -550,7 +509,7 @@ class QuickScreen final : public ScreenView {
                       {column ? right : pad, top + (line - 1) * pitch, layout::quickTileW, layout::quickTileH});
             };
             bool oled = s["oled"].valid() && (s["oled"].isObject() || s["oled"].boolean());
-            place(add(Row::Kind::Plain, "layout", "settings", msg("tv.quick.settings", "Home settings"), "", true),
+            place(add(Row::Kind::Plain, "settings", "settings", msg("tv.quick.settings", "All settings")),
                   Row::Shape::Button, 0, 0,
                   {layout::quickGearX, layout::quickButtonTop, layout::quickButton, layout::quickButton});
             place(add(Row::Kind::Plain, "profile", "profile", msg("tv.quick.profile", "Profile"), "", true),
@@ -586,18 +545,6 @@ class QuickScreen final : public ScreenView {
         } else if (level_ == Level::Sleep) {
             for (const char *value : kSleep)
                 add(Row::Kind::Choice, value, "bedtime", sleepLabel(value), value);
-        } else {
-            static const std::vector<std::pair<std::string, std::string>> titles = {
-                {"clockFormat", msg("tv.quick.clock24", "24-hour clock")},
-                {"appNames", msg("tv.quick.appNames", "App names")},
-                {"showLive", msg("tv.quick.showLive", "Live tab")},
-                {"showInputs", msg("tv.quick.showInputs", "Inputs tab")},
-                {"showLgHome", msg("tv.quick.showLgHome", "LG Home tile")},
-                {"picture", msg("tv.quick.picture", "Picture details")}};
-            for (const LayoutSwitch &entry : kSwitches)
-                for (const auto &title : titles)
-                    if (title.first == entry.key)
-                        add(Row::Kind::Switch, entry.key, entry.icon, title.second);
         }
         if (rows.empty())
             add(Row::Kind::Plain, "", "", msg("tv.quick.nothing", "Nothing to choose from"), "", false, true);
@@ -610,16 +557,6 @@ class QuickScreen final : public ScreenView {
             }
         rows_ = rows;
         focus_ = std::min(focus_, rows_.size() - 1);
-        // Switches slide to where they are shown.
-        for (size_t i = 0; i < rows_.size(); ++i)
-            if (rows_[i].kind == Row::Kind::Switch) {
-                std::string id = "quick:t:" + std::to_string(i);
-                double to = layoutFlag(host, rows_[i].id) ? 1 : 0;
-                if (jump)
-                    host.motion().set(id, to);
-                else
-                    host.motion().tween(id, to, kit::motion::ms::fast, easing(kit::motion::ease::out));
-            }
         host.invalidate();
     }
     bool rowDim(const Row &row) const {
@@ -748,7 +685,7 @@ class QuickScreen final : public ScreenView {
         }
         scene.popTransform();
         scene.hits.push_back({kit::focus::scaledAbout(look.at, look.scale), "quick:row:" + std::to_string(index)});
-        // Under the focused button, what it opens: "Home settings", or the profile's name.
+        // Under the focused button, what it opens: "All settings", or the profile's name.
         if (look.focus > .004f) {
             const float width = 220, centre = look.at.x + look.at.w / 2;
             std::string label = row.id == "profile" ? trail(host, row) : row.title;
@@ -883,10 +820,7 @@ class QuickScreen final : public ScreenView {
             item.focus = look.focus;
             item.scale = look.scale;
             item.dim = row.dim;
-            if (row.kind == Row::Kind::Switch) {
-                item.mark = kit::PanelItem::Mark::Switch;
-                item.on = static_cast<float>(motion.value("quick:t:" + std::to_string(i)));
-            } else if (row.kind == Row::Kind::Choice) {
+            if (row.kind == Row::Kind::Choice) {
                 item.mark = kit::PanelItem::Mark::Radio;
                 item.on = rowOn(host, row) ? 1.0f : 0.0f;
             }
@@ -962,7 +896,7 @@ class QuickScreen final : public ScreenView {
     void openLevel(ScreenHost &host, Level level) {
         level_ = level;
         focus_ = 0;
-        rebuild(host, true);
+        rebuild(host);
         // A list of choices opens on the one in force; a list of switches, on its first.
         for (size_t i = 0; i < rows_.size(); ++i)
             if (rows_[i].kind == Row::Kind::Choice && rowOn(host, rows_[i]))
@@ -974,7 +908,7 @@ class QuickScreen final : public ScreenView {
     void toMain(ScreenHost &host) {
         std::string opener = rowOpening(level_);
         level_ = Level::Main;
-        rebuild(host, true);
+        rebuild(host);
         focus_ = indexOf(opener, focus_);
         host.motion().erasePrefix("quick:f:");
         focusMoved(host, true);
@@ -1033,8 +967,8 @@ class QuickScreen final : public ScreenView {
             openLevel(host, Level::Input);
         else if (row.id == "sleep")
             openLevel(host, Level::Sleep);
-        else if (row.id == "layout")
-            openLevel(host, Level::Layout);
+        else if (row.id == "settings")
+            close(host, "settings");
         else if (row.id == "saver" || row.id == "off") {
             // The TV acts; the panel is already gone, and a refusal is said by the layer.
             host.optimistic().run("quick.act", controlWrite(row.id == "saver" ? "screensaver" : "screenOff"));
@@ -1045,13 +979,6 @@ class QuickScreen final : public ScreenView {
             close(host, "profiles");
     }
     void choose(ScreenHost &host, const Row &row) {
-        if (level_ == Level::Layout) {
-            bool on = !layoutFlag(host, row.id);
-            host.optimistic().set("layout." + row.id, Json::flag(on), Json::flag(layoutServer(host, row.id)),
-                                  layoutWrite(row.id));
-            host.invalidate();
-            return;
-        }
         if (level_ == Level::Input) {
             if (row.dim)
                 return;

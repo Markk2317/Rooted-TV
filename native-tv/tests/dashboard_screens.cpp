@@ -1047,7 +1047,8 @@ void catalog() {
 
     // Back on the preview discards the download.
     FakeTransport second;
-    Application again(second, "catalog");
+    Application again(second, "dashboard:apps");
+    again.open("catalog");
     reply(again, "catalog:list", section("catalog"));
     reply(again, "catalog:status", section("install-preview"));
     run(again, 16, 600);
@@ -1063,6 +1064,12 @@ void catalog() {
     check(again.snapshot()["view"].string() == "list", "…and shows the catalog");
     again.key(Key::Back);
     check(again.screenName() == "dashboard:apps", "Back from the catalog returns to Apps");
+    FakeTransport fromHome;
+    Application homeCatalog(fromHome);
+    homeCatalog.open("catalog");
+    homeCatalog.key(Key::Back);
+    check(homeCatalog.screenName() == "home",
+          "Back from the catalog opened from Home's Apps tab returns to Home");
 
     // A failed install, and a catalog that does not load.
     FakeTransport failing;

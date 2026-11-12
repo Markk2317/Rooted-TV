@@ -60,16 +60,15 @@ struct TopBar {
     int selected = 0;
     // The pill's two edges are animated separately so it stretches toward its target.
     float pillLeft = 0, pillRight = 0;
-    float pillHot = 0;   // 0..1: focus is on the bar, so the pill turns from rest to focus fill
+    // 0..1: the focus is on the tab the pill marks, so the pill is light with dark text; at 0 it
+    // is Google TV's grey pill, the tab's text as dim as the others'.
+    float pillHot = 0;
     float pillAlpha = 1; // fades out while Settings or Setup is showing
-    float avatarFocus = 0, settingsFocus = 0, searchFocus = 0;
+    float avatarFocus = 0, settingsFocus = 0;
     bool settingsSelected = false;
-    // Search leads the tabs' capsule where titles can be searched; `searchSelected` while its page
-    // shows, as Google TV marks it with a grey slot.
+    // Search leads the tabs' capsule where titles can be searched; the pill marks it like a tab
+    // (`searchSelected`) while it has the focus or its page shows.
     bool search = false, searchSelected = false;
-    // The assistant leads the gear's capsule where a Gemini key is saved, as Google TV's Gemini.
-    bool assistant = false;
-    float assistantFocus = 0;
     float saverFocus = 0; // the screen saver's button, before the gear
     std::string clock;
     // After the clock and a divider, as Google TV ends its bar with its name.
@@ -80,7 +79,8 @@ struct TopBar {
 // them along to make room for it.
 std::vector<Rect> tabRects(const Glyphs &glyphs, const std::vector<std::string> &tabs,
                            bool search = false);
-// Hits are "nav:avatar", "tool:2" (search), "nav:tab:<i>", "tool:3" (assistant) and "nav:settings".
+// Hits are "nav:avatar", "tool:2" (search), "nav:tab:<i>", "tool:4" (screen saver) and
+// "nav:settings".
 void topBar(Paint paint, const TopBar &bar);
 void tabPill(Paint paint, float left, float right, float hot, float alpha = 1);
 
@@ -95,6 +95,8 @@ struct RoundButton {
     Color focusFill = color::focusFill;
     std::string tooltip; // under the button while it has the focus, as on Google TV's bar
     float focus = 0; // fill fades to focus fill, ink to on-focus, scale to 1.12
+    // Google TV's avatar keeps its face when focused and gains a light ring instead of the fill.
+    bool ring = false;
     Enter enter;
 };
 void roundButton(Paint paint, const RoundButton &button);
@@ -108,13 +110,12 @@ struct HeroSlot {
     float opacity = 0;  // crossfade
     float kenBurns = 0; // 0..1 over the 14 s push
     float artAlpha = 1; // the picture alone: dimmed to a wallpaper behind a focused app
+    Color tint = color::page; // the card's colour, in the art's place once the rows cover it
 };
 struct Hero {
     HeroSlot slot[2];    // outgoing and incoming art
     float wallAlpha = 1; // 0 off the Home page
     float stackY = 0;    // the rows' vertical offset (<= 0) that drives the parallax
-    std::string trailer; // a film's clip, drawn over the art
-    float trailerAlpha = 0;
     // A title: source row, title, and one line of facts, or, in the banner's own carousel, why it
     // is shown (Google TV's "Recommended for you"). An app: its icon beside the lines, and the key
     // hint under them. wordmark: the service's wordmark (an icon file, drawn white) in the source

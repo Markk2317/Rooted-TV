@@ -62,6 +62,18 @@ int main() {
     require(found.found, "declared app icon was not found");
     require(found.bytes == icon, "app icon bytes changed");
     require(!found.etag.empty(), "app icon ETag was not created");
+    // The largest icon wins, and one that is declared but missing gives way to the next.
+    const std::string large("\x89PNG\r\n\x1a\nlarge", 12);
+    writeFile(app + "/appinfo.json",
+              "{\"icon\":\"assets/icon.png\",\"largeIcon\":\"assets/icon.png\","
+              "\"mediumLargeIcon\":\"assets/missing.png\",\"extraLargeIcon\":\"$assets/large.png\"}");
+    writeFile(app + "/assets/large.png", large);
+    require(service::readAppIcon("com.example.app", systemRoot, assets).bytes == large,
+            "the extra large icon was not preferred");
+    writeFile(app + "/appinfo.json",
+              "{\"extraLargeIcon\":\"assets/gone.png\",\"largeIcon\":\"assets/icon.png\"}");
+    require(service::readAppIcon("com.example.app", systemRoot, assets).bytes == icon,
+            "a missing extra large icon did not fall back to the large one");
 
     const std::string secret = systemRoot + "/secret.json";
     writeFile(secret, "{\"token\":\"secret\"}");

@@ -231,29 +231,27 @@ AppIconFile readAppIcon(const std::string &appId, const std::string &systemRoot,
         return result;
     if (packedIcon(packPath, titleKey(appInfo["title"].string()), result))
         return result;
-    std::string iconRelative = appInfo["largeIcon"].string();
-    if (iconRelative.empty())
-        iconRelative = appInfo["icon"].string();
-    if (iconRelative.empty())
-        iconRelative = "icon.png";
-    if (iconRelative.find('\0') != std::string::npos)
-        return result;
-    if (!iconRelative.empty() && iconRelative[0] == '$')
-        iconRelative.erase(0, 1);
-
     std::string base = appRoot;
     const std::string assetsBase = appInfo["sysAssetsBasePath"].string();
     if (!assetsBase.empty())
         base += "/" + assetsBase;
-    const std::vector<std::string> candidates = {
-        base + "/" + iconRelative,
-        base + "/hd1080/" + iconRelative,
-        base + "/hd720/" + iconRelative,
-        appRoot + "/" + iconRelative,
-        appRoot + "/hd1080/" + iconRelative,
-        appRoot + "/icon.png",
-        appRoot + "/assets/icon.png"
-    };
+    // The largest icon the app has, as Home draws icons up to a card's height: Netflix's
+    // extraLargeIcon is 192 px, its largeIcon 130 and its mediumLargeIcon 115. LG's apps name
+    // theirs "$name.png".
+    std::vector<std::string> candidates;
+    for (const char *field : {"extraLargeIcon", "largeIcon", "mediumLargeIcon", "icon"}) {
+        std::string iconRelative = appInfo[field].string();
+        if (iconRelative.empty() || iconRelative.find('\0') != std::string::npos)
+            continue;
+        if (iconRelative[0] == '$')
+            iconRelative.erase(0, 1);
+        for (const std::string &candidate : {base + "/" + iconRelative, base + "/hd1080/" + iconRelative,
+                                             base + "/hd720/" + iconRelative, appRoot + "/" + iconRelative,
+                                             appRoot + "/hd1080/" + iconRelative})
+            candidates.push_back(candidate);
+    }
+    candidates.push_back(appRoot + "/icon.png");
+    candidates.push_back(appRoot + "/assets/icon.png");
 
     std::string iconPath;
     for (const std::string &candidate : candidates) {

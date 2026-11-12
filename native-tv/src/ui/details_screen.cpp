@@ -66,6 +66,12 @@ std::string titleKey(const Json &item) {
     return item["type"].string() + ":" +
            (item["id"].isNumber() ? compactNumber(item["id"].number()) : item["id"].string());
 }
+// A film's trailer, where the server offers them (Apple's previews are of films only).
+std::string trailerOf(const ViewState &view, const Json &item) {
+    return view.discover["trailers"].boolean() && item["type"].string() == "movie" && item["id"].valid()
+               ? "trailer:" + titleKey(item)
+               : "";
+}
 // A genre's titles for a title's row of them, as Google TV mixes films and shows: one of each in
 // turn, the title's own kind first, leaving out those `shown` already (the title, the rows above).
 Json genreTitles(const Json &found, const Json &item, std::vector<std::string> &shown) {
@@ -544,9 +550,63 @@ void DetailsScreen::markTitle(ScreenHost &host, Action::Kind kind) {
     rebuildActions(host, title);
     host.invalidate();
 }
+bool DetailsScreen::update(ScreenHost &host) {
+    if (stack_.empty())
+        return false;
+    Motion &motion = host.motion();
+    const double now = host.nowMs();
+    const std::string want = trailerOf(host.view(), top().item);
+    if (want != trailer_) {
+        // Another title on top: its own clip, from the start.
+        trailer_ = want;
+        trailerFrom_ = keyAt_ = now;
+        shownAt_ = -1;
+        trailerOver_ = lowered_ = false;
+        motion.set("details:tv", 0);
+        motion.set("details:low", 0);
+    }
+    if (trailer_.empty() || trailerOver_ || now - trailerFrom_ < kit::motion::ms::trailerDelay)
+        return !trailer_.empty() && !trailerOver_;
+    auto end = [&] {
+        trailerOver_ = true;
+        motion.tween("details:tv", 0, kit::motion::ms::hero, easing(kit::motion::ease::inOut));
+        lower(host, false);
+        return true;
+    };
+    // The rows or the full overview have the page: the clip gives way to them.
+    if (top().row != 0 || overview_)
+        return shownAt_ < 0 ? true : end();
+    const ImageView clip = host.picture(trailer_, kit::canvas::width, kit::canvas::height);
+    if (clip.failed) // none, or it has played to its end
+        return end();
+    if (shownAt_ < 0) {
+        if (clip.texture) {
+            shownAt_ = now;
+            motion.tween("details:tv", 1, kit::motion::ms::hero, easing(kit::motion::ease::inOut));
+        }
+        return true;
+    }
+    if (!lowered_ && now - std::max(shownAt_, keyAt_) >= kit::motion::ms::trailerLower)
+        lower(host, true);
+    return true;
+}
+void DetailsScreen::lower(ScreenHost &host, bool down) {
+    if (lowered_ == down)
+        return;
+    lowered_ = down;
+    host.motion().tween("details:low", down ? 1 : 0, kit::motion::ms::detailsLower,
+                        easing(kit::motion::ease::inOut));
+    host.invalidate();
+}
 bool DetailsScreen::key(ScreenHost &host, Key key) {
     if (stack_.empty())
         return false;
+    keyAt_ = host.nowMs();
+    // A key on the lowered page brings it back up and does nothing else, as on Google TV.
+    if (lowered_) {
+        lower(host, false);
+        return true;
+    }
     if (overview_) {
         if ((key == Key::Down || key == Key::Right || key == Key::PageDown) &&
             overviewPage_ + 1 < overviewPages_.size())
@@ -682,6 +742,8 @@ Json DetailsScreen::snapshot() const {
     value.set("contentStatus", Json::text(title.status));
     value.set("contentState", Json::text(title.loading ? "loading" : title.error ? "error" : "ready"));
     value.set("overview", Json::flag(overview_));
+    value.set("trailer", Json::text(shownAt_ >= 0 && !trailerOver_ ? trailer_ : ""));
+    value.set("lowered", Json::flag(lowered_));
     value.set("overviewPage", Json::numeric(static_cast<double>(overviewPage_)));
     Json rows = Json::array();
     for (const int section : sectionsOf(title))
@@ -699,8 +761,10 @@ namespace {
 // The backdrop, with one diagonal fade that keeps the lines readable at the upper left and the
 // row of similar titles at the bottom. As the rows take the page (`rows` 0 to 1) the art turns
 // into a dark blur of itself, as Google TV's does: TMDB's smallest cut the server serves, drawn at
-// the screen's size four times a few pixels apart.
-void backdrop(kit::Paint paint, const Json &item, float rows) {
+// the screen's size four times a few pixels apart. The film's trailer plays over the art at
+// `clip`; with the page lowered (`low`) the fade gives way to a shade at the foot under the title.
+void backdrop(kit::Paint paint, const Json &item, float rows, const std::string &trailer, float clip,
+              float low) {
     Scene &scene = paint.scene;
     Rect screen = {0, 0, kit::canvas::width, kit::canvas::height};
     std::string art = artwork(item, true);
@@ -710,6 +774,11 @@ void backdrop(kit::Paint paint, const Json &item, float rows) {
     else {
         if (rows < 1)
             scene.picture(screen, 0).value = art;
+        if (rows < 1 && !trailer.empty() && clip > .002f) {
+            Node &film = scene.picture(screen, 0);
+            film.value = trailer;
+            film.opacity = clip * (1 - rows);
+        }
         if (rows > 0) {
             const std::string blur = "tmdb:w185:" + item["backdrop"].string();
             const float spread = kit::layout::detailsBlurSpread;
@@ -729,8 +798,14 @@ void backdrop(kit::Paint paint, const Json &item, float rows) {
         return;
     // The blur is dimmed evenly, so the fade goes as it comes.
     Color shade = kit::color::ink;
+    if (low > .002f) {
+        Node &foot = scene.shape(screen, {0, 0, 0, 0});
+        foot.opacity = low;
+        foot.gradient = Gradient::between(180, kit::focus::withAlpha(shade, 0), kit::focus::withAlpha(shade, .8f));
+        foot.gradient.at[0] = .6f;
+    }
     Node &fade = scene.shape(screen, {0, 0, 0, 0});
-    fade.opacity = 1 - rows;
+    fade.opacity = (1 - rows) * (1 - low);
     fade.gradient.stops = 4;
     fade.gradient.angle = 45;
     fade.gradient.color[0] = kit::focus::withAlpha(shade, .97f);
@@ -844,7 +919,11 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
     // The page rises as the focus goes down its rows; its head fades as it leaves.
     const float rise = static_cast<float>(motion.value("details:vy"));
     const float head = kit::focus::clamp01(1 + rise / 500);
-    backdrop(paint, item, 1 - head);
+    // Lowered under the trailer: the title at half its size and its facts at the foot, the rest
+    // gone below the screen.
+    const float low = static_cast<float>(motion.value("details:low"));
+    const float shift = low * (layout::detailsLowFactsTop - layout::detailsFactsTop);
+    backdrop(paint, item, 1 - head, trailer_, static_cast<float>(motion.value("details:tv")), low);
 
     scene.pushTransform(Transform::translate(0, rise));
     auto group = [&](int block, float alpha = 1) {
@@ -857,15 +936,22 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
         scene.popOpacity();
     };
     // Block 0: the title, as large as Google TV sets it, and its facts.
-    group(0, head);
+    group(0, head * (1 - .3f * low));
     const std::string name = item["title"].string();
     const kit::TypeStyle &titleStyle = kit::type::detailsTitle;
     const bool twoLines = paint.glyphs.measure(name, titleStyle) > layout::detailsTitleW;
     const float titleBox = 2 * titleStyle.line;
-    paint.glyphs.text(scene,
-                      {layout::homeX, layout::detailsTitleTop + (twoLines ? 0 : (titleBox - titleStyle.line) / 2),
-                       layout::detailsTitleW, twoLines ? titleBox : titleStyle.line},
+    const float titleY = layout::detailsTitleTop + (twoLines ? 0 : (titleBox - titleStyle.line) / 2);
+    const float titleScale = 1 + (layout::detailsLowTitleScale - 1) * low;
+    // Lowered, the title's last line keeps its place over the facts.
+    const float lowTitleY =
+        layout::detailsLowTitleTop - (twoLines ? titleStyle.line * layout::detailsLowTitleScale : 0);
+    scene.pushTransform(Transform::scaleAbout(layout::homeX, titleY, titleScale, titleScale, 0,
+                                              low * (lowTitleY - titleY)));
+    paint.glyphs.text(scene, {layout::homeX, titleY, layout::detailsTitleW, twoLines ? titleBox : titleStyle.line},
                       name, titleStyle, kit::color::onSurface, Node::Align::Left, twoLines ? 2 : 1);
+    scene.popTransform();
+    scene.pushTransform(Transform::translate(0, shift));
     float x = layout::homeX;
     const kit::TypeStyle &factStyle = kit::type::detailsFacts;
     for (const std::string &fact : factsOf(item)) {
@@ -877,7 +963,10 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
                        kit::color::onSurface);
         x += width + layout::detailsFactsGap;
     }
+    scene.popTransform();
     endGroup();
+    scene.pushTransform(Transform::translate(0, shift));
+    scene.pushOpacity(1 - low);
     // Block 1: the story, two lines.
     group(1, head);
     std::string overview = item["overview"].string();
@@ -930,6 +1019,8 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
                           title.status, kit::type::labelM,
                           title.error ? kit::color::bad : kit::color::onSurface3);
     endGroup();
+    scene.popOpacity();
+    scene.popTransform();
     scene.popTransform();
     // Block 3: the rows under them, Google TV's: the cast and crew, the titles like it, then its
     // genres' titles. They are placed on the screen, risen, since the cards leave out what is off it.
@@ -941,6 +1032,8 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
         looks[i].grow = static_cast<float>(motion.value("details:rg:" + std::to_string(i)));
     }
     const std::vector<float> tops = rowTopsOf(sectionHeights(sections), looks);
+    scene.pushTransform(Transform::translate(0, shift));
+    scene.pushOpacity(1 - low);
     group(3);
     for (size_t r = 0; r < sections.size(); ++r) {
         const float labelY = tops[r] + rise, itemsY = labelY + home::labelArea(looks[r]);
@@ -995,6 +1088,8 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
         }
     }
     endGroup();
+    scene.popOpacity();
+    scene.popTransform();
     // A page with nothing to press yet (its details on the way, no trailer, no marks) shows how
     // to leave, which the pointer can click.
     if (title.actions.empty())

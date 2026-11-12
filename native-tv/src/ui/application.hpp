@@ -51,10 +51,8 @@ struct HeroArt {
     std::string shownId;  // card the layers are showing
     HeroText text;        // the lines on screen; changes after the old ones have left
     Color wallTint = {0.07f, 0.19f, 0.24f, 1}; // what pages without art wash in
-    // The film's trailer ("trailer:movie:<id>"), wanted from trailerAt on; trailerShown is the clip
-    // drawn over the art, kept until it has faded out after the hero moved on.
-    std::string trailer, trailerShown;
-    uint32_t trailerAt = 0;
+    // Each layer's card colour, shown in place of its art once the rows cover it.
+    Color tint[2] = {{0.07f, 0.19f, 0.24f, 1}, {0.07f, 0.19f, 0.24f, 1}};
 };
 struct HomeState {
     size_t tab = 0, row = 0, column = 0, nav = 0;
@@ -70,6 +68,9 @@ struct HomeState {
     std::vector<Tab> tabs;
     std::string rowsTab; // the tab `rows` were built for: the focus keeps its card only within it
     std::vector<CardRow> rows;
+    // The card each row of the tab had the focus on when the focus left it (by rowKey()): as on
+    // Google TV, Up or Down lands on that card again, and on the first card of a row not visited.
+    std::map<std::string, std::string> rowFocus;
     Card hero;                 // the card the hero is showing or about to show
     std::vector<Card> spotlight; // the banner's own titles, which it cycles through
     bool spotlightOwn = false;   // they came from the feed's featured row, not the top picks
@@ -206,6 +207,7 @@ class Application : private ScreenHost {
     Optimistic &optimistic() override {
         return optimistic_;
     }
+    ImageView picture(const std::string &id, int width, int height) override;
     bool isRecents() const;
     void homeStart();
     void homeData();
@@ -220,8 +222,9 @@ class Application : private ScreenHost {
     void homePlayEntrance(size_t firstRow = 0, size_t endRow = static_cast<size_t>(-1));
     void homeRetargetPill(bool jump);
     void homeRetargetHero(const Card &card, bool instant);
-    void homeTrailer(bool visible);
     void homeHeroKey(Key key);
+    // Moves the focus to another row, onto the card it had there (HomeState::rowFocus).
+    void homeEnterRow(size_t row);
     bool homeHeroOffered() const;
     void homeSwapText();
     // The card's lines, with its logo where that has arrived and reads on the art.

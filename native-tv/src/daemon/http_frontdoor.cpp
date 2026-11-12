@@ -18903,6 +18903,9 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
         launchPayload.set("id", Json::text(resolved.appId));
         if (resolved.launchParams.isObject())
             launchPayload.set("params", resolved.launchParams);
+        // Without it webOS covers the screen with the app's splashBackground while the app starts
+        // (Netflix's is LG's grey one); with it Home stays until the app draws its own.
+        launchPayload.set("noSplash", Json::flag(true));
         LunaReply launchReply;
         if (!waitForLuna(luna_, "com.webos.applicationManager/launch",
                          launchPayload, launchReply) ||

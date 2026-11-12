@@ -60,6 +60,18 @@ std::string weatherWords(int code) {
     return "";
 }
 
+std::string weatherIcon(int code, bool day) {
+    if (code == 0) return day ? "clear-day" : "clear-night";
+    if (code == 1 || code == 2) return day ? "partly-day" : "partly-night";
+    if (code == 3) return "cloudy";
+    if (code == 45 || code == 48) return "fog";
+    if (code >= 51 && code <= 57) return "drizzle";
+    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return "rain";
+    if ((code >= 71 && code <= 77) || code == 85 || code == 86) return "snow";
+    if (code >= 95) return "storm";
+    return "";
+}
+
 Weather::Weather(Fetcher fetcher, Clock clock)
     : fetcher_(std::move(fetcher)), clock_(std::move(clock)) {
     if (!clock_) clock_ = systemNow;
@@ -161,8 +173,11 @@ Json Weather::current(double latitude, double longitude) {
     }
     result.set("ok", Json::flag(true));
     result.set("temperature", Json::numeric(std::round(now["temperature_2m"].number())));
-    result.set("words", Json::text(weatherWords(static_cast<int>(now["weather_code"].number(-1)))));
-    result.set("day", Json::flag(now["is_day"].number(1) != 0));
+    const int code = static_cast<int>(now["weather_code"].number(-1));
+    const bool day = now["is_day"].number(1) != 0;
+    result.set("words", Json::text(weatherWords(code)));
+    result.set("day", Json::flag(day));
+    result.set("icon", Json::text(weatherIcon(code, day)));
     std::lock_guard<std::mutex> lock(mutex_);
     cachedPlace_ = place;
     cachedAt_ = clock_();

@@ -134,12 +134,13 @@ writing `<name>.actual.png` and `<name>.diff.png` when one fails (in `--out`, or
 else a folder of its own under the temporary directory, removed when every screen matches);
 `golden.py update` rewrites the PNGs after an intended change. A case may name
 `"fixture": "home"`, which serves the stand-in daemon in `tests/home_fixture.py`
-(an invented catalogue, feed and generated artwork; `"assistant": true` adds the
-assistant to the bar and answers its questions), and a `"script"` of timed
-keys; the Home and Apps cases catch the page at rest, mid-entrance, with the
+(an invented catalogue, feed and generated artwork; `"assistant": true` offers the
+assistant and answers its questions), and a `"script"` of timed keys (a step's
+`"open"` follows a route, as `assistant-answer` opens the assistant's page, which no
+key on the bar opens); the Home and Apps cases catch the page at rest, mid-entrance, with the
 pill stretched, after a row snap, on Continue watching (the bar gone up with the
 page) and with the recent apps open. The Quick drawer
-(mid-slide, at rest, a list of choices, the switches), Profiles (`"profiles": 3`
+(mid-slide, at rest, a list of choices, its gear focused on All settings), Profiles (`"profiles": 3`
 gives the fixture three profiles), the profile editor, title details with and
 without the overview sheet and Search's pages (its tab, the risen genre grid, the
 keyboard with suggestions, the results and their risen rows) each have a case; the

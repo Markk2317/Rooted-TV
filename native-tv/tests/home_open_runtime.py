@@ -160,7 +160,7 @@ def main():
             assert headers.get("cache-control") == "no-store"
             opened = [call for call in calls(details)
                       if call["uri"] == "com.webos.applicationManager/launch"]
-            assert opened and opened[-1]["payload"] == {"id": "com.webos.app.netflix"}
+            assert opened and opened[-1]["payload"] == {"id": "com.webos.app.netflix", "noSplash": True}
             stamped = open_recent(recent_path)
             assert "com.webos.app.netflix" in stamped["app"]
             assert stamped["app"]["com.webos.app.netflix"] > 0
@@ -178,7 +178,7 @@ def main():
             assert status == 200 and json.loads(body.decode("utf-8")) == {"ok": True}
             opened = [call for call in calls(details)
                       if call["uri"] == "com.webos.applicationManager/launch"]
-            assert opened[-1]["payload"] == {"id": "com.webos.app.hdmi2"}
+            assert opened[-1]["payload"] == {"id": "com.webos.app.hdmi2", "noSplash": True}
             stamped = open_recent(recent_path)
             assert "hdmi2:game-console" in stamped["dev"]
 
@@ -186,7 +186,7 @@ def main():
             assert status == 200 and json.loads(body.decode("utf-8")) == {"ok": True}
             opened = [call for call in calls(details)
                       if call["uri"] == "com.webos.applicationManager/launch"]
-            assert opened[-1]["payload"] == {"id": "com.webos.app.hdmi1"}
+            assert opened[-1]["payload"] == {"id": "com.webos.app.hdmi1", "noSplash": True}
             stamped = open_recent(recent_path)
             assert "hdmi1" in stamped["dev"]
 
@@ -221,7 +221,7 @@ def main():
             opened = [call for call in calls(details)
                       if call["uri"] == "com.webos.applicationManager/launch"]
             assert opened[-1]["payload"] == {
-                "id": "youtube.leanback.v4",
+                "id": "youtube.leanback.v4", "noSplash": True,
                 "params": {"contentTarget": "https://www.youtube.com/tv?v=abcdefghijk"}}
 
             # A no-key Netflix lookup refuses without launching or making a request.

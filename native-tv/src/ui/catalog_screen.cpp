@@ -8,6 +8,7 @@
 #include "ui/home_layout.hpp"
 #include "ui/kit/tuning.hpp"
 #include "ui/optimistic.hpp"
+#include "ui/overlay_routes.hpp"
 #include "ui/settings_list.hpp"
 #include <algorithm>
 #include <cctype>
@@ -125,7 +126,9 @@ class CatalogScreen final : public ScreenView {
             dismiss(host);
             return true;
         }
-        host.open("dashboard:apps");
+        // Back where it was opened: Settings' Apps, or Home's Apps tab.
+        const std::string from = host.cameFrom();
+        host.open(from.empty() || from.compare(0, 9, "dashboard") == 0 ? "dashboard:apps" : returnRoute(from));
         return true;
     }
     void click(ScreenHost &host, const std::string &hit) override {

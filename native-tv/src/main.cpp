@@ -651,6 +651,9 @@ int main(int argc, char **argv) {
                                       instruction["click"][static_cast<size_t>(0)].number()),
                                   static_cast<float>(
                                       instruction["click"][static_cast<size_t>(1)].number()));
+                    // A route followed as a key would ("assistant", which no key on the bar opens).
+                    if (instruction.has("open"))
+                        app.open(instruction["open"].string());
                     if (instruction.has("activate") &&
                         !app.activate(instruction["activate"].string()))
                         throw std::runtime_error("Visible target not found: " +

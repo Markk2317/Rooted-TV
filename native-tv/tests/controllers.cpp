@@ -213,7 +213,7 @@ int main() {
         gear.key(Key::Right);
         gear.key(Key::Ok);
         check(gear.screenName() == "quick", "The gear after it opens Quick settings");
-        // With a Gemini key the assistant leads the icon capsule: the screen saver is one stop on.
+        // A Gemini key adds no button: Google TV's bar has none, so the screen saver stays third.
         FakeTransport assistantTransport;
         Application assisted(assistantTransport);
         reply(assisted, "catalogue", catalogue);
@@ -221,7 +221,7 @@ int main() {
         assistantFeed.set("assistant", Json::flag(true));
         reply(assisted, "discover", assistantFeed.dump());
         assisted.key(Key::Up);
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < 2; ++i)
             assisted.key(Key::Right);
         const size_t beforeSaver = assistantTransport.requests.size();
         assisted.key(Key::Right);
@@ -230,7 +230,7 @@ int main() {
                   assistantTransport.requests.size() == beforeSaver + 1 &&
                   assistantTransport.requests.back().operation == Operation::Control &&
                   assistantTransport.requests.back().body["action"].string() == "screensaver",
-              "After the assistant the next Right reaches the screen saver's button");
+              "With a Gemini key the third Right still reaches the screen saver's button");
         reply(assisted, "action", R"({"ok":true})", 200, assistantTransport.revisions["action"]);
         Rect saverHit{};
         for (const auto &hit : assisted.scene().hits)
@@ -470,6 +470,30 @@ int main() {
             R"({"ok":true,"apps":[{"id":"a","title":"Alpha"},{"id":"b","title":"Beta"},{"id":"c","title":"Gamma"},{"id":"d","title":"Delta"},{"id":"e","title":"Epsilon"},{"id":"f","title":"Zeta"},{"id":"g","title":"Eta"},{"id":"h","title":"Theta"}],"devices":[{"id":"hdmi1","name":"Console","port":1},{"id":"hdmi2","name":"Stick","port":2,"unused":true}],"channels":[],"order":{"app":["a","b","c","d","e","f","g","h","lg-home"],"dev":["hdmi1","hdmi2"]},"layout":{"rows":["app","dev"],"hidden":{},"showInputs":true},"profiles":[{"id":"main","name":"Main","active":true}]})";
         const char *fullFeed =
             R"({"ok":true,"enabled":true,"titlesEnabled":true,"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","overview":"First."},{"id":2,"type":"movie","title":"Two","overview":"Second."},{"id":3,"type":"tv","title":"Three","overview":"Third."},{"id":4,"type":"movie","title":"Four"},{"id":5,"type":"movie","title":"Five"},{"id":6,"type":"movie","title":"Six"},{"id":7,"type":"movie","title":"Seven"},{"id":8,"type":"movie","title":"Eight"}]},{"key":"movies","items":[{"id":9,"type":"movie","title":"Nine"}]}]})";
+        // Each row keeps the card it had the focus on: Down lands on the first card of a row not
+        // visited yet, and Up goes back to the card left, as on Google TV.
+        {
+            FakeTransport rowsTransport;
+            Application rows(rowsTransport);
+            rows.update(0);
+            reply(rows, "catalogue", fullCatalogue);
+            reply(rows, "discover", fullFeed);
+            uint32_t at = run(rows, 16, 1500);
+            const double first = rows.snapshot()["row"].number();
+            for (int i = 0; i < 3; ++i)
+                rows.key(Key::Right);
+            rows.key(Key::Down);
+            at = run(rows, at, 600);
+            check(rows.snapshot()["row"].number() == first + 1 && rows.snapshot()["column"].number() == 0,
+                  "Down from the fourth card lands on the first card of the next row");
+            rows.key(Key::Right);
+            rows.key(Key::Up);
+            run(rows, at, 600);
+            check(rows.snapshot()["row"].number() == first && rows.snapshot()["column"].number() == 3,
+                  "Up returns to the card the row had the focus on");
+            rows.key(Key::Down);
+            check(rows.snapshot()["column"].number() == 1, "and Down to the one the next row had");
+        }
         // Google TV's banner: titles of its own, apart from the top picks; the focus starts on it,
         // Left and Right change its title, and the top picks hold still while it moves on.
         {
@@ -1328,6 +1352,47 @@ int main() {
         check(host.screenName() == "probe", "A screen can use Back for a level of its own");
         host.key(Key::Back);
         check(host.screenName() == "home", "Back leaves a registered screen for Home");
+
+        // ---- Google TV's trailer on the details: in after trailerDelay, the page lowered after
+        // trailerLower, raised again by a key that does nothing else ----------------------------
+        {
+            const char *trailerFeed =
+                R"({"ok":true,"enabled":true,"titlesEnabled":true,"trailers":true,"rows":[{"key":"trending","items":[{"id":7,"type":"movie","title":"Seven","overview":"A film."}]}]})";
+            FakeTransport trailerTransport;
+            Application film(trailerTransport);
+            kit::LegacyGlyphs trailerGlyphs;
+            FakePictures clips;
+            film.attach(trailerGlyphs, clips);
+            film.update(0);
+            reply(film, "catalogue", fullCatalogue);
+            reply(film, "discover", trailerFeed);
+            uint32_t at = run(film, 16, 600);
+            film.key(Key::Ok);
+            at = run(film, at, 600);
+            bool asked = false;
+            for (const auto &id : clips.asked)
+                asked = asked || id.compare(0, 15, "trailer:movie:7") == 0;
+            check(film.screenName() == "details" && film.snapshot()["trailer"].string().empty() && !asked,
+                  "The details open on the art, the trailer not asked for yet");
+            clips.ready["trailer:movie:7"] = 9;
+            at = run(film, at, static_cast<uint32_t>(kit::motion::ms::trailerDelay));
+            check(film.snapshot()["trailer"].string() == "trailer:movie:7" &&
+                      film.animation().value("details:tv") > .99 && !film.snapshot()["lowered"].boolean(),
+                  "trailerDelay after the page opened the trailer fades in over the art, the page up");
+            at = run(film, at, static_cast<uint32_t>(kit::motion::ms::trailerLower) + 900);
+            check(film.snapshot()["lowered"].boolean() && film.animation().value("details:low") > .99,
+                  "trailerLower later the page lowers to the title at the foot");
+            const std::string focus = film.snapshot()["focus"].string();
+            film.key(Key::Right);
+            at = run(film, at, 900);
+            check(!film.snapshot()["lowered"].boolean() && film.animation().value("details:low") < .01 &&
+                      film.snapshot()["focus"].string() == focus,
+                  "A key raises the page and does nothing else");
+            clips.failed.insert("trailer:movie:7");
+            run(film, at, 900);
+            check(film.snapshot()["trailer"].string().empty() && film.animation().value("details:tv") < .01,
+                  "When the clip ends it fades back to the art");
+        }
 
         // ---- Pictures: asked for at their drawn size, waited for by the hero, faded in -------
         const char *artFeed =

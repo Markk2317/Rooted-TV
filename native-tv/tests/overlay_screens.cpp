@@ -371,14 +371,15 @@ void detailsFocusReturnChecks() {
 // ---- Editors ----------------------------------------------------------------------------------
 
 void assistantChecks() {
-    // With a Gemini key the bar has the assistant before the gear, as Google TV's Gemini button.
+    // With a Gemini key the assistant's page opens by its route; the bar has no button for it.
     std::string feed = feedJson;
     feed.replace(feed.find(R"("titlesEnabled":true)"), std::string(R"("titlesEnabled":true)").size(),
                  R"("titlesEnabled":true,"assistant":true)");
     World world;
     world.reply("discover", feed.c_str(), 0);
     world.settle(300);
-    check(world.app.activate("tool:3"), "The assistant is on the bar");
+    check(!world.app.activate("tool:3"), "The bar has no assistant button");
+    world.app.open("assistant");
     world.settle(300);
     check(world.screen() == "assistant" && world.app.shows("Ask Gemini"), "It opens the assistant's page");
     world.app.input("un film di boxe");

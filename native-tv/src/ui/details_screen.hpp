@@ -26,6 +26,7 @@ class DetailsScreen final : public ScreenView {
     void enter(ScreenHost &host) override;
     void leave(ScreenHost &host) override;
     bool key(ScreenHost &host, Key key) override;
+    bool update(ScreenHost &host) override;
     bool back(ScreenHost &host) override;
     void click(ScreenHost &host, const std::string &id) override;
     void response(ScreenHost &host, const Response &response) override;
@@ -107,5 +108,14 @@ class DetailsScreen final : public ScreenView {
     bool overview_ = false;
     size_t overviewPage_ = 0;
     std::vector<std::string> overviewPages_;
+
+    // Google TV's trailer behind the details: the film's clip ("trailer:movie:<id>"), asked for once
+    // the page has been open trailerDelay, fades in over the art; trailerLower after it starts, or
+    // after the last key, the page lowers to the title and its facts at the foot, and a key raises
+    // it again without doing anything else. It ends with the clip, or once the rows take the page.
+    void lower(ScreenHost &host, bool down);
+    std::string trailer_; // the clip of the title on top; empty when it has none
+    double trailerFrom_ = 0, keyAt_ = 0, shownAt_ = -1;
+    bool trailerOver_ = false, lowered_ = false;
 };
 } // namespace nativetv

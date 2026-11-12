@@ -70,6 +70,10 @@ inline bool isSearch(const CardRow &row) {
 inline bool isChips(const CardRow &row) {
     return row.key == "chips";
 }
+// The Apps tab's rows of wide app cards: a category's apps, and the stores to get more from.
+inline bool isAppCards(const CardRow &row) {
+    return row.key == "appkind" || row.key == "appstore";
+}
 // Google TV's rows come in three sizes: the top picks' small cards, Your apps' circles, and the
 // larger cards of every row of titles under them (Continue watching and the rest), which the Apps
 // tab's rows of apps share.
@@ -164,7 +168,7 @@ inline float rowSpan(const CardRow &row, const RowLook &look, const CardRow *nex
                kit::layout::appsSearchNames * look.names;
     if (isChips(row))
         return labelArea(look) + kit::layout::appsChipH + rowFoot(look) + kit::layout::appsChipFoot * look.grow;
-    if (row.key == "appkind")
+    if (isAppCards(row))
         return labelArea(look) + kit::layout::cardLH + rowFoot(look, kit::layout::appCardRowGap) +
                kit::layout::appCardCaptionFoot * look.captions;
     float foot = rowFoot(look);

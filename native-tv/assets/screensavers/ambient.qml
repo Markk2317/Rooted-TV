@@ -6,8 +6,10 @@
  * capitalised overline over the name) and the time and the weather in the lower
  * right, in Google Sans. The pictures are the owner's photos where some are
  * uploaded on the dashboard's Screensaver tab, else the stills of the titles on
- * Native Tv Home's banner and trending rows. The text moves a few pixels every
- * minute, so on an OLED no pixel holds the same text for long.
+ * Native Tv Home's banner and trending rows. The temperature, the weather's
+ * picture and the time stand on one line in the lower right corner, as Google
+ * TV's ambient mode sets them. The text moves a few pixels every minute, so on
+ * an OLED no pixel holds the same text for long.
  * The pictures and the weather come from the server, at the address written in
  * when the screen saver is staged. QtQuick 2.4 and Eos.Window, as the others.
  */
@@ -45,7 +47,7 @@ WebOSWindow {
     property int shown: -1
     property bool frontA: true
     property string temperature: ""
-    property string weatherWords: ""
+    property string weatherIcon: ""
     property string overline: ""
     property string caption: ""
     // Where the text sits, within 16 px of its place: one of nine spots, a new one every minute.
@@ -83,9 +85,9 @@ WebOSWindow {
     }
     function loadWeather() {
         get("/api/screensaver/weather", function(answer) {
-            if (!answer || !answer.ok) { win.temperature = ""; win.weatherWords = ""; return; }
+            if (!answer || !answer.ok) { win.temperature = ""; win.weatherIcon = ""; return; }
             win.temperature = answer.temperature + "°";
-            win.weatherWords = answer.words || "";
+            win.weatherIcon = answer.icon || "";
         });
     }
     // Any picture but the one on screen, so a short list still changes every time.
@@ -213,28 +215,40 @@ WebOSWindow {
         }
     }
 
-    Column {
+    // Google TV's corner: "11°", the weather's picture and the time on one baseline, the digits'
+    // foot 37 px above the bottom and the time ending 43 px from the right.
+    Row {
         id: glance
         z: 3
-        x: win.width - width - Math.round((116 + win.drift) * win.unit)
-        y: win.height - height - Math.round((96 + win.drift / 2) * win.unit)
-        spacing: Math.round(6 * win.unit)
+        x: win.width - width - Math.round((43 + win.drift) * win.unit)
+        y: win.height - Math.round((37 + win.drift / 2) * win.unit) - clock.baselineOffset
+        spacing: Math.round(10 * win.unit)
         Behavior on x { NumberAnimation { duration: 4000; easing.type: Easing.InOutQuad } }
         Text {
-            id: clock
-            x: glance.width - width
+            id: temperatureText
+            visible: win.temperature.length > 0
+            y: clock.baselineOffset - baselineOffset
             color: "#f1f4f6"
             font.family: win.face
-            font.pixelSize: Math.round(72 * win.unit)
-            text: win.timeText()
+            font.pixelSize: Math.round(46 * win.unit)
+            text: win.temperature
         }
+        Image {
+            visible: win.temperature.length > 0 && win.weatherIcon.length > 0
+            width: Math.round(44 * win.unit)
+            height: width
+            // Centred on the temperature's digits.
+            y: clock.baselineOffset - Math.round(17 * win.unit) - height / 2
+            smooth: true
+            source: win.weatherIcon.length > 0 ? "weather-" + win.weatherIcon + ".png" : ""
+        }
+        Item { width: Math.round(18 * win.unit); height: 1; visible: win.temperature.length > 0 }
         Text {
-            x: glance.width - width
-            visible: win.temperature.length > 0
-            color: "#cfd6dc"
+            id: clock
+            color: "#f1f4f6"
             font.family: win.face
-            font.pixelSize: Math.round(28 * win.unit)
-            text: win.weatherWords.length ? win.temperature + "  ·  " + win.weatherWords : win.temperature
+            font.pixelSize: Math.round(74 * win.unit)
+            text: win.timeText()
         }
     }
 
