@@ -85,6 +85,9 @@ std::string titleFacts(const Json &item, bool withKind = true);
 // The line under a Continue watching card, after its title: "Netflix  •  1 h 12 min left", or for
 // a play in a service's app without a title, how long it played.
 std::string continueLine(const Card &card);
+// The line under a card of the Films and Shows tabs' focused row, as Google TV's says where a
+// title plays: its service where a Popular on row lists it, then its year and rating.
+std::string titleCaption(const Card &card);
 std::string pictureLabel(const Json &picture);
 std::vector<Tab> dashboardTabs();
 std::vector<MenuRow> dashboardRows(const std::string &tab, const Json &data, const Json &caps,

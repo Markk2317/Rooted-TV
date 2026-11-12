@@ -187,6 +187,7 @@ struct PosterCard {
     // lines under the card that the focus leaves in place (the title, then its service and how
     // much is left). With a caption the card prints no title of its own.
     std::string action, caption, captionLine;
+    float captionAlpha = 1; // the lines fade in and out with the row that has them
     Enter enter;
 };
 void card(Paint paint, const PosterCard &card);

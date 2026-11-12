@@ -121,6 +121,30 @@ int main() {
               "Artwork remains proxied through the server");
         check(rows[1].cards[0].subtitle == "Series  ·  2026  ·  ★ 8.5",
               "A title's facts lead with its kind and star the rating");
+        Json titlesFeed = Json::parse(
+            R"({"rows":[{"key":"movies","items":[{"id":7,"type":"movie","title":"Seven","year":"2025","rating":7.4,"backdrop":"/b7.jpg","overview":"A plot."},{"id":8,"type":"movie","title":"Eight"}]},)"
+            R"({"key":"on:netflix","items":[{"id":7,"type":"movie","title":"Seven"}]},)"
+            R"({"key":"films:popular","items":[{"id":7,"type":"movie","title":"Seven","year":"2025","rating":7.4},{"id":9,"type":"movie","title":"Nine","year":"2024"}]},)"
+            R"({"key":"shows:top","items":[{"id":3,"type":"tv","title":"Three"}]}]})");
+        tabs = homeTabs(catalogue, titlesFeed);
+        check(tabs.size() == 5 && tabs[1].key == "films" && tabs[1].title == "Films" &&
+                  tabs[2].key == "shows" && tabs[2].title == "Shows" && tabs[3].key == "apps" &&
+                  titlesTab("films") && titlesTab("shows") && !titlesTab("home"),
+              "A feed with the tabs' rows adds Films and Shows after Home, as on Google TV");
+        rows = homeRows("films", catalogue, titlesFeed, Json());
+        check(rows.size() == 2 && rows[0].key == "feature" && rows[0].cards.size() == 1 &&
+                  rows[0].cards[0].image == "tmdb:w1280:/b7.jpg" &&
+                  rows[0].cards[0].subtitle == "A plot." &&
+                  rows[0].cards[0].data["service"].string() == "netflix" &&
+                  rows[1].key == "films:popular" && rows[1].title == "Popular films" &&
+                  rows[1].cards.size() == 2,
+              "Films leads with the trending films that have a backdrop, then its own rows");
+        check(titleCaption(rows[1].cards[0]) == "Netflix  ·  2025  ·  ★ 7.4" &&
+                  titleCaption(rows[1].cards[1]) == "2024",
+              "A tab card's caption names the service a Popular on row lists it on, then its facts");
+        rows = homeRows("shows", catalogue, titlesFeed, Json());
+        check(rows.size() == 1 && rows[0].title == "Top rated shows",
+              "Shows lists its own rows, without featured cards where no trending series has a backdrop");
         Json topPicks = Json::parse(
             R"({"rows":[{"key":"trending","items":[{"id":1,"type":"movie","title":"One","poster":"/p.jpg"}]}]})");
         rows = homeRows("home", catalogue, topPicks, Json());

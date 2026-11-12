@@ -329,6 +329,14 @@ void homeLayout() {
           "items");
     check(sameRect(home::item(more, 700, 1), {116 + 391 + 41, 700, 391, 220}),
           "A row's items start at Home's 116 px margin");
+    CardRow popular;
+    popular.key = "films:popular";
+    home::RowLook captioned = focused;
+    captioned.captions = 1;
+    check(near(home::rowSpan(popular, captioned) - home::rowSpan(popular, focused), 22 + 2 * 36) &&
+              near(home::rowSpan(more, focused) - home::rowSpan(popular, focused), 22 + 2 * 36),
+          "A row with its captions, as Continue watching always is, stands 94 px taller for its two "
+          "lines, as Google TV's Films row does");
 }
 
 void cards() {
@@ -349,6 +357,21 @@ void cards() {
     check(textAt(rest.scene, "Glass Season") &&
               sameRect(textAt(rest.scene, "Glass Season")->rect, {132, 777, 274, 40}),
           "The title sits 16 px in and 10 px above the bottom edge");
+
+    Fixture captioned;
+    kit::PosterCard lines = poster;
+    lines.caption = "Glass Season";
+    lines.captionLine = "Netflix";
+    lines.captionAlpha = .5f;
+    kit::card(captioned.paint(), lines);
+    const Node *named = textAt(captioned.scene, "Glass Season"),
+               *where = textAt(captioned.scene, "Netflix");
+    check(named && where && near(named->rect.y, 655 + 172 + 22) &&
+              near(where->rect.y, 655 + 172 + 22 + 36) && near(named->groupOpacity, .5f) &&
+              near(where->groupOpacity, .5f) &&
+              near(captioned.scene.nodes.back().groupOpacity, 1),
+          "Captions stand 22 px under the card, a 36 px line apart, and fade with the row; the card "
+          "does not");
 
     Fixture lifted;
     poster.focus = 1;

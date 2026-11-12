@@ -352,6 +352,13 @@ std::vector<CardRow> titleTabRows(const std::string &tab, const Json &discover) 
                 services.emplace(item["type"].string() + ":" + item["id"].string(), key.substr(3));
     }
     std::vector<CardRow> result;
+    // A title a Popular on row lists plays on that service, which its captions name.
+    auto markService = [&](Card &card) {
+        const auto service =
+            services.find(card.data["type"].string() + ":" + card.data["id"].string());
+        if (service != services.end())
+            card.data.set("service", Json::text(service->second));
+    };
     CardRow featured;
     featured.key = "feature";
     for (const auto &item : feedRows[films ? "movies" : "series"]["items"].items()) {
@@ -362,9 +369,7 @@ std::vector<CardRow> titleTabRows(const std::string &tab, const Json &discover) 
         card.image = "tmdb:w1280:" + item["backdrop"].string();
         card.titled = false;
         card.subtitle = item["overview"].string();
-        const auto service = services.find(item["type"].string() + ":" + item["id"].string());
-        if (service != services.end())
-            card.data.set("service", Json::text(service->second));
+        markService(card);
         featured.cards.push_back(card);
     }
     if (!featured.cards.empty())
@@ -377,14 +382,26 @@ std::vector<CardRow> titleTabRows(const std::string &tab, const Json &discover) 
         row.key = spec.first;
         row.title = spec.second;
         row.posters = true;
-        for (const auto &item : found->second["items"].items())
-            row.cards.push_back(feedCard(item, row.key));
+        for (const auto &item : found->second["items"].items()) {
+            Card card = feedCard(item, row.key);
+            markService(card);
+            row.cards.push_back(card);
+        }
         if (!row.cards.empty())
             result.push_back(row);
     }
     return result;
 }
 } // namespace
+std::string titleCaption(const Card &card) {
+    std::string line;
+    if (const auto *service = nativetv::names::streamingService(card.data["service"].string()))
+        line = service->name;
+    const std::string facts = titleFacts(card.data, false);
+    if (!facts.empty())
+        line += (line.empty() ? "" : "  \xc2\xb7  ") + facts;
+    return line;
+}
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide) {
     std::vector<CardRow> result;

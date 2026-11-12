@@ -498,6 +498,7 @@ void Application::homeFocus(bool jump) {
         look.risen = risen ? 1 : 0;
         look.grow = risen && r == home.row ? 1 : 0;
         look.names = namedApps ? 1 : home::isApps(home.rows[r]) && risen && r == home.row ? 1 : 0;
+        look.captions = titles ? look.grow : 0;
         tween(home::id("rg", r), look.grow);
         tween(home::id("rn", r), look.names);
         looks.push_back(look);

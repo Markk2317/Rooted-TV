@@ -91,9 +91,10 @@ inline std::string hit(size_t row, size_t column) {
 
 // How a row stands, from the animated values: `up` (0..1) once anything under the bar has the
 // focus, `risen` (0..1) while the rows are over the banner, `grow` (0..1) for the focused row then,
-// `names` (0..1) while every app's name shows under it.
+// `names` (0..1) while every app's name shows under it, `captions` (0..1) while its cards have
+// their lines under them (the Films and Shows tabs' focused row, as Google TV's).
 struct RowLook {
-    float up = 0, risen = 0, grow = 0, names = 0;
+    float up = 0, risen = 0, grow = 0, names = 0, captions = 0;
 };
 // The row's title: 24 px under the banner at rest, 36 px once a row or the banner has the focus,
 // 63 px for the focused row once the rows have risen (Google TV's sizes at 1080p, measured on a
@@ -117,9 +118,10 @@ inline float rowSpan(const CardRow &row, const RowLook &look) {
                                  kit::layout::rowGapRisen, look.risen);
     if (isApps(row))
         foot += kit::layout::appNames * look.names;
-    // Continue watching has two lines under its cards.
-    if (row.key == "continue")
-        foot += kit::layout::cardCaptionGap + 2 * kit::layout::cardCaptionLine;
+    // Continue watching has two lines under its cards, and so, while it has them, has the Films
+    // and Shows tabs' focused row.
+    const float captions = kit::layout::cardCaptionGap + 2 * kit::layout::cardCaptionLine;
+    foot += captions * (row.key == "continue" ? 1 : look.captions);
     return labelArea(look) + itemHeight(row) + foot;
 }
 // Each row's title top, the first at `top`.

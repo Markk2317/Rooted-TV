@@ -638,7 +638,9 @@ void card(Paint paint, const PosterCard &poster) {
     if (captioned) {
         // Under the card, outside the focus's scale: the lines stay where they are. Without a
         // caption its line takes the first place.
-        Group lines(scene, poster.enter);
+        Enter shown = poster.enter;
+        shown.alpha *= poster.captionAlpha;
+        Group lines(scene, shown);
         float y = poster.rest.y + poster.rest.h + layout::cardCaptionGap;
         if (!poster.caption.empty()) {
             text(paint, {poster.rest.x, y, poster.rest.w, layout::cardCaptionLine}, poster.caption,

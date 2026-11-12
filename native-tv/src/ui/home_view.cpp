@@ -159,6 +159,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
     // On the Apps page every circle carries its name; on Home only the focused one does.
     const bool namedApps = home.tabs[home.tab].key == "apps";
     const float risen = static_cast<float>(motion.value("rs")), up = static_cast<float>(motion.value("ru"));
+    const bool titles = titlesTab(home.tabs[home.tab].key);
     std::vector<home::RowLook> looks;
     for (size_t ri = 0; ri < home.rows.size(); ++ri) {
         home::RowLook look;
@@ -166,6 +167,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         look.risen = risen;
         look.grow = static_cast<float>(motion.value(home::id("rg", ri)));
         look.names = static_cast<float>(motion.value(home::id("rn", ri)));
+        look.captions = titles ? look.grow : 0;
         looks.push_back(look);
     }
     const std::vector<float> tops = home::rowTops(home.rows, looks);
@@ -294,6 +296,13 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                     poster.caption = card.title;
                     poster.captionLine = continueLine(card);
                     poster.title.clear();
+                } else if (look.captions > 0) {
+                    // Google TV's focused row on its Films and Shows tabs: where each title plays
+                    // under its card, and the focused one's title over that line.
+                    if (focus > .5f)
+                        poster.caption = card.title;
+                    poster.captionLine = titleCaption(card);
+                    poster.captionAlpha = look.captions;
                 }
                 poster.focus = focus;
                 poster.enter = enter;
