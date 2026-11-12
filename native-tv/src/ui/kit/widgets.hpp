@@ -191,6 +191,17 @@ struct PosterCard {
 };
 void card(Paint paint, const PosterCard &card);
 
+// Google TV's featured title on its Films and Shows tabs: an 824x384 card of the title's backdrop,
+// its service's wordmark ("wordmark-netflix") at the top left, and at the foot its title and one
+// line of its overview, lettered over the art. Focus as a card's.
+struct FeatureCard {
+    Rect rest;
+    std::string id, image, title, line, wordmark;
+    float focus = 0;
+    Enter enter;
+};
+void featureCard(Paint paint, const FeatureCard &card);
+
 struct AppCircle {
     Rect rest;
     std::string id, name;

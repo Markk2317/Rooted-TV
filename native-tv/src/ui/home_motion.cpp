@@ -385,6 +385,10 @@ void Application::homeFocus(bool jump) {
     auto glide = [&](const std::string &name, double to) {
         if (jump)
             motion_.set(name, to);
+        else if (name.compare(0, 2, "f:") == 0)
+            // Google TV's card focus (its launcher's state animator): in over 300 ms, out over 500.
+            motion_.tween(name, to, to > 0 ? ms::cardFocus : ms::cardUnfocus,
+                          easing(to > 0 ? ease::cardFocus : ease::cardUnfocus));
         else
             motion_.tween(name, to, ms::focus, easing(ease::decelerate));
     };
@@ -459,6 +463,11 @@ void Application::homeFocus(bool jump) {
         else if (home.row < home.rows.size())
             place = home.rows[home.row].key == "trending" ? Place::Picks : Place::Lower;
     }
+    // Films and Shows: the featured titles stay where they are; a row under them rises to the top,
+    // its title large, as Home's lower rows do.
+    const bool titles = titlesTab(home.tabs[home.tab].key);
+    if (titles && !grid && !home.navigation && home.row > 0 && home.row < home.rows.size())
+        place = Place::Lower;
     const bool risen = place == Place::Lower;
     const bool titlesUp = place == Place::Banner || place == Place::Picks || risen;
     const bool namedApps = home.tabs[home.tab].key == "apps";
@@ -503,7 +512,8 @@ void Application::homeFocus(bool jump) {
     else if (place == Place::Picks)
         stack = kit::layout::picksDrop;
     else if (place == Place::Lower)
-        stack = kit::layout::rowsRisenTop - tops[home.row];
+        stack = kit::layout::rowsRisenTop - tops[home.row] -
+                (titles ? kit::layout::featureTop - kit::layout::rowsTop : 0);
     else if (home.row < home.rows.size() && !home.navigation && !home.heroFocus && !grid) {
         if (kindRows)
             stack = home::kindStackTarget(home.row, home.rows.size());
@@ -512,7 +522,7 @@ void Application::homeFocus(bool jump) {
     }
     // A row of the first screen that reaches past the bottom (Your apps, with the focused app's
     // name under it) rises just enough to show it whole.
-    if (place == Place::Other && !home.navigation && !home.heroFocus && !grid && !kindRows &&
+    if (place == Place::Other && !home.navigation && !home.heroFocus && !grid && !kindRows && !titles &&
         contentRow >= 0 && contentRow <= firstScreenRows && home.row < home.rows.size()) {
         const CardRow &row = home.rows[home.row];
         const float bottom = tops[home.row] + home::labelArea(looks[home.row]) +

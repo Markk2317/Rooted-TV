@@ -1817,6 +1817,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
         return lookup["ok"].boolean(true) && !lookup["netflixId"].string().empty();
     });
     homeDiscover_.setTitledArt(true);
+    homeDiscover_.setTabRows(true);
     // The Available on Netflix row is the feed's titles that have a Netflix link (the lookup is kept for then, too).
     homeDiscover_.setNetflixCheck([this](const std::string &type, const std::string &id) {
         const Json document = currentConfigDocument();

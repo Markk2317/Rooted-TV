@@ -7,13 +7,18 @@ void Application::rebuildHome() {
     // The cards being moved are the person's own order until it is saved.
     if (state_.home.editing)
         return;
-    state_.home.tabs = homeTabs(state_.catalogue);
+    state_.home.tabs = homeTabs(state_.catalogue, state_.discover);
     auto &home = state_.home;
     home.tab = clampIndex(home.tab, home.tabs.size());
     std::string oldId;
-    if (home.row < home.rows.size() && home.column < home.rows[home.row].cards.size())
+    const std::string &tab = home.tabs[home.tab].key;
+    if (home.rowsTab != tab) {
+        // Another tab's rows: its focus starts on the first card, wherever the last tab's was.
+        home.row = home.column = 0;
+    } else if (home.row < home.rows.size() && home.column < home.rows[home.row].cards.size())
         oldId = home.rows[home.row].cards[home.column].id;
-    home.rows = homeRows(home.tabs[home.tab].key, state_.catalogue, state_.discover, state_.guide);
+    home.rows = homeRows(tab, state_.catalogue, state_.discover, state_.guide);
+    home.rowsTab = tab;
     home.arranging = false; // the rows are the server's again
     home.grid = home.tabs[home.tab].key == "apps" &&
                 state_.catalogue["layout"]["sort"]["app"].string() != "kind";

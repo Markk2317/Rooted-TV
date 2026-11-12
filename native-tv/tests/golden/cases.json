@@ -157,6 +157,14 @@
           "key": "right"
         },
         {
+          "at": 1520,
+          "key": "right"
+        },
+        {
+          "at": 1530,
+          "key": "right"
+        },
+        {
           "at": 1600,
           "key": "ok"
         }
@@ -181,6 +189,14 @@
         },
         {
           "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1520,
+          "key": "right"
+        },
+        {
+          "at": 1530,
           "key": "right"
         },
         {
@@ -219,6 +235,14 @@
           "key": "right"
         },
         {
+          "at": 1520,
+          "key": "right"
+        },
+        {
+          "at": 1530,
+          "key": "right"
+        },
+        {
           "at": 1600,
           "key": "ok"
         }
@@ -243,6 +267,14 @@
         },
         {
           "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1520,
+          "key": "right"
+        },
+        {
+          "at": 1530,
           "key": "right"
         },
         {
@@ -286,6 +318,14 @@
           "key": "right"
         },
         {
+          "at": 1520,
+          "key": "right"
+        },
+        {
+          "at": 1530,
+          "key": "right"
+        },
+        {
           "at": 1600,
           "key": "ok"
         },
@@ -318,12 +358,113 @@
           "key": "right"
         },
         {
+          "at": 1520,
+          "key": "right"
+        },
+        {
+          "at": 1530,
+          "key": "right"
+        },
+        {
           "at": 1600,
           "key": "ok"
         },
         {
           "at": 2300,
           "longPress": true
+        },
+        {
+          "at": 2400,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "films-tab",
+      "time": 2600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "films-feature",
+      "time": 3000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        },
+        {
+          "at": 2200,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "films-row",
+      "time": 3400,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        },
+        {
+          "at": 2200,
+          "key": "down"
         },
         {
           "at": 2400,
@@ -819,6 +960,14 @@
           "key": "right"
         },
         {
+          "at": 1760,
+          "key": "right"
+        },
+        {
+          "at": 1780,
+          "key": "right"
+        },
+        {
           "at": 1800,
           "key": "ok"
         }
@@ -862,6 +1011,14 @@
           "key": "right"
         },
         {
+          "at": 1760,
+          "key": "right"
+        },
+        {
+          "at": 1780,
+          "key": "right"
+        },
+        {
           "at": 1800,
           "key": "ok"
         }
@@ -902,6 +1059,14 @@
         },
         {
           "at": 1740,
+          "key": "right"
+        },
+        {
+          "at": 1760,
+          "key": "right"
+        },
+        {
+          "at": 1780,
           "key": "right"
         },
         {
@@ -957,6 +1122,14 @@
         },
         {
           "at": 1740,
+          "key": "right"
+        },
+        {
+          "at": 1760,
+          "key": "right"
+        },
+        {
+          "at": 1780,
           "key": "right"
         },
         {
@@ -1248,6 +1421,14 @@
         },
         {
           "at": 1680,
+          "key": "right"
+        },
+        {
+          "at": 1720,
+          "key": "right"
+        },
+        {
+          "at": 1760,
           "key": "right"
         },
         {

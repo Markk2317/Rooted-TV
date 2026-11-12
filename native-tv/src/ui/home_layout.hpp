@@ -49,20 +49,32 @@ inline unsigned hashOf(const std::string &text) {
 inline bool isApps(const CardRow &row) {
     return row.key == "app";
 }
+// The Films and Shows tabs' featured titles: Google TV's large cards over the rows, with no title.
+inline bool isFeature(const CardRow &row) {
+    return row.key == "feature";
+}
 // Google TV's rows come in three sizes: the top picks' small cards, Your apps' circles, and the
 // larger cards of every row of titles under them (Continue watching and the rest).
 inline bool largeCards(const CardRow &row) {
-    return !isApps(row) && row.key != "trending" && row.key != "dev" && row.key != "ch";
+    return !isApps(row) && !isFeature(row) && row.key != "trending" && row.key != "dev" &&
+           row.key != "ch";
 }
 inline float itemWidth(const CardRow &row) {
-    return isApps(row) ? kit::layout::appD : largeCards(row) ? kit::layout::cardLW : kit::layout::cardW;
+    return isApps(row)      ? kit::layout::appD
+           : isFeature(row) ? kit::layout::featureW
+           : largeCards(row) ? kit::layout::cardLW
+                             : kit::layout::cardW;
 }
 inline float itemHeight(const CardRow &row) {
-    return isApps(row) ? kit::layout::appD : largeCards(row) ? kit::layout::cardLH : kit::layout::cardH;
+    return isApps(row)      ? kit::layout::appD
+           : isFeature(row) ? kit::layout::featureH
+           : largeCards(row) ? kit::layout::cardLH
+                             : kit::layout::cardH;
 }
 // `named`: a row of apps that carries every name (the Apps page), so the circles stand wider.
 inline float itemGap(const CardRow &row, bool named = false) {
     return named && isApps(row) ? kit::layout::appGapNamed
+           : isFeature(row)     ? kit::layout::featureGap
            : largeCards(row)    ? kit::layout::cardLGap
                                 : kit::layout::cardGap;
 }
@@ -93,8 +105,14 @@ inline float labelPx(const RowLook &look) {
 inline float labelArea(const RowLook &look) {
     return kit::focus::mix(55, 69, look.up) + (121 - 69) * look.grow;
 }
+// From the row's top to its items: the title's area, or nothing for the featured row.
+inline float itemsOffset(const CardRow &row, const RowLook &look) {
+    return isFeature(row) ? 0 : labelArea(look);
+}
 // From the title's top to the next row's title.
 inline float rowSpan(const CardRow &row, const RowLook &look) {
+    if (isFeature(row))
+        return kit::layout::featureH + kit::layout::featureFoot;
     float foot = kit::focus::mix(kit::focus::mix(kit::layout::rowGap, kit::layout::rowGapUp, look.up),
                                  kit::layout::rowGapRisen, look.risen);
     if (isApps(row))

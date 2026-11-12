@@ -38,6 +38,9 @@ class HomeDiscover {
     // Each title's art with its name on it, as Google TV's cards have, in the items' "art": one
     // TMDB images call per title new to the feed, kept for a week. Off, the feed asks one call a row.
     void setTitledArt(bool on);
+    // The rows of the TV app's Films and Shows tabs too ("films:..." and "shows:..."): what is popular,
+    // for families and well rated, and a few genres. Twelve more calls a refresh.
+    void setTabRows(bool on);
 
   private:
     void workerLoop();
@@ -54,6 +57,7 @@ class HomeDiscover {
     LinkCheck linkCheck_;
     LinkCheck netflixCheck_;
     bool titledArt_ = false;
+    bool tabRows_ = false;
     std::mutex mutex_;
     std::condition_variable changed_;
     std::thread worker_;

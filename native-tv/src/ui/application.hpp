@@ -69,6 +69,7 @@ struct HomeState {
     // an app that was hidden) and Red does the same. Home's row lists the hidden apps, dimmed, last.
     bool editing = false, editHide = false;
     std::vector<Tab> tabs;
+    std::string rowsTab; // the tab `rows` were built for: the focus keeps its card only within it
     std::vector<CardRow> rows;
     Card hero;                 // the card the hero is showing or about to show
     std::vector<Card> spotlight; // the banner's own titles, which it cycles through

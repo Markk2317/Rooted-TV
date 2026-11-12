@@ -99,8 +99,21 @@ std::string pictureLabel(const Json &picture) {
     }
     return text;
 }
-std::vector<Tab> homeTabs(const Json &catalogue) {
+bool titlesTab(const std::string &tab) {
+    return tab == "films" || tab == "shows";
+}
+std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover) {
     std::vector<Tab> tabs = {{"home", "Home", Operation::None}};
+    bool films = false, shows = false;
+    for (const auto &row : discover["rows"].items()) {
+        const std::string key = row["key"].string();
+        films = films || key.compare(0, 6, "films:") == 0;
+        shows = shows || key.compare(0, 6, "shows:") == 0;
+    }
+    if (films)
+        tabs.push_back({"films", "Films", Operation::None});
+    if (shows)
+        tabs.push_back({"shows", "Shows", Operation::None});
     if (catalogue["layout"]["showLive"].boolean() &&
         catalogue["sources"]["channels"].number(-1) != 0)
         tabs.push_back({"live", "Live", Operation::None});
@@ -309,6 +322,69 @@ std::string continueLine(const Card &card) {
     }
     return line;
 }
+namespace {
+// Google TV's Films and Shows tabs show eight featured titles at most.
+constexpr size_t kFeaturedMax = 8;
+// Google TV's Films and Shows tabs: the week's trending films or series as large featured cards,
+// with their service where a Popular on row lists them, then the tab's own rows from the feed.
+std::vector<CardRow> titleTabRows(const std::string &tab, const Json &discover) {
+    const bool films = tab == "films";
+    const std::vector<std::pair<std::string, std::string>> rows =
+        films ? std::vector<std::pair<std::string, std::string>>{{"films:popular", "Popular films"},
+                                                                 {"films:family", "Family films"},
+                                                                 {"films:top", "Top rated films"},
+                                                                 {"films:action", "Action and adventure"},
+                                                                 {"films:comedy", "Comedies"},
+                                                                 {"films:animation", "Animated films"}}
+              : std::vector<std::pair<std::string, std::string>>{{"shows:popular", "Popular shows"},
+                                                                 {"shows:animation", "Animated shows"},
+                                                                 {"shows:top", "Top rated shows"},
+                                                                 {"shows:crime", "Crime shows"},
+                                                                 {"shows:comedy", "Comedy shows"},
+                                                                 {"shows:docs", "Documentaries"}};
+    std::map<std::string, Json> feedRows;
+    std::map<std::string, std::string> services;
+    for (const auto &source : discover["rows"].items()) {
+        const std::string key = source["key"].string();
+        feedRows[key] = source;
+        if (key.compare(0, 3, "on:") == 0)
+            for (const auto &item : source["items"].items())
+                services.emplace(item["type"].string() + ":" + item["id"].string(), key.substr(3));
+    }
+    std::vector<CardRow> result;
+    CardRow featured;
+    featured.key = "feature";
+    for (const auto &item : feedRows[films ? "movies" : "series"]["items"].items()) {
+        if (item["backdrop"].string().empty() || featured.cards.size() == kFeaturedMax)
+            continue;
+        Card card = feedCard(item, "feature");
+        // The plain backdrop at the card's size: the card letters its title itself.
+        card.image = "tmdb:w1280:" + item["backdrop"].string();
+        card.titled = false;
+        card.subtitle = item["overview"].string();
+        const auto service = services.find(item["type"].string() + ":" + item["id"].string());
+        if (service != services.end())
+            card.data.set("service", Json::text(service->second));
+        featured.cards.push_back(card);
+    }
+    if (!featured.cards.empty())
+        result.push_back(featured);
+    for (const auto &spec : rows) {
+        const auto found = feedRows.find(spec.first);
+        if (found == feedRows.end())
+            continue;
+        CardRow row;
+        row.key = spec.first;
+        row.title = spec.second;
+        row.posters = true;
+        for (const auto &item : found->second["items"].items())
+            row.cards.push_back(feedCard(item, row.key));
+        if (!row.cards.empty())
+            result.push_back(row);
+    }
+    return result;
+}
+} // namespace
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide) {
     std::vector<CardRow> result;
@@ -324,6 +400,8 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
             result.push_back(row);
         return result;
     }
+    if (titlesTab(tab))
+        return titleTabRows(tab, discover);
     const std::map<std::string, std::string> names = {{"trending", "Top picks for you"},
                                                       {"movies", "Trending films this week"},
                                                       {"series", "Trending series this week"},

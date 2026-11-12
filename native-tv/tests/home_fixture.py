@@ -191,7 +191,11 @@ def discover(assistant=False):
         {"key": "continue", "items": [dict(item(n), service="prime", progress=p)
                                       for n, p in ((8, .35), (3, .7), (9, .12))]},
         {"key": "movies", "items": [item(n) for n in range(2, 10)]},
-        {"key": "series", "items": [item(n) for n in range(4, 10)]}]}
+        {"key": "series", "items": [item(n) for n in range(4, 10)]},
+        # The Films and Shows tabs' rows.
+        {"key": "films:popular", "items": [item(n) for n in range(3, 11)]},
+        {"key": "films:family", "items": [item(n) for n in range(5, 13)]},
+        {"key": "shows:popular", "items": [item(n) for n in range(7, 15)]}]}
 
 
 class Handler(http.server.BaseHTTPRequestHandler):

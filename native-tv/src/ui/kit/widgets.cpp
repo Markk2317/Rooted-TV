@@ -697,6 +697,43 @@ void card(Paint paint, const PosterCard &poster) {
     }
     hit(scene, look.rect, poster.id);
 }
+void featureCard(Paint paint, const FeatureCard &feature) {
+    focus::Look look = focus::lookAt(feature.rest, motion::scale::card, feature.focus);
+    if (invisible(feature.enter) || offCanvas(look.rect))
+        return;
+    Scene &scene = paint.scene;
+    Transform scale = focus::transformAt(feature.rest, look.scale);
+    Group group(scene, feature.enter, look.scale != 1 ? &scale : nullptr);
+    const Rect &box = feature.rest;
+    focusGlow(scene, box, layout::featureR, feature.image, look.ringAlpha);
+    if (look.ringAlpha > 0) {
+        const float gap = 4;
+        Node &ring = scene.shape({box.x - gap, box.y - gap, box.w + 2 * gap, box.h + 2 * gap}, clear,
+                                 layout::featureR + gap);
+        ring.ring = {0, 3, faded(alpha::cardRing, look.ringAlpha)};
+    }
+    scene.shape(box, color::surface2, layout::featureR);
+    if (!feature.image.empty())
+        scene.picture(box, 0, layout::featureR).value = feature.image;
+    // The art darkens towards the lines at the left and the foot, as Google TV's does.
+    Node &side = scene.shape(box, clear, layout::featureR);
+    side.gradient = gradient(90, {{{0, 0, 0, .45f}, 0}, {{0, 0, 0, 0}, .6f}});
+    Node &foot = scene.shape(box, clear, layout::featureR);
+    foot.gradient = gradient(180, {{{0, 0, 0, 0}, .35f}, {{0, 0, 0, .7f}, 1}});
+    if (!feature.wordmark.empty()) {
+        // Half the banner's size: about 24 px high, Google TV's height there.
+        const WordmarkSize size = wordmarkSize(feature.wordmark);
+        paint.glyphs.icon(scene, {box.x + layout::featureMarkInset, box.y + layout::featureMarkInset,
+                                  size.w / 2, size.h / 2},
+                          feature.wordmark, white);
+    }
+    const float textX = box.x + layout::featureTextX, textW = box.w - 2 * layout::featureTextX;
+    text(paint, {textX, box.y + layout::featureTitleTop, textW, type::featureTitle.line}, feature.title,
+         type::featureTitle, white);
+    text(paint, {textX, box.y + layout::featureLineTop, textW, type::featureLine.line}, feature.line,
+         type::featureLine, color::onSurface);
+    hit(scene, look.rect, feature.id);
+}
 void appCircle(Paint paint, const AppCircle &circle) {
     // Google TV's focused app: the circle grows a little inside a white ring that stands off it,
     // over the glow in its icon's colour.

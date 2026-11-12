@@ -43,6 +43,23 @@ const RowSpec kRows[] = {
     {"series", "trending/tv/week", "tv"}
 };
 
+// The Films and Shows tabs' rows, after Google TV's: what is popular, for families and well rated,
+// then a few genres, films and series apart.
+const RowSpec kTabRows[] = {
+    {"films:popular", "movie/popular", "movie"},
+    {"films:family", "discover/movie?with_genres=10751&sort_by=popularity.desc", "movie"},
+    {"films:top", "movie/top_rated", "movie"},
+    {"films:action", "discover/movie?with_genres=28&sort_by=popularity.desc", "movie"},
+    {"films:comedy", "discover/movie?with_genres=35&sort_by=popularity.desc", "movie"},
+    {"films:animation", "discover/movie?with_genres=16&sort_by=popularity.desc", "movie"},
+    {"shows:popular", "tv/popular", "tv"},
+    {"shows:animation", "discover/tv?with_genres=16&sort_by=popularity.desc", "tv"},
+    {"shows:top", "tv/top_rated", "tv"},
+    {"shows:crime", "discover/tv?with_genres=80&sort_by=popularity.desc", "tv"},
+    {"shows:comedy", "discover/tv?with_genres=35&sort_by=popularity.desc", "tv"},
+    {"shows:docs", "discover/tv?with_genres=99&sort_by=popularity.desc", "tv"}
+};
+
 bool initializeCurl() {
     static std::once_flag once;
     static CURLcode result = CURLE_FAILED_INIT;
@@ -338,6 +355,10 @@ void HomeDiscover::setTitledArt(bool on) {
     std::lock_guard<std::mutex> lock(mutex_);
     titledArt_ = on;
 }
+void HomeDiscover::setTabRows(bool on) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    tabRows_ = on;
+}
 
 Json HomeDiscover::feed(const std::string &tmdbKey, const std::string &youtubeKey,
                         const std::string &region) {
@@ -400,12 +421,13 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     }
 
     LinkCheck linkCheck, netflixCheck;
-    bool titledArt = false;
+    bool titledArt = false, tabRows = false;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         linkCheck = linkCheck_;
         netflixCheck = netflixCheck_;
         titledArt = titledArt_ && !tmdbKey.empty();
+        tabRows = tabRows_ && !tmdbKey.empty();
     }
     std::map<std::string, bool> linked; // a title is asked about once, whichever rows it is in
     const auto hasLink = [&](const Json &item) {
@@ -457,6 +479,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     std::vector<Json> rows;
     const bool services = !tmdbKey.empty() && !region.empty();
     const size_t asked = (tmdbKey.empty() ? 0 : 3) + (youtubeKey.empty() ? 0 : 1) +
+                         (tabRows ? sizeof(kTabRows) / sizeof(kTabRows[0]) : 0) +
                          (services ? names::streamingServices().size() : 0);
     size_t missed = asked;
     for (const RowSpec &row : kRows) {
@@ -537,6 +560,33 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
         if (!onNetflix.empty()) rows.push_back(makeRow("netflix", onNetflix));
     }
 
+    // The tabs' rows, listed whether or not a title has a trailer: OK opens its details.
+    for (const RowSpec &row : kTabRows) {
+        if (!tabRows) break;
+        const std::string path = row.path;
+        const std::string url = "https://api.themoviedb.org/3/" + path +
+            (path.find('?') == std::string::npos ? "?" : "&") + "api_key=" + urlEncode(tmdbKey) +
+            "&language=en-US&include_adult=false" + (region.empty() ? "" : "&region=" + region);
+        Json document;
+        std::string error;
+        bool fetched = false;
+        try { fetched = fetch(url, document, error); } catch (...) { fetched = false; }
+        std::vector<Json> items;
+        std::set<std::string> seen;
+        if (fetched && document["results"].isArray())
+            for (const Json &raw : document["results"].items()) {
+                Json item = trimmedTitle(raw, row.type);
+                if (!item.valid() || !seen.insert(idString(item["id"])).second) continue;
+                addArt(item);
+                items.push_back(item);
+                if (items.size() == kPerRow) break;
+            }
+        if (!items.empty()) {
+            rows.push_back(makeRow(row.key, items));
+            --missed;
+        }
+    }
+
     if (!youtubeKey.empty()) {
         const std::string url = "https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&maxResults=16&key=" +
                                 urlEncode(youtubeKey) +
@@ -581,6 +631,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     updated.set("partial", Json::flag(missed > 0));
     updated.set("tmdbAsked", Json::flag(!tmdbKey.empty()));
     updated.set("youtubeAsked", Json::flag(!youtubeKey.empty()));
+    updated.set("tabsAsked", Json::flag(tabRows));
     updated.set("region", Json::text(region));
     if (titledArt) updated.set("art", art);
     {
@@ -704,6 +755,8 @@ bool HomeDiscover::dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked,
     const bool hadYoutube = cache_["youtubeAsked"].isBoolean() ? cache_["youtubeAsked"].boolean() : youtubeRows;
     const bool hadTmdb = cache_["tmdbAsked"].isBoolean() ? cache_["tmdbAsked"].boolean() : titleRows;
     if ((youtubeAsked && !hadYoutube) || (tmdbAsked && !hadTmdb)) return true;
+    // A feed from before the Films and Shows tabs never asked for their rows.
+    if (tmdbAsked && tabRows_ && !cache_["tabsAsked"].boolean()) return true;
     // Rows from before the art was looked up have none to show.
     if (tmdbAsked && titledArt_ && !cache_["art"].isObject()) return true;
     // Art kept from before the titles' logos were: looked up again once, for them.

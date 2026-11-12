@@ -7,6 +7,7 @@
 #include <ctime>
 #include <fstream>
 #include <mutex>
+#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -488,6 +489,49 @@ int main() {
     (void)unlink((artDir + "/home-discover.json").c_str());
     (void)unlink((artDir + "/home-discover.json.tmp").c_str());
     (void)rmdir(artDir.c_str());
+
+    // The Films and Shows tabs' rows: asked for once switched on, with the TV's region, listed
+    // whether or not a title opens anywhere; a feed from before them is refreshed at once.
+    const std::string tabsDir = directory.path() + "/tabs";
+    assert(mkdir(tabsDir.c_str(), 0700) == 0);
+    {
+        HomeDiscover plain(tabsDir, fetcher, [&clock] { return clock; });
+        const size_t before = asked.size();
+        (void)plain.feed("tmdb", "", "IT");
+        assert(waitForAsked(before + 3));
+    }
+    const size_t beforeTabs = asked.size();
+    {
+        HomeDiscover tabs(tabsDir, fetcher, [&clock] { return clock; });
+        tabs.setTabRows(true);
+        tabs.setLinkCheck([](const std::string &, const std::string &) { return false; });
+        (void)tabs.feed("tmdb", "", "IT");
+        assert(waitForAsked(beforeTabs + 15));
+    }
+    bool popular = false, family = false;
+    for (size_t index = beforeTabs; index < asked.size(); ++index) {
+        popular = popular || (asked[index].find("/3/movie/popular?api_key=tmdb") != std::string::npos &&
+                              asked[index].find("&region=IT") != std::string::npos);
+        family = family || asked[index].find("discover/movie?with_genres=10751&sort_by=popularity.desc&api_key=") !=
+                               std::string::npos;
+    }
+    assert(popular && family);
+    {
+        HomeDiscover tabs(tabsDir, fetcher, [&clock] { return clock; });
+        tabs.setTabRows(true);
+        const Json feed = tabs.feed("tmdb", "", "IT");
+        std::set<std::string> keys;
+        for (const Json &row : feed["rows"].items()) {
+            const std::string key = row["key"].string();
+            if (key.compare(0, 6, "films:") == 0 || key.compare(0, 6, "shows:") == 0)
+                keys.insert(key);
+        }
+        assert(keys.count("films:popular") && keys.count("films:family") && keys.count("shows:popular") &&
+               keys.count("shows:docs") && keys.size() == 12);
+    }
+    (void)unlink((tabsDir + "/home-discover.json").c_str());
+    (void)unlink((tabsDir + "/home-discover.json.tmp").c_str());
+    (void)rmdir(tabsDir.c_str());
 
     (void)unlink((addedDir + "/home-discover.json").c_str());
     (void)unlink((addedDir + "/home-discover.json.tmp").c_str());

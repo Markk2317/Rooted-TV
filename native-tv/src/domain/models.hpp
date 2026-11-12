@@ -58,7 +58,10 @@ struct Tab {
 };
 // TMDB's size for the hero's art: a 1920x1080 picture, the screen's own size.
 constexpr const char *kHeroArtSize = "w1920_and_h1080_bestv2";
-std::vector<Tab> homeTabs(const Json &catalogue);
+// Home, Google TV's Films and Shows once the feed has their rows, Live, Apps and Inputs.
+std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover = Json());
+// A tab of titles with Google TV's featured cards on top: Films or Shows.
+bool titlesTab(const std::string &tab);
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide);
 // The ids hidden from a list of the layout: "app" (Home's apps), "dev", "ch", or "appsTab" (the Apps

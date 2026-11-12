@@ -120,6 +120,8 @@ constexpr TypeStyle quickCard = {22, 30, 400, 0};
 constexpr TypeStyle quickCardSub = {18, 24, 400, 0};
 constexpr TypeStyle quickMark = {24, 32, 500, 0};
 constexpr TypeStyle quickInitial = {24, 32, 500, 0};
+constexpr TypeStyle featureTitle = {52, 64, 400, 0};
+constexpr TypeStyle featureLine = {24, 32, 400, 0};
 } // namespace type
 namespace space {
 constexpr float x4 = 4;
@@ -328,6 +330,16 @@ constexpr float quickTrackW = 168;
 constexpr float quickTrackH = 8;
 constexpr float quickItemR = 24;
 constexpr float detailsBlurSpread = 40;
+constexpr float featureW = 824;
+constexpr float featureH = 384;
+constexpr float featureGap = 40;
+constexpr float featureR = 32;
+constexpr float featureTop = 192;
+constexpr float featureFoot = 64;
+constexpr float featureMarkInset = 40;
+constexpr float featureTextX = 36;
+constexpr float featureTitleTop = 234;
+constexpr float featureLineTop = 322;
 constexpr int dotSlots = 6;
 constexpr int tileCols = 6;
 constexpr int statCols = 4;
@@ -353,6 +365,8 @@ constexpr int boot = 520;
 constexpr int bars = 900;
 constexpr int quick = 500;
 constexpr int quickFocus = 200;
+constexpr int cardFocus = 300;
+constexpr int cardUnfocus = 500;
 constexpr int idleAfter = 30000;
 constexpr int homeIdleAfter = 300000;
 } // namespace ms
@@ -364,6 +378,8 @@ constexpr Bezier inOut = {0.77f, 0, 0.175f, 1};
 constexpr Bezier linear = {0, 0, 1, 1};
 constexpr Bezier quick = {0.4f, 1, 0.12f, 1};
 constexpr Bezier quickFocus = {0.2f, 0.1f, 0, 1};
+constexpr Bezier cardFocus = {0.1f, 1, 0.4f, 1};
+constexpr Bezier cardUnfocus = {0.4f, 1, 0.1f, 1};
 } // namespace ease
 namespace spring {
 constexpr SpringTuning row = {400, 1};

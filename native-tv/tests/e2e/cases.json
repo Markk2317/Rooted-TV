@@ -5041,7 +5041,7 @@
         "Take the lock folder /tmp/nativetv-e2e.lock (mkdir).",
         "Read the server's port from the TV, as deploy.py does (the access token is never read).",
         "POST /api/home/layout with the apps sorted by kind and the kinds in their default order.",
-        "Send the script over ssh and run the client for 16.5 s through the app's jailer: Up twice and Right reach the Apps tab, OK opens it on the first kind's row; a long press lifts the row, Down moves it under the next one, OK saves; a second long press and Up move it back up, and Back puts the server's order back.",
+        "Send the script over ssh and run the client for 16.5 s through the app's jailer: Up twice and Right three times (past Films and Shows) reach the Apps tab, OK opens it on the first kind's row; a long press lifts the row, Down moves it under the next one, OK saves; a second long press and Up move it back up, and Back puts the server's order back.",
         "Read the report and judge the checkpoints.",
         "Always, even after a failure: POST /api/home/layout with the apps back in Your order and the kinds in their default order; delete the script and the lock folder."
       ],
@@ -6585,7 +6585,7 @@
     {
       "id": "E2E-174",
       "title": "Search leads the Home bar and Quick settings ends it",
-      "purpose": "With the feed on (a TMDB key saved) Search is the first stop after the avatar, in the tabs' capsule before the tabs, and Quick settings the last, as Google TV lays its bar out since 2025: from the first tab, Left reaches Search and four Rights from there reach Quick settings.",
+      "purpose": "With the feed on (a TMDB key saved) Search is the first stop after the avatar, in the tabs' capsule before the tabs, and Quick settings the last, as Google TV lays its bar out since 2025: from the first tab, Left reaches Search and six Rights from there (past Home, Films, Shows, Apps and Inputs) reach Quick settings.",
       "kind": "run",
       "screen": "home",
       "script": "home-bar-order.json",
@@ -6859,7 +6859,7 @@
         "Take the lock folder /tmp/nativetv-e2e.lock (mkdir).",
         "Read the server's port from the TV, as deploy.py does (the access token is never read).",
         "POST /api/home/layout with the apps in Your order and the six hidden apps on both Home's row and the Apps tab.",
-        "Send the script over ssh and run the client for the case's time through the app's jailer: Up twice and Right reach the Apps tab, OK opens it on the first app; a long press starts editing, Up reaches the Hide from Apps button and OK hides the app; Back returns to the Home tab and Up reaches its apps row.",
+        "Send the script over ssh and run the client for the case's time through the app's jailer: Up twice and Right three times (past Films and Shows) reach the Apps tab, OK opens it on the first app; a long press starts editing, Up reaches the Hide from Apps button and OK hides the app; Back returns to the Home tab and Up reaches its apps row.",
         "Read the report and judge the checkpoints, then read the server's catalogue: the first app is in the Apps tab's hidden list.",
         "Always, even after a failure: POST /api/home/layout with an empty app order and the six hidden apps on both lists again; delete the script and the lock folder."
       ],
@@ -7176,7 +7176,7 @@
       "steps": [
         "Take the lock folder /tmp/nativetv-e2e.lock (mkdir).",
         "Read the server's port from the TV, as deploy.py does (the access token is never read).",
-        "Send the script over ssh and run the client for the case's time through the app's jailer: Up twice and Right reach the Apps tab, OK opens it; Back returns to the Home tab; Up twice reaches the bar, where Back does nothing; a held Back opens the recent apps.",
+        "Send the script over ssh and run the client for the case's time through the app's jailer: Up twice and Right three times (past Films and Shows) reach the Apps tab, OK opens it; Back returns to the Home tab; Up twice reaches the bar, where Back does nothing; a held Back opens the recent apps.",
         "Read the report and judge the checkpoints.",
         "Delete the script and the lock folder."
       ],

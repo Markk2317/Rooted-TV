@@ -172,7 +172,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
     for (size_t ri = 0; ri < home.rows.size(); ++ri) {
         const CardRow &row = home.rows[ri];
         const home::RowLook &look = looks[ri];
-        const float labelY = tops[ri] + stack, itemsY = labelY + home::labelArea(look);
+        const float labelY = tops[ri] + stack, itemsY = labelY + home::itemsOffset(row, look);
         // Rows above the screen or below it are not drawn at all; the one just above the focused
         // row peeks in at the top, as on Google TV.
         if (labelY > kit::canvas::height + 40 || itemsY + home::itemHeight(row) + 40 < 0)
@@ -210,7 +210,8 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         // The next row's name is not shown cut by the screen's edge: it fades in as it rises.
         label.enter.alpha *=
             kit::focus::clamp01((kit::canvas::height - 40 - labelY) / 48);
-        kit::row(paint, label);
+        if (!home::isFeature(row)) // the featured titles have no row title
+            kit::row(paint, label);
         const float scroll = static_cast<float>(motion.value(home::id("rx", ri)));
         for (size_t ci = 0; ci < row.cards.size(); ++ci) {
             Rect rest = home::item(row, itemsY, ci, namedApps);
@@ -221,7 +222,20 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
             std::string id = home::hit(ri, ci);
             float focus = static_cast<float>(motion.value(home::id("f", ri, ci)));
             kit::Enter enter = enterOf(motion, home::id("EC", ri, ci));
-            if (row.key == "app") {
+            if (home::isFeature(row)) {
+                kit::FeatureCard feature;
+                feature.rest = rest;
+                feature.id = id;
+                feature.image = card.image;
+                feature.title = card.title;
+                feature.line = card.subtitle;
+                const std::string service = card.data["service"].string();
+                if (service == "netflix" || service == "prime" || service == "disney")
+                    feature.wordmark = "wordmark-" + service;
+                feature.focus = focus;
+                feature.enter = enter;
+                kit::featureCard(paint, feature);
+            } else if (row.key == "app") {
                 kit::AppCircle circle;
                 circle.rest = rest;
                 circle.id = id;
@@ -384,18 +398,21 @@ void drawHome(kit::Paint paint, const Frame &frame) {
     scene.background = kit::color::ink;
     if (home.tabs.empty())
         return;
-    const bool apps = home.tabs[home.tab].key == "apps";
+    const bool apps = home.tabs[home.tab].key == "apps", titles = titlesTab(home.tabs[home.tab].key);
     wallpaper(scene, home);
     float wall = static_cast<float>(motion.value("wall"));
     kit::ambientWall(paint, 1 - wall, home.art.wallTint);
     // A tab change slides the page's content sideways; the art behind it only fades.
     const float slide = static_cast<float>(motion.value("pgs"));
-    if (apps) {
+    if (apps || titles) {
         kit::Hero none = heroOf(frame);
         none.wallAlpha = wall;
         kit::heroWall(paint, none);
         scene.pushTransform(Transform::translate(slide, 0));
-        if (home.grid)
+        // Films and Shows: Google TV's featured titles from y 192, the rows under them.
+        if (titles)
+            rows(paint, frame, layout::featureTop - layout::rowsTop);
+        else if (home.grid)
             grid(paint, frame);
         else
             appRows(paint, frame);
@@ -450,8 +467,9 @@ void drawHome(kit::Paint paint, const Frame &frame) {
         hide.focus = static_cast<float>(motion.value("f:eh"));
         kit::pillButton(paint, hide);
     }
-    // On the Apps page Google TV darkens all of it under the bar while the bar has the focus.
-    const float barDim = apps ? static_cast<float>(motion.value("bd")) : 0;
+    // On the Apps, Films and Shows pages Google TV darkens all of it under the bar while the bar has
+    // the focus.
+    const float barDim = apps || titles ? static_cast<float>(motion.value("bd")) : 0;
     if (barDim > .002f)
         scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::focus::withAlpha(kit::alpha::barDim, barDim));
     // On Home's first page the bar leaves with the page once the rows below the first two are
