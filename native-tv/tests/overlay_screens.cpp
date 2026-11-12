@@ -330,11 +330,22 @@ void detailsGenreChecks() {
     check(world.snapshot()["focus"].string() == "Orbit", "Its titles leave the title itself out");
     world.press(Key::Right);
     check(world.snapshot()["focus"].string() == "Station", "and take a film and a show in turn");
-    world.reply("details:genre:1", R"({"ok":true,"items":[{"id":50,"type":"movie","title":"Summit"}]})");
+    world.reply("details:genre:1",
+                R"({"ok":true,"items":[{"id":50,"type":"movie","title":"Summit"},{"id":21,"type":"tv","title":"Tide"},)"
+                R"({"id":31,"type":"movie","title":"Nova"}]})");
     world.settle(100);
     check(world.snapshot()["rows"].size() == 4 && world.snapshot()["rows"][2].string() == "genre:adventure" &&
               world.snapshot()["focus"].string() == "Station",
           "A row that comes in above keeps the focus where it was");
+    world.press(Key::Up);
+    check(world.snapshot()["focus"].string() == "Summit", "and the row above has the genre's titles");
+    world.press(Key::Right);
+    check(world.snapshot()["focus"].string() == "Nova",
+          "less those of the rows above it (Tide is a title like it)");
+    world.press(Key::Down);
+    world.press(Key::Left);
+    check(world.snapshot()["focus"].string() == "Orbit", "and a row under it gives up those it has (Nova)");
+    world.press(Key::Right);
     world.press(Key::Ok);
     world.reply("title:details", detailsJson);
     world.settle(300);

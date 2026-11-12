@@ -52,11 +52,6 @@ std::vector<std::string> pagesOf(const std::string &text) {
     }
     return pages;
 }
-// "movie:42", as Home's feed lists the profile's titles.
-std::string titleKey(const Json &item) {
-    return item["type"].string() + ":" +
-           (item["id"].isNumber() ? compactNumber(item["id"].number()) : item["id"].string());
-}
 bool listed(const Json &keys, const std::string &key) {
     for (const auto &entry : keys.items())
         if (entry.string() == key)
@@ -66,18 +61,25 @@ bool listed(const Json &keys, const std::string &key) {
 bool sameTitle(const Json &item, const std::string &type, const std::string &id) {
     return item["id"].string() == id && (type.empty() || item["type"].string() == type);
 }
+// "movie:42", as Home's feed lists the profile's titles.
+std::string titleKey(const Json &item) {
+    return item["type"].string() + ":" +
+           (item["id"].isNumber() ? compactNumber(item["id"].number()) : item["id"].string());
+}
 // A genre's titles for a title's row of them, as Google TV mixes films and shows: one of each in
-// turn, the title's own kind first, without the title itself.
-Json genreTitles(const Json &found, const Json &item) {
+// turn, the title's own kind first, leaving out those `shown` already (the title, the rows above).
+Json genreTitles(const Json &found, const Json &item, std::vector<std::string> &shown) {
     std::vector<Json> kinds[2];
     for (const auto &entry : found.items())
-        if (!(entry["type"].string() == item["type"].string() && entry["id"].string() == item["id"].string()))
+        if (std::find(shown.begin(), shown.end(), titleKey(entry)) == shown.end())
             kinds[entry["type"].string() == item["type"].string() ? 0 : 1].push_back(entry);
     Json titles = Json::array();
     for (size_t i = 0; titles.size() < kGenreTitles && (i < kinds[0].size() || i < kinds[1].size()); ++i)
         for (const auto &kind : kinds)
-            if (i < kind.size() && titles.size() < kGenreTitles)
+            if (i < kind.size() && titles.size() < kGenreTitles) {
                 titles.add(kind[i]);
+                shown.push_back(titleKey(kind[i]));
+            }
     return titles;
 }
 kit::Enter enterOf(const Motion &motion, int block) {
@@ -304,11 +306,23 @@ void DetailsScreen::response(ScreenHost &host, const Response &response) {
             const int focused = focusedSection(title);
             shelf.generation = 0;
             if (succeeded(response, data))
-                shelf.items = genreTitles(data["items"], title.item);
+                shelf.found = data["items"];
+            // Each row leaves out what the rows above it have: a series' Action & Adventure is
+            // both the Action and the Adventure of the grid.
+            std::vector<std::string> shown = {titleKey(title.item)};
+            for (Shelf &each : title.shelves) {
+                if (each.genre.empty())
+                    for (const auto &entry : each.items.items())
+                        shown.push_back(titleKey(entry));
+                else
+                    each.items = genreTitles(each.found, title.item, shown);
+                each.focus = std::min(each.focus, each.items.size() ? each.items.size() - 1 : 0);
+            }
             const std::vector<int> sections = sectionsOf(title);
             const auto at = std::find(sections.begin(), sections.end(), focused);
-            if (title.row && at != sections.end())
-                title.row = static_cast<size_t>(at - sections.begin()) + 1;
+            if (title.row)
+                title.row = at != sections.end() ? static_cast<size_t>(at - sections.begin()) + 1
+                                                 : std::min(title.row, sections.size());
             focusMoved(host, false);
             host.invalidate();
         }

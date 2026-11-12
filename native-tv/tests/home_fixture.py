@@ -163,9 +163,11 @@ def search(query):
 
 
 def genre(key):
-    """A genre of Search's grid: every third title from one that depends on the genre."""
+    """A genre of Search's grid: every third title from one that depends on the genre, then as many
+    again further on (other ids, the same names), which a details page's similar titles do not have."""
     start = sum(map(ord, key)) % 3
-    return {"ok": True, "enabled": True, "items": [item(n) for n in range(start, len(TITLES), 3)]}
+    return {"ok": True, "enabled": True,
+            "items": [item(n) for n in list(range(start, len(TITLES), 3)) + list(range(20 + start, 40, 3))]}
 
 
 def catalogue(profiles=1, sort="custom"):

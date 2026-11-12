@@ -41,6 +41,7 @@ class DetailsScreen final : public ScreenView {
     // asked for once the details have said its genres.
     struct Shelf {
         std::string genre; // the Search page's genre key; empty for the titles like it
+        Json found = Json::array(); // a genre's titles as the server gave them
         Json items = Json::array();
         size_t focus = 0;
         unsigned generation = 0; // a genre's titles on their way
