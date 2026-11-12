@@ -641,6 +641,35 @@ Json HomeContent::search(const std::string &tmdbKey, const std::string &query,
     });
 }
 
+Json HomeContent::genre(const std::string &tmdbKey, const std::string &key) {
+    if (tmdbKey.empty()) return disabled();
+    const names::SearchGenre *genre = names::searchGenre(key);
+    if (!genre) return failed("Unknown genre");
+    Json items = Json::array();
+    for (const std::string type : {"movie", "tv"}) {
+        const int id = type == "movie" ? genre->film : genre->series;
+        if (!id) continue;
+        const Json found = request(
+            tmdbKey, "discover/" + type,
+            "&include_adult=false&sort_by=popularity.desc&with_genres=" + std::to_string(id),
+            kDayMs, [type](const Json &document) {
+                if (!document["results"].isArray()) return Json();
+                Json result = Json::object();
+                result.set("ok", Json::flag(true));
+                result.set("enabled", Json::flag(true));
+                result.set("items", trimRows(document["results"], type));
+                return result;
+            });
+        if (!found["ok"].boolean()) return found;
+        for (const Json &item : found["items"].items()) items.add(item);
+    }
+    Json result = Json::object();
+    result.set("ok", Json::flag(true));
+    result.set("enabled", Json::flag(true));
+    result.set("items", items);
+    return result;
+}
+
 Json HomeContent::netflix(const std::string &tmdbKey, bool netflixEnabled,
                           const std::string &type, const std::string &id) {
     if (!netflixEnabled || tmdbKey.empty()) return disabled();

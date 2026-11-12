@@ -128,7 +128,9 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab, float away) {
     bar.selected = home.navigation && home.nav < home.tabs.size() ? static_cast<int>(home.nav)
                                                                   : pageTab;
     bar.pillAlpha = bar.selected < 0 ? 0.0f : 1.0f;
-    bar.settingsSelected = pageTab < 0 && !home.navigation;
+    const bool searchPage = state.screen == Screen::Kit && state.kitComponent == "search";
+    bar.searchSelected = searchPage;
+    bar.settingsSelected = pageTab < 0 && !home.navigation && !searchPage;
     bar.pillLeft = static_cast<float>(motion.value("pill:0"));
     bar.pillRight = static_cast<float>(motion.value("pill:1"));
     bar.pillHot = static_cast<float>(motion.value("pill:hot"));

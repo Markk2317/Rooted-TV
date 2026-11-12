@@ -16859,7 +16859,10 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
     const bool netflixEnabled =
         config_.document["netflixDeepLinks"].boolean();
     homeContent_.setRegion(tvRegion(dataRoot_));
-    if (kind == "search") {
+    std::string genre;
+    if (kind == "search" && uniqueQueryParameter(request.query, "genre", genre)) {
+        result = homeContent_.genre(key, genre);
+    } else if (kind == "search") {
         const bool hasQuery = uniqueQueryParameter(request.query, "q", query);
         result = homeContent_.search(key, query, hasQuery);
     } else if (kind == "netflix") {

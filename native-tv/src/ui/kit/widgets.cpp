@@ -290,7 +290,7 @@ void topBar(Paint paint, const TopBar &bar) {
         search.rest = geometry::searchButton();
         search.id = "tool:2";
         search.icon = "search";
-        search.fill = clear;
+        search.fill = bar.searchSelected ? color::searchSlot : clear;
         search.focusFill = color::tabFocused;
         search.focus = bar.searchFocus;
         roundButton(paint, search);
@@ -1105,20 +1105,30 @@ void loadingIndicator(Paint paint, const Loading &loading) {
 // -------------------------------------------------------------------------------------
 
 void keyCap(Paint paint, const KeyCap &key) {
-    float scaleNow = focus::keyScale(key.focus, key.press);
+    float scaleNow = key.tv ? focus::mix(focus::scaleAt(motion::scale::tvKey, key.focus),
+                                         motion::scale::press, focus::clamp01(key.press))
+                            : focus::keyScale(key.focus, key.press);
     if (invisible(key.enter) || offCanvas(key.rest))
         return;
     Scene &scene = paint.scene;
     Transform scale = focus::transformAt(key.rest, scaleNow);
     Group group(scene, key.enter, scaleNow != 1 ? &scale : nullptr);
-    scene.shape(key.rest, key.accent ? color::accent : color::surface2, radius::key);
+    const float rounding = key.tv ? layout::tvKeyR : radius::key;
+    const Color fill = key.tv ? (key.accent ? color::tvKeySearch : color::tvKey)
+                              : key.accent ? color::accent
+                                           : color::surface2;
+    scene.shape(key.rest, fill, rounding);
     if (key.latched)
-        scene.shape(key.rest, alpha::accentDim, radius::key);
+        scene.shape(key.rest, alpha::accentDim, rounding);
     if (key.focus > 0)
-        scene.shape(key.rest, faded(color::focusFill, focus::clamp01(key.focus)), radius::key);
-    Color ink =
-        focus::inkAt(key.accent ? color::onAccent : color::onSurface, color::onFocus, key.focus);
-    const TypeStyle &style = key.hint ? type::labelM : type::key;
+        scene.shape(key.rest, faded(color::focusFill, focus::clamp01(key.focus)), rounding);
+    Color ink = focus::inkAt(key.accent && !key.tv ? color::onAccent : color::onSurface,
+                             color::onFocus, key.focus);
+    const TypeStyle &style = key.hint ? type::labelM : key.tv ? type::tvKey : type::key;
+    if (!key.corner.empty())
+        text(paint, {key.rest.x, key.rest.y + 4, key.rest.w - 7, type::tvKeyHint.line}, key.corner,
+             type::tvKeyHint, focus::inkAt(color::onSurface3, color::onFocus, key.focus),
+             Node::Align::Right);
     if (key.hint)
         ink = color::onSurface3;
     if (key.latched)
@@ -1138,6 +1148,56 @@ void keyCap(Paint paint, const KeyCap &key) {
                  key.label, style, ink);
     }
     hit(scene, focus::scaledAbout(key.rest, scaleNow), key.id);
+}
+
+void searchField(Paint paint, const SearchField &field) {
+    if (invisible(field.enter))
+        return;
+    Scene &scene = paint.scene;
+    Group group(scene, field.enter);
+    const float amount = focus::clamp01(field.focus);
+    Node &pill = scene.shape(field.rest, color::searchField, field.rest.h / 2);
+    if (amount > 0)
+        pill.ring = {layout::searchFieldLine, 0, faded(color::searchOutline, amount)};
+    const float middle = field.rest.y + field.rest.h / 2,
+                iconX = field.rest.x + layout::searchIconCx - layout::searchFieldX;
+    paint.glyphs.icon(scene, centred(iconX, middle, layout::searchIcon), "search",
+                      focus::inkAt(color::onSurface2, color::onSurface, amount));
+    const bool typed = !field.text.empty();
+    const float textX = field.rest.x + layout::searchTextX - layout::searchFieldX;
+    text(paint,
+         {textX, middle - type::searchField.line / 2, field.rest.x + field.rest.w - textX - 60,
+          type::searchField.line},
+         typed ? field.text : field.placeholder, type::searchField,
+         focus::inkAt(typed ? color::onSurface2 : color::onSurface3, color::onSurface, amount),
+         Node::Align::Left, 1);
+    hit(scene, field.rest, field.id);
+}
+void genreTile(Paint paint, const GenreTile &tile) {
+    focus::Look look = focus::lookAt(tile.rest, motion::scale::card, tile.focus);
+    if (invisible(tile.enter) || offCanvas(look.rect))
+        return;
+    Scene &scene = paint.scene;
+    Transform scale = focus::transformAt(tile.rest, look.scale);
+    Group group(scene, tile.enter, look.scale != 1 ? &scale : nullptr);
+    focusGlow(scene, tile.rest, layout::genreR, "", look.ringAlpha);
+    if (look.ringAlpha > 0) {
+        const float gap = 4;
+        Node &ring = scene.shape({tile.rest.x - gap, tile.rest.y - gap, tile.rest.w + 2 * gap,
+                                  tile.rest.h + 2 * gap},
+                                 clear, layout::genreR + gap);
+        ring.ring = {0, 3, faded(alpha::cardRing, look.ringAlpha)};
+    }
+    // Google TV's tiles at rest are its lit ones at 60% over the page.
+    Group strength(scene, {focus::mix(.6f, 1, focus::clamp01(tile.lit)), 0});
+    Node &base = scene.shape(tile.rest, tile.color, layout::genreR);
+    base.gradient = Gradient::between(180, focus::mix(color::page, tile.color, .82f), tile.color);
+    base.ring = {1, 0, faded(white, .08f)};
+    text(paint,
+         {tile.rest.x + 8, tile.rest.y + (tile.rest.h - type::genreLabel.line) / 2, tile.rest.w - 16,
+          type::genreLabel.line},
+         tile.label, type::genreLabel, color::onSurface, Node::Align::Center, 1);
+    hit(scene, look.rect, tile.id);
 }
 
 void spinner(Paint paint, Rect box, double timeMs, Color ink, float alphaFactor) {

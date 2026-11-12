@@ -162,6 +162,12 @@ def search(query):
     return {"ok": True, "enabled": True, "items": found}
 
 
+def genre(key):
+    """A genre of Search's grid: every third title from one that depends on the genre."""
+    start = sum(map(ord, key)) % 3
+    return {"ok": True, "enabled": True, "items": [item(n) for n in range(start, len(TITLES), 3)]}
+
+
 def catalogue(profiles=1, sort="custom"):
     apps = [{"id": a, "title": t, "icon": "/icon/%s" % a, "color": c, "kind": KINDS.get(a, "other")}
             for a, t, c in APPS]
@@ -257,6 +263,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.json(stats())
         elif url.path == "/api/home/details":
             self.json(details(int(query.get("id", ["100"])[0]) - 100))
+        elif url.path == "/api/home/search" and "genre" in query:
+            self.json(genre(query["genre"][0]))
         elif url.path == "/api/home/search":
             self.json(search(query.get("q", [""])[0]))
         elif url.path == "/api/home/netflix":

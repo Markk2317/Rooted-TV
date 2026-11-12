@@ -3,13 +3,14 @@
 #include <memory>
 #include <string>
 
-// The Quick drawer, Profiles, Details and the editors: each answers null for a route it does not
-// own (screen_registry.cpp adds the four).
+// The Quick drawer, Profiles, Details, the editors and Search: each answers null for a route it
+// does not own (screen_registry.cpp adds the five).
 namespace nativetv {
 std::unique_ptr<ScreenView> makeQuickScreen(const std::string &route);
 std::unique_ptr<ScreenView> makeProfilesScreen(const std::string &route);
 std::unique_ptr<ScreenView> makeDetailsScreen(const std::string &route);
 std::unique_ptr<ScreenView> makeEditorScreen(const std::string &route);
+std::unique_ptr<ScreenView> makeSearchScreen(const std::string &route);
 
 // Where closing a screen goes: back to Home as it was when Home (or one of these screens, which
 // were reached from Home) opened it, otherwise to the page it came from.

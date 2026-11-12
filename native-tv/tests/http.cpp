@@ -73,6 +73,11 @@ int main(int argc, char **argv) {
         response = wait(services, "search");
         check(response.ok() && response.json()["query"].string() == "é & /?",
               "Query encoding survives real HTTP transport");
+        services.read("genre", Operation::SearchTitles, fields({{"genre", Json::text("scifi")}}));
+        response = wait(services, "genre");
+        check(response.ok() && response.json()["genre"].string() == "scifi" &&
+                  response.json()["query"].string().empty(),
+              "A genre of Search's grid is asked for by its key");
         services.write("action", Operation::Control,
                        fields({{"action", Json::text("mute")}, {"value", Json::flag(true)}}));
         response = wait(services, "action");

@@ -22,7 +22,22 @@ constexpr double kPressStiffness = 720, kPressDamping = .9;
 
 std::vector<std::vector<KeyboardPad::Cap>> KeyboardPad::layout() const {
     std::vector<std::vector<Cap>> rows;
-    const auto keys = model_.padRows();
+    const auto keys = this->rows();
+    if (options_.tv) {
+        for (size_t r = 0; r < keys.size(); ++r) {
+            float x = options_.origin.x;
+            const float y = options_.origin.y + r * (layout::tvKeyH + layout::tvKeyGapY);
+            std::vector<Cap> row;
+            for (const auto &id : keys[r]) {
+                const int units = id == "space" ? 3 : id == "done" ? 2 : 1;
+                const float width = units * layout::tvKeyW + (units - 1) * layout::tvKeyGapX;
+                row.push_back({id, {x, y, width, layout::tvKeyH}});
+                x += width + layout::tvKeyGapX;
+            }
+            rows.push_back(std::move(row));
+        }
+        return rows;
+    }
     for (size_t r = 0; r < keys.size(); ++r) {
         float used = 0;
         for (const auto &id : keys[r])
@@ -48,7 +63,7 @@ void KeyboardPad::begin(Motion &motion, const std::string &value, const Options 
     motion.erasePrefix(options_.id + ":");
     options_ = options;
     model_.reset(value, options.maximum, options.address, options.digits);
-    row_ = options.digits ? 0 : 1;
+    row_ = options.digits || options.tv ? 0 : 1;
     column_ = 0;
     active_ = true;
     editedAt_ = 0;
@@ -70,11 +85,11 @@ void KeyboardPad::setValue(const std::string &value, double nowMs) {
     editedAt_ = nowMs;
 }
 std::string KeyboardPad::focusedKey() const {
-    auto keys = model_.padRows();
+    auto keys = rows();
     return row_ < keys.size() && column_ < keys[row_].size() ? keys[row_][column_] : "";
 }
 KeyboardPad::Result KeyboardPad::press(Motion &motion, double nowMs, size_t row, size_t column) {
-    auto keys = model_.padRows();
+    auto keys = rows();
     if (row >= keys.size() || column >= keys[row].size())
         return Result::None;
     const std::string id = keys[row][column];
@@ -89,7 +104,7 @@ KeyboardPad::Result KeyboardPad::press(Motion &motion, double nowMs, size_t row,
     if (edited)
         editedAt_ = nowMs;
     // The layers have different key counts: keep focus on a key that exists.
-    auto now = model_.padRows();
+    auto now = rows();
     column_ = std::min(column_, now[row_].size() - 1);
     return edited ? Result::Edited : Result::Moved;
 }
@@ -169,6 +184,10 @@ void KeyboardPad::paint(kit::Paint paint, const Motion &motion, kit::Enter enter
             cap.focus = static_cast<float>(motion.value(motionId("f", r, c)));
             cap.press = static_cast<float>(motion.value(motionId("p", r, c)));
             cap.enter = enter;
+            cap.tv = options_.tv;
+            // Gboard's top row of letters types its digits too, shown in the corner.
+            if (options_.tv && r == 0 && !model_.symbols())
+                cap.corner = std::string(1, "1234567890"[c % 10]);
             if (id == "shift") {
                 cap.icon = "shift";
                 cap.latched = model_.upper();
@@ -187,8 +206,11 @@ void KeyboardPad::paint(kit::Paint paint, const Motion &motion, kit::Enter enter
                 cap.hint = true;
             } else
                 cap.label = model_.label(id);
-            if (id == "symbols")
+            if (id == "symbols") {
                 cap.latched = model_.symbols();
+                if (options_.tv)
+                    cap.label = model_.symbols() ? "ABC" : "?123";
+            }
             kit::keyCap(paint, cap);
         }
 }

@@ -122,6 +122,9 @@ void drawHome(kit::Paint paint, const Frame &frame);
 void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab, float away = 0);
 void drawRecents(kit::Paint paint, const Frame &frame);
 void drawMenu(Scene &scene, const ViewState &state);
+// The bar's focus stays on a tab (or Search) this long before its page opens.
+constexpr uint32_t kTabSettleMs = 190;
+
 class Application : private ScreenHost {
     Services &services_;
     ViewState state_;
@@ -166,6 +169,9 @@ class Application : private ScreenHost {
         bool idle = false /* dimmed: any screen, see idleUpdate() */, heroWaiting = false, textPending = false, tabPending = false,
              waiting = false;
         bool heroUntouched = false; // no key since the page opened: the focus starts on the banner
+        // The bar's focus rests on Search (from Home) or on a tab (from Search's page): its page
+        // opens at commitAt, the bar keeping the focus, as Google TV's tabs do.
+        bool barPagePending = false;
         std::string focusId, wantId;
         Card want;
         std::vector<std::string> tabTitles;
@@ -207,6 +213,9 @@ class Application : private ScreenHost {
     void startScreensaver();
     void homeFocus(bool jump = false);
     void homeKeyMoved(Key key);
+    // Opens the page of the bar's stop under the focus (Search, or a tab from Search's page) and
+    // keeps the focus on the bar.
+    void openBarPage();
     void homeSelectTab(size_t tab);
     void homeUpdate();
     void homePlayEntrance(size_t firstRow = 0, size_t endRow = static_cast<size_t>(-1));

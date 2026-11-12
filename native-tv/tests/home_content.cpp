@@ -103,6 +103,19 @@ nativetv::Json responseFor(const std::string &url) {
                            "\"previewUrl\":\"https://video-ssl.itunes.apple.com/itunes-assets/"
                            "Video128/clip.640x458.h264lc.U.p.m4v\"}]}");
     }
+    // A genre: its two most popular films or series, which TMDB's discover lists without a kind.
+    if (url.find("/discover/") != std::string::npos) {
+        const bool series = url.find("/discover/tv") != std::string::npos;
+        Json results = Json::array();
+        for (int id : {series ? 31 : 21, series ? 32 : 22}) {
+            Json raw = rawTitle(id, series ? "tv" : "movie");
+            raw.set("media_type", Json::text(""));
+            results.add(raw);
+        }
+        Json document = Json::object();
+        document.set("results", results);
+        return document;
+    }
     if (url.find("search/multi") != std::string::npos) {
         Json results = Json::array();
         results.add(rawTitle(5));
@@ -204,6 +217,22 @@ int main() {
     assert(search["items"][0]["id"].number() == 5);
     assert(search["items"][1]["id"].number() == 8);
     assert(asked.back().find("query=secret%20phrase%20%26%20%2F%3F") != std::string::npos);
+
+    // A genre of Search's grid: its films, then its series, from TMDB's discover by genre ID.
+    const Json scifi = content.genre("private-test-key", "scifi");
+    assert(scifi["ok"].boolean() && scifi["items"].size() == 4);
+    assert(scifi["items"][0]["type"].string() == "movie" && scifi["items"][0]["id"].number() == 21);
+    assert(scifi["items"][2]["type"].string() == "tv" && scifi["items"][2]["id"].number() == 31);
+    assert(asked[asked.size() - 2].find("discover/movie") != std::string::npos &&
+           asked[asked.size() - 2].find("with_genres=878") != std::string::npos);
+    assert(asked.back().find("discover/tv") != std::string::npos &&
+           asked.back().find("with_genres=10765") != std::string::npos);
+    const size_t afterGenre = asked.size();
+    // History has no series genre on TMDB: only its films are asked for.
+    assert(content.genre("private-test-key", "history")["items"].size() == 2);
+    assert(asked.size() == afterGenre + 1 && asked.back().find("with_genres=36") != std::string::npos);
+    assert(!content.genre("private-test-key", "nonsense")["ok"].boolean());
+    assert(!content.genre("", "scifi")["enabled"].boolean());
     struct stat cacheInfo = {};
     assert(stat((directory.path() + "/home-content.json").c_str(), &cacheInfo) == 0);
     assert((cacheInfo.st_mode & 0777) == 0600);

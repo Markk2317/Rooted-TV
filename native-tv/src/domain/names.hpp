@@ -63,5 +63,17 @@ const std::vector<StreamingService> &streamingServices();
 const StreamingService *streamingService(const std::string &key);
 // The service's app among the installed ones (a list of {"id": ...}), or "" when none is.
 std::string streamingApp(const StreamingService &service, const Json &apps);
+
+// A genre of Search's "Search by genre" grid: its name and TMDB's genre ID for films and for
+// series (0 where TMDB has no such genre for that kind).
+struct SearchGenre {
+    std::string key;
+    std::string name;
+    int film;
+    int series;
+};
+// Google TV's eighteen, in its order; TMDB has no game show genre, so War takes its place.
+const std::vector<SearchGenre> &searchGenres();
+const SearchGenre *searchGenre(const std::string &key);
 } // namespace names
 } // namespace nativetv

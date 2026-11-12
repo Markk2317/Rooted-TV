@@ -147,6 +147,8 @@ bool Application::update(uint32_t now) {
         homeUpdate();
         homeBeat(nullptr);
     }
+    if (screen_ && flow_.barPagePending && static_cast<int32_t>(now_ - flow_.commitAt) >= 0)
+        openBarPage();
     if (screen_)
         screenBusy = screen_->update(*this);
     // The wallpaper is shown once its picture has arrived.
@@ -355,7 +357,7 @@ void Application::buildFrame() {
             kit::ambientWall(paint, 1, state_.home.art.wallTint);
         screen_->build(*this, paint);
         if (screen_->hasBar())
-            drawTopBar(paint, frame, screen_->barTab());
+            drawTopBar(paint, frame, screen_->barTab(), screen_->barAway());
     } else if (state_.screen == Screen::Home)
         drawHome(paint, frame);
     else if (isRecents()) {

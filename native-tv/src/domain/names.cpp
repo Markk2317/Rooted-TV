@@ -283,6 +283,26 @@ const StreamingService *streamingService(const std::string &key) {
     return nullptr;
 }
 
+const std::vector<SearchGenre> &searchGenres() {
+    static const std::vector<SearchGenre> genres = {
+        {"action", "Action", 28, 10759},          {"adventure", "Adventure", 12, 10759},
+        {"animation", "Animation", 16, 16},       {"comedy", "Comedy", 35, 35},
+        {"crime", "Crime", 80, 80},               {"documentary", "Documentary", 99, 99},
+        {"drama", "Drama", 18, 18},               {"family", "Family", 10751, 10751},
+        {"fantasy", "Fantasy", 14, 10765},        {"war", "War", 10752, 10768},
+        {"history", "History", 36, 0},            {"horror", "Horror", 27, 0},
+        {"music", "Music", 10402, 0},             {"mystery", "Mystery", 9648, 9648},
+        {"reality", "Reality", 0, 10764},         {"romance", "Romance", 10749, 0},
+        {"scifi", "Science fiction", 878, 10765}, {"thriller", "Thriller", 53, 0}};
+    return genres;
+}
+
+const SearchGenre *searchGenre(const std::string &key) {
+    for (const SearchGenre &genre : searchGenres())
+        if (genre.key == key) return &genre;
+    return nullptr;
+}
+
 std::string streamingApp(const StreamingService &service, const Json &apps) {
     for (const std::string &app : service.apps)
         for (const Json &item : apps.items())

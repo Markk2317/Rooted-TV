@@ -281,7 +281,7 @@ struct Walk {
             return detailsFor(request.body);
         if (channel == "title:netflix")
             return R"({"ok":true,"netflixId":"80057281"})";
-        if (channel == "title:search")
+        if (channel == "title:search" || channel == "title:suggest")
             return R"({"ok":true,"enabled":true,"items":[{"id":300,"type":"movie","title":"Found A"},{"id":301,"type":"tv","title":"Found B"}]})";
         if (channel.compare(0, 14, "settings:data:") == 0) {
             std::string key = channel.substr(14);
@@ -569,8 +569,8 @@ struct Walk {
             expect(snap["cards"].number() == 0 || snap["focus"].number() < snap["cards"].number(),
                    "live.focus", "focus beyond the live cards");
         } else if (name == "search") {
-            expect(snap["results"].number() == 0 || snap["selected"].number() < snap["results"].number(),
-                   "search.selected", "focus beyond the results");
+            expect(snap["focus"].string() != "rows" || snap["results"].number() > 0, "search.rows",
+                   "focus on rows of results that are not there");
         } else if (name == "profiles") {
             expect(snap["selected"].number() <= static_cast<double>(server.profiles) + 1, "profiles.selected",
                    "focus beyond the profiles");

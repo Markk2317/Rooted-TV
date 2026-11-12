@@ -35,6 +35,10 @@ class Keyboard {
     // then symbols, caret keys, space and Done. Key ids are "shift", "delete", "symbols", "left",
     // "right", "space", "done" and the characters themselves.
     std::vector<std::vector<std::string>> padRows() const;
+    // Google TV's keyboard (Gboard for TV): letters with the comma, shift, the full stop and
+    // delete, then symbols, caret keys, space, "-", "_" and Done (its search key); the symbols
+    // layer has the digits first.
+    std::vector<std::vector<std::string>> tvRows() const;
     std::string label(const std::string &key) const;
 };
 } // namespace nativetv

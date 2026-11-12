@@ -20,6 +20,7 @@ void registerScreens(ScreenRegistry &registry) {
     registry.add(makeProfilesScreen);
     registry.add(makeDetailsScreen);
     registry.add(makeEditorScreen);
+    registry.add(makeSearchScreen);
     registry.add(makePinScreen);
 }
 } // namespace nativetv

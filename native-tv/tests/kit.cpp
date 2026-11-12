@@ -1099,6 +1099,56 @@ void realGlyphs() {
     check(width > 110 && width < 240, "The poster title measures as a line of 28 px text");
 }
 
+// Google TV's search: the field of its Search tab, a genre tile and a key of its TV keyboard.
+void searchParts() {
+    Fixture field;
+    kit::SearchField pill;
+    pill.rest = {kit::layout::searchFieldX, kit::layout::searchFieldY, kit::layout::searchFieldW,
+                 kit::layout::searchFieldH};
+    pill.id = "search:field";
+    pill.placeholder = "Search films, series and more";
+    pill.focus = 1;
+    kit::searchField(field.paint(), pill);
+    const Node &base = field.scene.nodes[0];
+    check(sameRect(base.rect, {96, 276, 1728, 120}) && base.radius == 60 &&
+              sameColor(base.color, kit::color::searchField) && near(base.ring.inner, 4) &&
+              sameColor(base.ring.color, kit::color::searchOutline) &&
+              textAt(field.scene, "Search films, series and more") &&
+              near(textAt(field.scene, "Search films, series and more")->rect.x, 224) &&
+              hitFor(field.scene, "search:field"),
+          "The search field is Google TV's 1728x120 pill, outlined while it has the focus, its "
+          "words 224 px in");
+    Fixture rest, lit;
+    kit::GenreTile tile;
+    tile.rest = {116, 513, 248, 138};
+    tile.id = "search:genre:0";
+    tile.label = "Action";
+    tile.color = kit::color::genreAction;
+    kit::genreTile(rest.paint(), tile);
+    const Node *restBase = shapeAt(rest.scene, tile.rest);
+    check(restBase && near(restBase->groupOpacity, .6f) && restBase->radius == 16 &&
+              textAt(rest.scene, "Action") && !shapeAt(rest.scene, {112, 509, 256, 146}),
+          "A genre tile at rest is its colour at 60%, with no ring");
+    tile.lit = 1;
+    tile.focus = 1;
+    kit::genreTile(lit.paint(), tile);
+    const Node *litBase = shapeAt(lit.scene, tile.rest);
+    check(litBase && near(litBase->groupOpacity, 1) && shapeAt(lit.scene, {112, 509, 256, 146}) &&
+              near(hitFor(lit.scene, "search:genre:0")->rect.w, 248 * kit::motion::scale::card, .01f),
+          "With the grid lit and the focus on it, a tile is whole, ringed and grown as a card");
+    Fixture tvKey;
+    kit::KeyCap letter;
+    letter.rest = {570, 718, 68, 75};
+    letter.id = "search:kb:0:0";
+    letter.label = "q";
+    letter.corner = "1";
+    letter.tv = true;
+    kit::keyCap(tvKey.paint(), letter);
+    check(sameColor(tvKey.scene.nodes[0].color, kit::color::tvKey) && tvKey.scene.nodes[0].radius == 10 &&
+              textAt(tvKey.scene, "q") && textAt(tvKey.scene, "1"),
+          "A key of Google TV's keyboard is dark, with the digit it also types in its corner");
+}
+
 void keys() {
     Fixture plain;
     kit::KeyCap key;
@@ -1152,6 +1202,7 @@ int main() {
         statsAndSettings();
         loading();
         keys();
+        searchParts();
         galleries();
         realGlyphs();
 

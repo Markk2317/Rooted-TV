@@ -364,56 +364,110 @@ void assistantChecks() {
 void searchChecks() {
     World world;
     world.openSearch();
-    check(world.screen() == "search" && world.app.shows("Enter at least 2 characters"),
-          "The search button opens the editor with its prompt");
+    check(world.screen() == "search" && world.snapshot()["page"].string() == "tab" &&
+              world.snapshot()["focus"].string() == "field" &&
+              world.app.shows("Search films, series and more") && world.app.shows("Search by genre") &&
+              world.app.shows("Science fiction"),
+          "Search opens on Google TV's Search tab: the field over the genres");
+    world.press(Key::Ok);
+    check(world.snapshot()["page"].string() == "typing" && world.snapshot()["focusedKey"].string() == "q",
+          "OK on the field opens the typing page on the keyboard's first key");
     world.app.input("s");
     world.settle(500);
-    check(world.transport.count("title:search") == 0, "A single character searches nothing");
+    check(world.transport.count("title:suggest") == 0, "A single character asks for no suggestions");
     world.app.input("t");
     world.settle(300);
-    check(world.transport.count("title:search") == 0 && world.snapshot()["contentState"].string() == "loading",
-          "The search waits for its debounce");
+    check(world.transport.count("title:suggest") == 0, "Suggestions wait for the debounce");
     world.settle(200);
-    check(world.transport.count("title:search") == 1 && world.transport.last("title:search").body["query"].string() == "st",
-          "One request goes after the last key");
-    world.reply("title:search", R"({"ok":true,"enabled":true,"items":[{"id":7,"type":"movie","title":"Coast"},{"id":8,"type":"tv","title":"Harbor"}]})");
+    check(world.transport.count("title:suggest") == 1 &&
+              world.transport.last("title:suggest").body["query"].string() == "st",
+          "One request for suggestions goes after the last key");
+    world.reply("title:suggest",
+                R"({"ok":true,"enabled":true,"items":[{"id":7,"type":"movie","title":"Coast"},{"id":8,"type":"tv","title":"Harbor"},{"id":9,"type":"movie","title":"Coast"}]})");
     world.settle(300);
-    check(world.snapshot()["contentState"].string() == "ready" && world.snapshot()["results"].number() == 2 &&
-              world.app.shows("2 results"),
-          "Results replace the prompt");
-    // Done moves to the results; OK opens one on top of the search.
-    check(world.app.activate("editor:kb:4:4"), "The Done key is on the keyboard");
-    check(world.snapshot()["zone"].string() == "results", "Done with results moves to them");
+    check(world.snapshot()["suggestions"].number() == 2 && world.app.shows("Coast") && world.app.shows("Harbor"),
+          "The keyboard's strip suggests the titles found, each once");
+    // The search key ends the last row, two keys wide.
+    check(world.app.activate("search:kb:3:6"), "The search key is on the keyboard");
+    check(world.snapshot()["page"].string() == "results" && world.snapshot()["focus"].string() == "edit" &&
+              world.transport.last("title:search").body["query"].string() == "st" &&
+              world.snapshot()["contentState"].string() == "loading",
+          "The search key opens the results page on Edit search and asks for the results");
+    world.reply("title:search",
+                R"({"ok":true,"enabled":true,"items":[{"id":7,"type":"movie","title":"Coast"},{"id":8,"type":"tv","title":"Harbor"},{"id":10,"type":"movie","title":"Cove"}]})");
+    world.settle(300);
+    check(world.snapshot()["results"].number() == 3 && world.app.shows("Films") && world.app.shows("Series") &&
+              world.app.shows("Edit search"),
+          "The results come in a row of films and one of series");
+    world.press(Key::Down);
+    world.press(Key::Right);
+    check(world.snapshot()["focus"].string() == "rows" && world.snapshot()["row"].number() == 0 &&
+              world.snapshot()["column"].number() == 1,
+          "Down reaches the films and Right moves along them");
     world.press(Key::Ok);
     check(world.screen() == "details" && world.snapshot()["origin"].string() == "search",
           "OK on a result opens its details");
     world.press(Key::Back);
-    check(world.screen() == "search" && world.snapshot()["results"].number() == 2 &&
-              world.snapshot()["query"].string() == "st" && world.snapshot()["zone"].string() == "results",
-          "Back from the details restores the search as it was");
+    check(world.screen() == "search" && world.snapshot()["page"].string() == "results" &&
+              world.snapshot()["column"].number() == 1,
+          "Back from the details restores the results as they were");
     world.press(Key::Back);
-    check(world.snapshot()["zone"].string() == "keys", "Back from the results returns to the keyboard");
-    unsigned before = world.transport.revisions["title:search"];
+    check(world.snapshot()["focus"].string() == "edit", "Back from the rows returns to Edit search");
     world.press(Key::Back);
-    check(world.screen() == "home" && world.transport.revisions["title:search"] > before,
-          "Back from the keyboard returns Home and invalidates a pending reply");
+    check(world.snapshot()["page"].string() == "typing" && world.snapshot()["query"].string() == "st",
+          "Back from Edit search returns to the keyboard with the words searched");
+    world.press(Key::Back);
+    check(world.snapshot()["page"].string() == "tab" && world.snapshot()["query"].string().empty(),
+          "Back from the keyboard returns to the Search tab, which forgets them, as Google TV's does");
+    world.press(Key::Back);
+    check(world.screen() == "home", "Back from the field returns Home");
+}
+
+void searchGenreChecks() {
+    World world;
+    world.openSearch();
+    world.press(Key::Down);
+    check(world.snapshot()["focus"].string() == "grid" && world.snapshot()["genreIndex"].number() == 0,
+          "Down from the field reaches the genres");
+    world.settle(800);
+    check(world.motion("search:rise") > .99, "The grid rises under its title, the bar leaving");
+    world.press(Key::Right);
+    world.press(Key::Down);
+    check(world.snapshot()["genreIndex"].number() == 7, "The genres stand six to a row");
+    world.press(Key::Ok);
+    check(world.snapshot()["page"].string() == "results" &&
+              world.transport.last("title:search").body["genre"].string() == "family" &&
+              world.snapshot()["query"].string() == "Family",
+          "A genre opens its results under its name");
+    world.reply("title:search", R"({"ok":true,"enabled":true,"items":[{"id":1,"type":"movie","title":"Kin"}]})");
+    world.settle(300);
+    world.press(Key::Back);
+    check(world.snapshot()["page"].string() == "tab" && world.snapshot()["focus"].string() == "grid",
+          "Back from a genre's results returns to the grid");
+    world.press(Key::Back);
+    check(world.snapshot()["focus"].string() == "field", "Back from the grid returns to the field");
 }
 
 void searchStateChecks() {
     World world;
     world.openSearch();
     world.app.input("Wa");
-    world.settle(400);
+    world.settle(500);
+    world.reply("title:suggest", R"({"ok":false,"error":"Search service is starting"})", 503);
+    world.settle(300);
+    check(world.snapshot()["page"].string() == "typing" && world.snapshot()["suggestions"].number() == 0 &&
+              world.app.shows("Type a title, then press search"),
+          "Typing opens the keyboard; without suggestions its strip says what to do");
+    world.app.activate("search:kb:3:6");
     unsigned first = world.transport.revisions["title:search"];
     world.reply("title:search", R"({"ok":false,"error":"Search service is starting"})", 503);
     world.settle(300);
-    Scene error = world.app.scene();
-    check(world.snapshot()["contentState"].string() == "error" && world.snapshot()["query"].string() == "Wa" &&
-              world.app.shows("Search is unavailable. Try again.") && hasHit(error, "editor:retry"),
-          "A failed search keeps the query and offers a retry");
-    world.app.activate("editor:retry");
-    check(world.transport.count("title:search") == 2 && world.snapshot()["contentState"].string() == "loading",
-          "Retry asks again without leaving the editor");
+    check(world.snapshot()["contentState"].string() == "error" && world.app.shows("Search is unavailable. Try again."),
+          "A failed search says so");
+    world.press(Key::Ok);
+    check(world.snapshot()["page"].string() == "typing" && world.snapshot()["query"].string() == "Wa",
+          "Edit search returns to the keyboard with the words");
+    world.app.activate("search:kb:3:6");
     world.reply("title:search", R"({"ok":true,"enabled":true,"items":[]})");
     world.settle(300);
     check(world.snapshot()["contentState"].string() == "empty" && world.app.shows("No films or series found"),
@@ -421,81 +475,80 @@ void searchStateChecks() {
     world.reply("title:search", R"({"ok":true,"enabled":true,"items":[{"id":1,"type":"movie","title":"Late"}]})", 200,
                 static_cast<int>(first));
     check(world.snapshot()["results"].number() == 0, "A reply to an older search is dropped");
-    world.press(Key::Up);
-    world.press(Key::Up);
-    world.app.activate("editor:clear");
-    check(world.snapshot()["query"].string().empty() && world.app.shows("Enter at least 2 characters to see matching titles."),
-          "Clear empties the field and brings back the prompt");
-    world.reply("title:search", R"({"ok":true,"enabled":false,"items":[]})");
     World disabled;
     disabled.openSearch();
     disabled.app.input("ab");
-    disabled.settle(500);
+    disabled.app.activate("search:kb:3:6");
     disabled.reply("title:search", R"({"ok":true,"enabled":false,"items":[]})");
-    check(disabled.snapshot()["contentState"].string() == "error" && disabled.app.shows("Search is unavailable"),
-          "Search turned off on the server is reported");
+    check(disabled.snapshot()["contentState"].string() == "error", "Search turned off on the server is reported");
     World busy;
     busy.openSearch();
     busy.transport.refuse = true;
     busy.app.input("ab");
-    busy.settle(500);
+    busy.app.activate("search:kb:3:6");
     check(busy.snapshot()["contentState"].string() == "error", "A request the transport cannot take is an error");
 }
 
-void searchGridChecks() {
+void searchRowsChecks() {
     World world;
     world.openSearch();
     world.app.input("ab");
-    world.settle(500);
-    world.reply("title:search", R"({"ok":true,"enabled":true,"items":[{"id":1,"type":"movie","title":"A"},{"id":2,"type":"movie","title":"B"},{"id":3,"type":"movie","title":"C"},{"id":4,"type":"movie","title":"D"},{"id":5,"type":"movie","title":"E"}]})");
+    world.app.activate("search:kb:3:6");
+    world.reply("title:search",
+                R"({"ok":true,"enabled":true,"items":[{"id":1,"type":"movie","title":"A"},{"id":2,"type":"movie","title":"B"},{"id":3,"type":"movie","title":"C"},{"id":4,"type":"movie","title":"D"},{"id":5,"type":"movie","title":"E"},{"id":6,"type":"tv","title":"F"}]})");
+    world.settle(300);
     world.press(Key::Down);
-    world.press(Key::Down);
-    world.press(Key::Down);
-    check(world.snapshot()["zone"].string() == "keys" && world.snapshot()["focusedKey"].string() == "symbols",
-          "Down along the keyboard reaches its last row");
-    world.press(Key::Down);
-    check(world.snapshot()["zone"].string() == "clear", "Down from the last row reaches the Clear button");
-    world.press(Key::Up);
-    check(world.snapshot()["zone"].string() == "keys", "Up returns to the keyboard");
-    world.app.activate("editor:kb:4:4");
-    world.press(Key::Down);
-    check(world.snapshot()["selected"].number() == 2, "Down follows the results' two columns");
-    world.press(Key::Right);
-    check(world.snapshot()["selected"].number() == 3, "Right selects the neighbour");
-    world.press(Key::Down);
-    check(world.snapshot()["selected"].number() == 4, "Down to a shorter last row lands on its last card");
+    for (int i = 0; i < 3; ++i)
+        world.press(Key::Right);
     world.settle(900);
-    check(std::fabs(world.motion("editor:rs") + 254) < .5,
-          "The grid scrolls a row up once the focus is on its third row");
+    check(std::fabs(world.motion("search:rx:0") - kit::geometry::rowScrollTarget(3, 5, 391, 41)) < .5 &&
+              world.motion("search:rs") > .99 && world.motion("search:rg:0") > .99,
+          "The focused row rises and scrolls to keep its card first, as Home's rows do");
+    world.press(Key::Down);
+    check(world.snapshot()["row"].number() == 1 && world.snapshot()["column"].number() == 0,
+          "Down moves to the series, at the card it was left on");
     world.press(Key::Up);
-    world.press(Key::Left);
-    check(world.snapshot()["zone"].string() == "keys", "Left from the first column returns to the keyboard");
+    check(world.snapshot()["column"].number() == 3, "Each row keeps its own place");
+    world.press(Key::Up);
     world.settle(900);
-    check(std::fabs(world.motion("editor:rs")) < .5, "The grid returns to the top with the focus");
+    check(world.snapshot()["focus"].string() == "edit" && world.motion("search:rs") < .01,
+          "Up from the first row returns to Edit search and the rows settle back");
 }
 
 void keyboardChecks() {
     World world;
     world.openSearch();
-    // The key under the focus is typed with OK; the focus moves by the nearest key.
-    check(world.app.activate("editor:kb:1:4"), "The keys are targets");
+    world.press(Key::Ok);
+    // Google TV's keyboard: letters with the digits in the top row's corners.
+    check(world.app.activate("search:kb:0:4"), "The keys are targets");
     check(world.snapshot()["query"].string() == "t", "A key is typed");
-    world.press(Key::Down);
     world.press(Key::Down);
     world.press(Key::Right);
     world.press(Key::Ok);
-    check(world.snapshot()["query"].string().size() == 2, "Arrow keys move over the keyboard and OK types");
+    check(world.snapshot()["query"].string() == "th", "Arrow keys move over the keyboard and OK types");
     world.press(Key::Delete);
     check(world.snapshot()["query"].string() == "t", "The Delete key erases a character");
     world.app.input("héllo");
     check(world.snapshot()["query"].string() == "théllo", "Typed text is inserted whole");
-    world.app.activate("editor:kb:3:0");
-    world.app.activate("editor:kb:2:0");
-    check(world.snapshot()["query"].string() == "théllo" + std::string("A"),
-          "Shift turns the next letter to capitals");
-    world.app.activate("editor:kb:4:0");
-    check(world.app.activate("editor:kb:1:0") && world.snapshot()["query"].string().back() == '!',
-          "The 123? key switches to symbols");
+    world.app.activate("search:kb:2:0");
+    world.app.activate("search:kb:1:0");
+    check(world.snapshot()["query"].string() == "théllo" + std::string("A"), "Shift turns the next letter to capitals");
+    check(world.app.shows("?123"), "The symbols key is Gboard's ?123");
+    const Scene keysScene = world.app.scene();
+    auto keyRect = [&](const std::string &id) {
+        for (const Hit &hit : keysScene.hits)
+            if (hit.id == id)
+                return hit.rect;
+        return Rect{0, 0, 0, 0};
+    };
+    // The focused key (a, after shift) is grown; the one beside it is at rest.
+    check(keyRect("search:kb:1:1").x == 570 + 79 && keyRect("search:kb:1:1").y == 718 + 86 &&
+              keyRect("search:kb:1:1").w == 68 && keyRect("search:kb:3:3").w == 3 * 68 + 2 * 11 &&
+              keyRect("search:kb:3:6").x == 570 + 8 * 79 && keyRect("search:kb:3:6").w == 2 * 68 + 11,
+          "The keys stand on Gboard's 79x86 pitch, space three keys wide and search two");
+    world.app.activate("search:kb:3:0");
+    check(world.app.activate("search:kb:0:0") && world.snapshot()["query"].string().back() == '1',
+          "?123 switches to the digits and symbols");
 }
 
 
@@ -722,7 +775,8 @@ int main() {
         searchChecks();
         assistantChecks();
         searchStateChecks();
-        searchGridChecks();
+        searchRowsChecks();
+        searchGenreChecks();
         keyboardChecks();
         renameChecks();
         std::printf("%d native overlay-screen checks passed\n", checkCount());

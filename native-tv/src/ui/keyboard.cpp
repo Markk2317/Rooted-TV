@@ -109,6 +109,18 @@ std::vector<std::vector<std::string>> Keyboard::padRows() const {
             fourth,
             {"symbols", "left", "right", "space", "done"}};
 }
+std::vector<std::vector<std::string>> Keyboard::tvRows() const {
+    std::vector<std::string> third = split(symbols_ ? "*\"':;!?=~" : "zxcvbnm.");
+    if (!symbols_)
+        third.insert(third.begin(), "shift");
+    third.push_back("delete");
+    std::vector<std::string> last = {"symbols", "left", "right", "space"};
+    for (const std::string &key : split(symbols_ ? ",." : "-_"))
+        last.push_back(key);
+    last.push_back("done");
+    return {split(symbols_ ? "1234567890" : "qwertyuiop"),
+            split(symbols_ ? "@#$%&-+()/" : "asdfghjkl,"), third, last};
+}
 std::string Keyboard::label(const std::string &key) const {
     if (key == "shift")
         return "Shift";

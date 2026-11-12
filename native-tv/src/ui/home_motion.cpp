@@ -20,7 +20,6 @@ namespace stagger = kit::motion::stagger;
 
 constexpr uint32_t kBeatMs = 5000;
 constexpr uint32_t kHeroSettleMs = 400; // a held key moves on without changing the hero each step
-constexpr uint32_t kTabSettleMs = 190;  // the focus stays on a tab this long before its page opens
 constexpr uint32_t kPageSwapMs = 110;   // the old page has all but left
 constexpr uint32_t kHeroWaitMs = 1200;  // longest wait for the incoming art
 constexpr uint32_t kIconWaitMs = 300;   // longest wait for the apps' icons before their row enters
@@ -543,9 +542,16 @@ void Application::homeFocus(bool jump) {
 void Application::homeKeyMoved(Key key) {
     auto &home = state_.home;
     flow_.heroUntouched = false;
+    flow_.barPagePending = false;
     if (home.navigation && home.nav < home.tabs.size() && home.nav != flow_.shown &&
         (key == Key::Left || key == Key::Right)) {
         flow_.tabPending = true;
+        flow_.commitAt = now_ + kTabSettleMs;
+    } else if (home.navigation && home.nav == home.tabs.size() + 2 &&
+               (key == Key::Left || key == Key::Right)) {
+        // Search is a tab of Google TV's bar: resting on it opens its page.
+        flow_.tabPending = false;
+        flow_.barPagePending = true;
         flow_.commitAt = now_ + kTabSettleMs;
     } else if (key == Key::Left || key == Key::Right || key == Key::Up)
         flow_.tabPending = false;
@@ -618,6 +624,26 @@ void Application::homeArrangeCancel() {
 
 // ---- Tabs and pages ---------------------------------------------------------------------------
 
+void Application::openBarPage() {
+    auto &home = state_.home;
+    flow_.barPagePending = false;
+    const size_t stop = home.nav;
+    if (stop == home.tabs.size() + 2) {
+        route("search");
+    } else if (stop < home.tabs.size()) {
+        route("home");
+        home.tab = stop;
+        rebuildHome();
+        homeStart();
+        homeData();
+    } else
+        return;
+    barFocus_ = screen_ != nullptr;
+    home.navigation = true;
+    home.nav = stop;
+    homeFocus();
+}
+
 // Starts the old page leaving; its rows are swapped for the new tab's once it has.
 void Application::homeSelectTab(size_t tab) {
     auto &home = state_.home;
@@ -648,6 +674,8 @@ void Application::homeUpdate() {
         homeData();
     if (flow_.tabPending && due(now_, flow_.commitAt))
         homeSelectTab(home.nav);
+    if (flow_.barPagePending && due(now_, flow_.commitAt))
+        openBarPage();
     if (flow_.pendingTab >= 0 && due(now_, flow_.swapAt)) {
         home.tab = static_cast<size_t>(flow_.pendingTab);
         flow_.pendingTab = -1;

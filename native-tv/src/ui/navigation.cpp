@@ -219,7 +219,9 @@ void Application::screenKey(Key key) {
         if (!screen_->key(*this, key) && key == Key::Up && screen_->hasBar()) {
             barFocus_ = home.navigation = true;
             int tab = screen_->barTab();
-            home.nav = tab >= 0 ? static_cast<size_t>(tab) : home.tabs.size() + 1;
+            home.nav = screen_->barSearch() ? home.tabs.size() + 2
+                       : tab >= 0           ? static_cast<size_t>(tab)
+                                            : home.tabs.size() + 1;
             homeFocus();
         }
         return;
@@ -232,7 +234,11 @@ void Application::screenKey(Key key) {
     if (key == Key::Right && position + 1 < stops.size())
         ++position;
     home.nav = stops[position];
-    if (key == Key::Down) {
+    flow_.barPagePending = screen_->barSearch() && (key == Key::Left || key == Key::Right) &&
+                           home.nav < home.tabs.size();
+    if (flow_.barPagePending)
+        flow_.commitAt = now_ + kTabSettleMs;
+    if (key == Key::Down || (key == Key::Ok && screen_->barSearch() && home.nav == home.tabs.size() + 2)) {
         barFocus_ = home.navigation = false;
         screen_->focus(*this);
     } else if (key == Key::Ok) {

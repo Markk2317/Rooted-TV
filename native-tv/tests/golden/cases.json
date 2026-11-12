@@ -1363,8 +1363,31 @@
       ]
     },
     {
-      "name": "search-results",
-      "time": 4200,
+      "name": "search-tab",
+      "time": 2600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        }
+      ]
+    },
+    {
+      "name": "search-genres",
+      "time": 3200,
       "fixture": "home",
       "args": [
         "--screen",
@@ -1384,12 +1407,205 @@
           "key": "left"
         },
         {
-          "at": 1800,
+          "at": 2200,
+          "key": "down"
+        },
+        {
+          "at": 2300,
+          "key": "down"
+        },
+        {
+          "at": 2400,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "search-typing",
+      "time": 3600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 2200,
           "key": "ok"
         },
         {
-          "at": 3000,
+          "at": 2300,
+          "key": "ok"
+        },
+        {
+          "at": 2600,
           "text": "lo"
+        }
+      ]
+    },
+    {
+      "name": "search-results",
+      "time": 4400,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 2200,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "ok"
+        },
+        {
+          "at": 2600,
+          "text": "lo"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        },
+        {
+          "at": 3060,
+          "key": "down"
+        },
+        {
+          "at": 3120,
+          "key": "down"
+        },
+        {
+          "at": 3200,
+          "key": "right"
+        },
+        {
+          "at": 3260,
+          "key": "right"
+        },
+        {
+          "at": 3320,
+          "key": "right"
+        },
+        {
+          "at": 3380,
+          "key": "right"
+        },
+        {
+          "at": 3440,
+          "key": "right"
+        },
+        {
+          "at": 3500,
+          "key": "right"
+        },
+        {
+          "at": 3600,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "search-rows",
+      "time": 5000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 2200,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "ok"
+        },
+        {
+          "at": 2600,
+          "text": "lo"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        },
+        {
+          "at": 3060,
+          "key": "down"
+        },
+        {
+          "at": 3120,
+          "key": "down"
+        },
+        {
+          "at": 3200,
+          "key": "right"
+        },
+        {
+          "at": 3260,
+          "key": "right"
+        },
+        {
+          "at": 3320,
+          "key": "right"
+        },
+        {
+          "at": 3380,
+          "key": "right"
+        },
+        {
+          "at": 3440,
+          "key": "right"
+        },
+        {
+          "at": 3500,
+          "key": "right"
+        },
+        {
+          "at": 3600,
+          "key": "ok"
+        },
+        {
+          "at": 4200,
+          "key": "down"
         }
       ]
     },

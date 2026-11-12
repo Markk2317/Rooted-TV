@@ -140,8 +140,9 @@ pill stretched, after a row snap, on Continue watching (the bar gone up with the
 page) and with the recent apps open. The Quick drawer
 (mid-slide, at rest, a list of choices, the switches), Profiles (`"profiles": 3`
 gives the fixture three profiles), the profile editor, title details with and
-without the overview sheet and the search with results each have a case; the
-fixture also answers stats, details and search. It can also run alone
+without the overview sheet and Search's pages (its tab, the risen genre grid, the
+keyboard with suggestions, the results and their risen rows) each have a case; the
+fixture also answers stats, details and search, a genre included. It can also run alone
 (`home_fixture.py [--art DIR]`) to point a hand-run client at it.
 `"fixture": "dashboard"` serves `tests/dashboard_fixture.py` instead: a real C4's
 stats (`tests/fixtures/tv/stats-c4-webos9.json`), the ten dashboard sections' replies
@@ -182,7 +183,7 @@ the scroll. `native-kit` also checks that the loading indicator stays under fort
 nodes and turns.
 
 `native-overlay-screens` (`tests/overlay_screens.cpp`) drives the Quick drawer,
-Profiles, title details and the search and profile editors the same way: focus
+Profiles, title details, Search and the profile editor the same way: focus
 paths, the requests each makes and the replies it takes (a refused write is taken
 back and says why, a reply to an older request is dropped), the profile avatars and
 their names, a rename shown at once and put back when refused, the eight-deep stack

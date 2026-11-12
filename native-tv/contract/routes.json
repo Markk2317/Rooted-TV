@@ -618,7 +618,7 @@
       "csrf": "not applicable",
       "bodyLimit": {"max": 0, "unit": "bytes"},
       "owner": "native",
-      "notes": "Native owns on-demand title details and search with the bounded persistent cache and stale fallback. Netflix lookup uses the exact Wikidata entity and P1874 and never sends the TMDB key to Wikidata. Node keeps standalone fallback."
+      "notes": "Native owns on-demand title details and search (by words, or by a genre of Search's grid with ?genre=) with the bounded persistent cache and stale fallback. Netflix lookup uses the exact Wikidata entity and P1874 and never sends the TMDB key to Wikidata. Node keeps standalone fallback."
     },
     {
       "paths": ["/api/home/trailer"],

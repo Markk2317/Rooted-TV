@@ -27,6 +27,9 @@ class HomeContent {
                  const std::string &type, const std::string &id);
     Json search(const std::string &tmdbKey, const std::string &query,
                 bool queryPresent = true);
+    // Search's "Search by genre": the most popular films of a genre of names::searchGenres, then
+    // its series, as {"ok", "enabled", "items"} like a search.
+    Json genre(const std::string &tmdbKey, const std::string &genre);
     Json netflix(const std::string &tmdbKey, bool netflixEnabled,
                  const std::string &type, const std::string &id);
     // {"ok", "enabled", "gti"}: the title's Prime Video GTI (Wikidata's P14462), "" when Wikidata

@@ -49,16 +49,12 @@ The remote's **Red** key opens a focused title in Netflix immediately, without t
 
 ![A title's details on a B3: year, rating, genres, overview, cast, the Trailer button and More like this](../screenshots/tv-details.jpg)
 
-**Search**, which leads the bar's capsule before the tabs (Left from the first tab), finds films and series through TMDB.
+**Search** leads the bar's capsule before the tabs and is a tab of its own, as on Google TV: resting on it (Left from the first tab) opens its page, a wide search field over a **Search by genre** grid of eighteen genres (Action to Thriller; TMDB has no game show genre, so War takes Google TV's Game show place). Down from the field raises the grid under its title as the bar leaves. OK on the field opens the typing page: the field at the top left and Google TV's TV keyboard (Gboard's layout: the top row's letters show their digits, **?123** for symbols, the caret keys, space, - and _, and a search key), with up to eight titles suggested over the keys after two characters and a 350 ms pause (Up reaches them, OK searches one). The search key, a suggestion or a genre opens the results page: the words searched, **Edit search** (back to the keyboard with them), and a row of films and one of series, a genre's being its most popular. Down raises the rows as Home's do, with the focused row's captions; OK opens a title's details, and Back steps back through the rows, the keyboard and the Search tab, which forgets the words, as Google TV's does.
 
 **Ask Gemini**, the ✦ before the gear where a Gemini API key is saved (below), is Google TV's Gemini button with the owner's own key: the same keyboard takes a question ("something funny on Prime tonight", "open Rocky", "turn the volume down"), **Ask** sends it, and the answer shows over the films and series it names, which open as from Search. Gemini can search TMDB, choose the titles to show, open a title in the streaming app of the TV that has it in the TV's country, and set the volume, mute, switch off the screen, change the HDMI input, open an installed app, and play or pause; each of these goes through the server's own routes, with their checks. It answers in the language of the question. The Native Tv Home tab has the same question box, for asking from a phone. The remote's microphone is not used.
-The on-screen keyboard, the one Setup uses, has Shift, a **123?** key for
-symbols, Delete, keys that move the caret and a space bar, with **Clear** under
-it; a physical keyboard also works. Search starts after two
-characters and a 350 ms pause. The results are cards in two columns; **Results**
-(the last key) moves to them, Up and Down scroll through them, OK opens details,
-and Back returns to the keyboard and then Home. A failed search keeps the query
-and offers **Retry search**. Search and title details are hidden without a TMDB key.
+Ask Gemini's keyboard is the one Setup uses, with Shift, a **123?** key for
+symbols, Delete, keys that move the caret and a space bar, and **Clear** under
+it; a physical keyboard works on both. Search and title details are hidden without a TMDB key.
 With `"netflixDeepLinks": true` in `config.json`, details can also show
 **Open on Netflix**. The server uses TMDB's Wikidata identifier and
 [Wikidata's Netflix ID (P1874)](https://www.wikidata.org/wiki/Property:P1874)

@@ -35,6 +35,9 @@ class KeyboardPad {
         bool address = false;        // "." where a name has "'"
         bool digits = false;         // a number: only the digits, over delete and Done
         std::string doneLabel = "Done", doneIcon = "check";
+        // Google TV's keyboard (Keyboard::tvRows) at its sizes from `origin`'s corner, its keys
+        // one unit wide but space (three) and Done (two).
+        bool tv = false;
     };
     // Sets the text (caret at its end), puts focus on "q" (on "1" for digits) and clears the layers.
     void begin(Motion &motion, const std::string &value, const Options &options);
@@ -81,6 +84,9 @@ class KeyboardPad {
         Rect rect;
     };
     std::vector<std::vector<Cap>> layout() const;
+    std::vector<std::vector<std::string>> rows() const {
+        return options_.tv ? model_.tvRows() : model_.padRows();
+    }
     Result press(Motion &motion, double nowMs, size_t row, size_t column);
     void focusKey(Motion &motion, size_t row, size_t column);
     std::string motionId(const char *kind, size_t row, size_t column) const;

@@ -34,10 +34,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             else:
                 self.reply(200, b'{"ok":true}')
         elif url.path == "/api/home/search":
-            query = urllib.parse.parse_qs(url.query).get("q", [""])[0]
+            asked = urllib.parse.parse_qs(url.query)
+            query = asked.get("q", [""])[0]
             if query in ("slow", "hang"):
                 time.sleep(0.3 if query == "slow" else 5)
-            self.reply(200, json.dumps({"ok": True, "query": query}).encode())
+            self.reply(200, json.dumps({"ok": True, "query": query, "genre": asked.get("genre", [""])[0]}).encode())
         elif url.path == "/api/home/now":
             self.reply(200, b'{"kind":"input","port":4}')
         elif url.path in ("/api/home/picture", "/api/home/recents/image"):

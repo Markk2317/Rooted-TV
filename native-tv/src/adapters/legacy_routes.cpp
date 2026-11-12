@@ -114,6 +114,9 @@ std::string legacyRoute(Operation operation, const Json &arguments) {
         return "/api/home/details?type=" + encode(arguments["type"].string()) +
                "&id=" + encode(arguments["id"].string());
     case Operation::SearchTitles:
+        // A genre of the "Search by genre" grid, or the words typed.
+        if (!arguments["genre"].string().empty())
+            return "/api/home/search?genre=" + encode(arguments["genre"].string());
         return "/api/home/search?q=" + encode(arguments["query"].string());
     case Operation::NetflixTitle:
         return "/api/home/netflix?type=" + encode(arguments["type"].string()) +

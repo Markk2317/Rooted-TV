@@ -62,6 +62,14 @@ class ScreenView {
     virtual int barTab() const {
         return -1;
     }
+    // Google TV's Search is a tab of the bar: its page has the search slot selected instead.
+    virtual bool barSearch() const {
+        return false;
+    }
+    // How far the bar has left (0..1), as Home's does when its rows rise; read after build().
+    virtual float barAway() const {
+        return 0;
+    }
     // True for a screen that paints its own wall (art, or the page it sits over, like the Quick
     // drawer over Home): the application then draws no ambient wall under it.
     virtual bool paintsWall() const {

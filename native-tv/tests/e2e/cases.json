@@ -6585,7 +6585,7 @@
     {
       "id": "E2E-174",
       "title": "Search leads the Home bar and Quick settings ends it",
-      "purpose": "With the feed on (a TMDB key saved) Search is the first stop after the avatar, in the tabs' capsule before the tabs, and Quick settings the last, as Google TV lays its bar out since 2025: from the first tab, Left reaches Search and six Rights from there (past Home, Films, Shows, Apps and Inputs) reach Quick settings.",
+      "purpose": "With the feed on (a TMDB key saved) Search is the first stop after the avatar, in the tabs' capsule before the tabs, and Quick settings the last, as Google TV lays its bar out since 2025: from the first tab, Left reaches Search and six Rights from there (past Home, Films, Shows, Apps and Inputs) reach Quick settings. The bar's stops are numbered tabs first (five here), then the avatar, the gear and Search.",
       "kind": "run",
       "screen": "home",
       "script": "home-bar-order.json",
@@ -6618,12 +6618,12 @@
           {
             "name": "search",
             "path": "nav",
-            "equals": 5
+            "equals": 7
           },
           {
             "name": "gear",
             "path": "nav",
-            "equals": 4
+            "equals": 6
           }
         ]
       },

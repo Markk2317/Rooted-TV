@@ -1824,6 +1824,12 @@ The transport is the existing server `getJson`; details append
 `credits,videos,similar,external_ids`. TV runtime uses episode runtime.
 YouTube trailers require an eleven-character video ID. Queries are 2–80
 characters; IDs and types are validated before transport.
+`GET /api/home/search?genre=…` takes a key of Search's genre grid
+(`names::searchGenres`: `action` to `thriller`) and answers TMDB's
+`discover/movie` then `discover/tv` for its genre IDs, most popular first,
+16 of each at most, kept for a day; a genre TMDB has for one kind only
+(History, Horror, Music, Romance and Thriller are films, Reality series) asks
+for that kind alone.
 
 `home-content.json` stores up to 40 trimmed replies under hashed request
 keys, atomically written with mode 0600. Details live for a day and search

@@ -64,8 +64,9 @@ struct TopBar {
     float pillAlpha = 1; // fades out while Settings or Setup is showing
     float avatarFocus = 0, settingsFocus = 0, searchFocus = 0;
     bool settingsSelected = false;
-    // Search leads the tabs' capsule where titles can be searched.
-    bool search = false;
+    // Search leads the tabs' capsule where titles can be searched; `searchSelected` while its page
+    // shows, as Google TV marks it with a grey slot.
+    bool search = false, searchSelected = false;
     // The assistant leads the gear's capsule where a Gemini key is saved, as Google TV's Gemini.
     bool assistant = false;
     float assistantFocus = 0;
@@ -313,11 +314,37 @@ struct KeyCap {
     bool accent = false; // the Done key
     bool hint = false;   // quiet label (space)
     bool latched = false; // shift while capitals are on: accent ink on a tinted fill
+    // Google TV's keyboard (Gboard for TV): its key colours and size, the search key as the accent,
+    // and `corner`, the digit a letter of the top row also types, small in its top right.
+    bool tv = false;
+    std::string corner;
     float focus = 0;
     float press = 0; // 0 at rest, 1 at the bottom of the .94 dip
     Enter enter;
 };
 void keyCap(Paint paint, const KeyCap &key);
+
+// Google TV's search field, the page of its Search tab: a wide dark pill with a light outline while
+// it has the focus, the search icon and the words typed (or the placeholder) at 42 px.
+struct SearchField {
+    Rect rest;
+    std::string id, text, placeholder;
+    float focus = 0;
+    Enter enter;
+};
+void searchField(Paint paint, const SearchField &field);
+
+// A tile of Google TV's "Search by genre" grid: the genre's colour, darker at the top, and its name
+// in the middle. `lit` (0..1) is the grid with the focus, when the tiles show at full strength;
+// otherwise they are at 60% over the page. Focus as a card's, with a white glow.
+struct GenreTile {
+    Rect rest;
+    std::string id, label;
+    Color color;
+    float lit = 0, focus = 0;
+    Enter enter;
+};
+void genreTile(Paint paint, const GenreTile &tile);
 
 // ---- Progress -----------------------------------------------------------------------------------
 
