@@ -19,6 +19,7 @@ import argparse
 import contextlib
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
@@ -244,6 +245,9 @@ def main():
     if not has_gl(args.client, env):
         print("skipped: no GL context on this machine")
         return SKIP
+    # Without --out the frames go to a folder of their own, which is removed once every screen
+    # matches; a failure leaves its actual and diff images there, not the 6 MB frames.
+    scratch = not args.out
     out = args.out or tempfile.mkdtemp(prefix="nativetv-golden-")
     os.makedirs(out, exist_ok=True)
     failed = 0
@@ -254,6 +258,8 @@ def main():
         capture = os.path.join(out, case["name"] + ".ppm")
         render(args.client, case, capture, env)
         actual = read_ppm(capture)
+        if scratch:
+            os.remove(capture)
         if args.command == "update":
             write_png(golden, *actual)
             print("updated " + golden)
@@ -266,6 +272,8 @@ def main():
             failed += 1
             write_png(os.path.join(out, case["name"] + ".actual.png"), *actual)
             print("     actual and diff images in " + out)
+    if scratch and not failed:
+        shutil.rmtree(out, ignore_errors=True)
     return 1 if failed else 0
 
 

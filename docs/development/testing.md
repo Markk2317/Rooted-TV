@@ -130,7 +130,8 @@ probe exit codes, capture determinism, the perf log, the 30 fps ambient pacing
 and SIGTERM. `native-frame-loop` covers the statistics and the clock.
 `tests/golden/golden.py check` renders the screens in `tests/golden/cases.json`
 with `--time` and compares each with its PNG, per pixel with a tolerance,
-writing `<name>.actual.png` and `<name>.diff.png` when one fails;
+writing `<name>.actual.png` and `<name>.diff.png` when one fails (in `--out`, or
+else a folder of its own under the temporary directory, removed when every screen matches);
 `golden.py update` rewrites the PNGs after an intended change. A case may name
 `"fixture": "home"`, which serves the stand-in daemon in `tests/home_fixture.py`
 (an invented catalogue, feed and generated artwork; `"assistant": true` adds the
