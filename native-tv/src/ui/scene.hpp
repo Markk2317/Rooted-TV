@@ -147,6 +147,10 @@ struct Node {
     // Application::resolvePictures hides it once an opaque picture is on show, where it would
     // only tint the picture's edge and its fade.
     bool backing = false;
+    // A Rectangle with a picture id in `value` and `edges` set fills from the picture's top edge
+    // colour down to its bottom's, asked as a square the box's height (an app's icon tile drawn
+    // in a wider box); its own colour until the picture is in, or when the picture is see-through.
+    bool edges = false;
     // SCENE-V2
     Corners corners;            // overrides `radius` when any corner is set
     Gradient gradient;

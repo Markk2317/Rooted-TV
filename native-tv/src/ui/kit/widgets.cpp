@@ -744,6 +744,81 @@ void featureCard(Paint paint, const FeatureCard &feature) {
          type::featureLine, color::onSurface);
     hit(scene, look.rect, feature.id);
 }
+void appCard(Paint paint, const AppCard &card) {
+    focus::Look look = focus::lookAt(card.rest, card.zoom, card.focus);
+    if (invisible(card.enter) || offCanvas(look.rect))
+        return;
+    Scene &scene = paint.scene;
+    const Rect &box = card.rest;
+    if (card.caption > 0 && !card.name.empty()) {
+        Enter shown = card.enter;
+        shown.alpha *= focus::clamp01(card.caption);
+        Group line(scene, shown);
+        text(paint, {box.x, box.y + box.h + layout::cardCaptionGap, box.w, layout::cardCaptionLine}, card.name,
+             type::cardCaption, color::onSurface, Node::Align::Left, 1);
+    }
+    Transform scale = focus::transformAt(box, look.scale);
+    Group group(scene, card.enter, look.scale != 1 ? &scale : nullptr);
+    focusGlow(scene, box, card.radius, card.image, look.ringAlpha);
+    if (look.ringAlpha > 0) {
+        const float gap = 4;
+        Node &ring = scene.shape({box.x - gap, box.y - gap, box.w + 2 * gap, box.h + 2 * gap}, clear,
+                                 card.radius + gap);
+        ring.ring = {0, 3, faded(alpha::cardRing, look.ringAlpha)};
+    }
+    Node &base = scene.shape(box, card.color, card.radius);
+    if (!card.image.empty()) {
+        base.value = card.image;
+        base.edges = true;
+        // The tile is as high as the card, so its square corners stay inside the card's rounding.
+        scene.picture({box.x + (box.w - box.h) / 2, box.y, box.h, box.h}, 0, 0).value = card.image;
+    } else {
+        const float side = box.h * .4f;
+        paint.glyphs.icon(scene, centred(box.x + box.w / 2, box.y + box.h / 2, side), card.icon, white);
+    }
+    hit(scene, look.rect, card.id);
+}
+void searchPill(Paint paint, const SearchPill &pill) {
+    if (invisible(pill.enter) || offCanvas(pill.rest))
+        return;
+    Scene &scene = paint.scene;
+    Group group(scene, pill.enter);
+    const float amount = focus::clamp01(pill.focus);
+    Node &fill = scene.shape(pill.rest, color::appsSearch, pill.rest.h / 2);
+    if (amount > 0)
+        fill.ring = {3, 0, faded(alpha::cardRing, amount)};
+    const float middle = pill.rest.y + pill.rest.h / 2;
+    const Color ink = focus::inkAt(color::onSurface2, white, amount);
+    paint.glyphs.icon(scene,
+                      centred(pill.rest.x + layout::appsSearchIconCx - layout::appsSearchX, middle,
+                              layout::appsSearchIcon),
+                      "search", ink);
+    const float textX = pill.rest.x + layout::appsSearchTextX - layout::appsSearchX;
+    text(paint, {textX, middle - type::appsSearch.line / 2, pill.rest.x + pill.rest.w - textX - 60, type::appsSearch.line},
+         pill.label, type::appsSearch, ink, Node::Align::Left, 1);
+    hit(scene, pill.rest, pill.id);
+}
+void categoryChip(Paint paint, const CategoryChip &chip) {
+    focus::Look look = focus::lookAt(chip.rest, motion::scale::appChip, chip.focus);
+    if (invisible(chip.enter) || offCanvas(look.rect))
+        return;
+    Scene &scene = paint.scene;
+    Transform scale = focus::transformAt(chip.rest, look.scale);
+    Group group(scene, chip.enter, look.scale != 1 ? &scale : nullptr);
+    const Rect &box = chip.rest;
+    focusGlow(scene, box, layout::appsChipR, "", look.ringAlpha);
+    if (look.ringAlpha > 0) {
+        const float gap = 4;
+        Node &ring = scene.shape({box.x - gap, box.y - gap, box.w + 2 * gap, box.h + 2 * gap}, clear,
+                                 layout::appsChipR + gap);
+        ring.ring = {0, 3, faded(alpha::cardRing, look.ringAlpha)};
+    }
+    Node &base = scene.shape(box, color::appsChip, layout::appsChipR);
+    base.ring = {1, 0, faded(white, .08f)};
+    text(paint, {box.x + 12, box.y + (box.h - type::appsChip.line) / 2, box.w - 24, type::appsChip.line},
+         chip.label, type::appsChip, focus::inkAt(color::onSurface2, white, look.ringAlpha), Node::Align::Center, 1);
+    hit(scene, look.rect, chip.id);
+}
 void appCircle(Paint paint, const AppCircle &circle) {
     // Google TV's focused app: the circle grows a little inside a white ring that stands off it,
     // over the glow in its icon's colour.

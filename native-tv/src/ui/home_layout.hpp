@@ -3,6 +3,7 @@
 #include "ui/kit/geometry.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -10,8 +11,6 @@
 // animated values. Ids stay under 16 characters so building one allocates nothing.
 namespace nativetv {
 namespace home {
-constexpr size_t kGridColumns = static_cast<size_t>(kit::layout::tileCols);
-constexpr float kGridPitch = kit::layout::tilePitchY;
 constexpr size_t kSpotlightMax = 6;
 
 // Hue in degrees, saturation and lightness in 0..1.
@@ -46,37 +45,60 @@ inline unsigned hashOf(const std::string &text) {
         hash = (hash ^ c) * 16777619u;
     return hash;
 }
+// An app's own colour, as the TV gives it; without one a steady one per app, dark enough for
+// white text.
+inline Color appColor(const Card &card) {
+    std::string value = card.data["color"].string();
+    if (!value.empty() && value[0] == '#')
+        value.erase(0, 1);
+    if (value.size() == 6 && value.find_first_not_of("0123456789abcdefABCDEF") == std::string::npos)
+        return kit::rgb(static_cast<unsigned>(std::strtoul(value.c_str(), nullptr, 16)));
+    return hsl(static_cast<float>(hashOf(card.id) % 360), .5f, .36f);
+}
 inline bool isApps(const CardRow &row) {
     return row.key == "app";
 }
-// The Films and Shows tabs' featured titles: Google TV's large cards over the rows, with no title.
+// Google TV's large cards over the rows, with no title: the Films and Shows tabs' featured titles,
+// and the Apps tab's banners.
 inline bool isFeature(const CardRow &row) {
-    return row.key == "feature";
+    return row.key == "feature" || row.key == "appfeature";
+}
+// The Apps tab's bar that searches the apps, and its row of category buttons.
+inline bool isSearch(const CardRow &row) {
+    return row.key == "search";
+}
+inline bool isChips(const CardRow &row) {
+    return row.key == "chips";
 }
 // Google TV's rows come in three sizes: the top picks' small cards, Your apps' circles, and the
-// larger cards of every row of titles under them (Continue watching and the rest).
+// larger cards of every row of titles under them (Continue watching and the rest), which the Apps
+// tab's rows of apps share.
 inline bool largeCards(const CardRow &row) {
-    return !isApps(row) && !isFeature(row) && row.key != "trending" && row.key != "dev" &&
-           row.key != "ch";
+    return !isApps(row) && !isFeature(row) && !isSearch(row) && !isChips(row) && row.key != "trending" &&
+           row.key != "dev" && row.key != "ch";
 }
 inline float itemWidth(const CardRow &row) {
-    return isApps(row)      ? kit::layout::appD
-           : isFeature(row) ? kit::layout::featureW
+    return isApps(row)       ? kit::layout::appD
+           : isFeature(row)  ? kit::layout::featureW
+           : isSearch(row)   ? kit::layout::appsSearchW
+           : isChips(row)    ? kit::layout::appsChipW
            : largeCards(row) ? kit::layout::cardLW
                              : kit::layout::cardW;
 }
 inline float itemHeight(const CardRow &row) {
-    return isApps(row)      ? kit::layout::appD
-           : isFeature(row) ? kit::layout::featureH
+    return isApps(row)       ? kit::layout::appD
+           : isFeature(row)  ? kit::layout::featureH
+           : isSearch(row)   ? kit::layout::appsSearchH
+           : isChips(row)    ? kit::layout::appsChipH
            : largeCards(row) ? kit::layout::cardLH
                              : kit::layout::cardH;
 }
-// `named`: a row of apps that carries every name (the Apps page), so the circles stand wider.
-inline float itemGap(const CardRow &row, bool named = false) {
-    return named && isApps(row) ? kit::layout::appGapNamed
-           : isFeature(row)     ? kit::layout::featureGap
-           : largeCards(row)    ? kit::layout::cardLGap
-                                : kit::layout::cardGap;
+inline float itemGap(const CardRow &row) {
+    return isFeature(row)    ? kit::layout::featureGap
+           : isChips(row)    ? kit::layout::appsChipGap
+           : largeCards(row) ? kit::layout::cardLGap
+                             : isApps(row) ? kit::layout::appGap
+                                           : kit::layout::cardGap;
 }
 inline std::string id(const char *name, size_t row, size_t column) {
     return std::string(name) + ":" + std::to_string(row) + "." + std::to_string(column);
@@ -106,16 +128,46 @@ inline float labelPx(const RowLook &look) {
 inline float labelArea(const RowLook &look) {
     return kit::focus::mix(55, 69, look.up) + (121 - 69) * look.grow;
 }
-// From the row's top to its items: the title's area, or nothing for the featured row.
+// From the row's top to its items: the title's area, or nothing for a row with no title (the
+// featured cards, the Apps tab's search bar).
 inline float itemsOffset(const CardRow &row, const RowLook &look) {
-    return isFeature(row) ? 0 : labelArea(look);
+    return isFeature(row) || isSearch(row) ? 0 : labelArea(look);
 }
-// From the title's top to the next row's title.
-inline float rowSpan(const CardRow &row, const RowLook &look) {
-    if (isFeature(row))
+// Where a risen row's items stand: under the focused row's large title at rowsRisenTop. The Apps
+// tab's search bar, which has no title, rises to there itself.
+inline float risenItemsTop() {
+    RowLook risen;
+    risen.up = risen.risen = risen.grow = 1;
+    return kit::layout::rowsRisenTop + labelArea(risen);
+}
+// The gap under a row's items: wider once anything under the bar has the focus, wider still once
+// the rows have risen.
+inline float rowFoot(const RowLook &look, float risen = kit::layout::rowGapRisen) {
+    return kit::focus::mix(kit::focus::mix(kit::layout::rowGap, kit::layout::rowGapUp, look.up), risen,
+                           look.risen);
+}
+// From the title's top to the next row's title (`next`: the row under it, if any). Google TV's Apps
+// tab, as measured on a Chromecast with Google TV: its banners are spaced as rows are; its search
+// bar stands 60 px under Your apps' circles (and their names, while they show) whatever the
+// focus, with 62 px (48 once a row has the focus) to the categories' title; its focused category
+// row and focused row of apps keep room for the line under the focused item.
+inline float rowSpan(const CardRow &row, const RowLook &look, const CardRow *next = nullptr) {
+    if (row.key == "feature")
         return kit::layout::featureH + kit::layout::featureFoot;
-    float foot = kit::focus::mix(kit::focus::mix(kit::layout::rowGap, kit::layout::rowGapUp, look.up),
-                                 kit::layout::rowGapRisen, look.risen);
+    if (row.key == "appfeature")
+        return kit::layout::featureH + rowFoot(look);
+    if (isSearch(row))
+        return kit::layout::appsSearchH +
+               kit::focus::mix(kit::layout::appsSearchFoot, kit::layout::appsSearchFootUp, look.up);
+    if (isApps(row) && next && isSearch(*next))
+        return labelArea(look) + kit::layout::appD + kit::layout::appsSearchGap +
+               kit::layout::appsSearchNames * look.names;
+    if (isChips(row))
+        return labelArea(look) + kit::layout::appsChipH + rowFoot(look) + kit::layout::appsChipFoot * look.grow;
+    if (row.key == "appkind")
+        return labelArea(look) + kit::layout::cardLH + rowFoot(look, kit::layout::appCardRowGap) +
+               kit::layout::appCardCaptionFoot * look.captions;
+    float foot = rowFoot(look);
     if (isApps(row))
         foot += kit::layout::appNames * look.names;
     // Continue watching has two lines under its cards, and so, while it has them, has the Films
@@ -130,38 +182,17 @@ inline std::vector<float> rowTops(const std::vector<CardRow> &rows, const std::v
     std::vector<float> tops;
     for (size_t i = 0; i < rows.size(); ++i) {
         tops.push_back(top);
-        top += rowSpan(rows[i], i < looks.size() ? looks[i] : RowLook());
+        top += rowSpan(rows[i], i < looks.size() ? looks[i] : RowLook(), i + 1 < rows.size() ? &rows[i + 1] : nullptr);
     }
     return tops;
 }
 // Row n's items, before the row's own scroll and the stack's offset; `itemsY` is the items' top.
-inline Rect item(const CardRow &row, float itemsY, size_t column, bool named = false) {
-    float width = itemWidth(row), gap = itemGap(row, named);
+inline Rect item(const CardRow &row, float itemsY, size_t column) {
+    if (isSearch(row))
+        return {kit::layout::appsSearchX, itemsY, kit::layout::appsSearchW, kit::layout::appsSearchH};
+    float width = itemWidth(row), gap = itemGap(row);
     return {kit::layout::homeX + static_cast<float>(column) * (width + gap), itemsY, width,
             itemHeight(row)};
-}
-// The apps grid's scroll target while focus is on `column`: three rows fit under the page
-// title, so the grid follows once focus passes the second row, and stops when the last row is
-// in view.
-inline float gridScrollTarget(size_t column, size_t count) {
-    size_t rows = (count + kGridColumns - 1) / kGridColumns, at = column / kGridColumns;
-    float visible = 3;
-    float room = rows > visible ? (static_cast<float>(rows) - visible) * kGridPitch : 0;
-    float wanted = at > 1 ? static_cast<float>(at - 1) * kGridPitch : 0;
-    return -(wanted > room ? room : wanted);
-}
-// The Apps page by kind: rows of named circles, one after another from layout::appsTop.
-inline float kindPitch() {
-    return labelArea(RowLook()) + kit::layout::appD + kit::layout::rowGap + kit::layout::appNames;
-}
-// Its scroll target while focus is on kind row `row` of `rows`: the rows keep their place until
-// focus passes the second, then the page follows so the next row stays in view, and the last rows
-// end flush with the screen.
-inline float kindStackTarget(size_t row, size_t rows) {
-    const size_t visible = static_cast<size_t>((kit::canvas::height - kit::layout::appsTop) / kindPitch());
-    size_t last = rows > visible ? rows - visible : 0;
-    size_t first = row > 1 ? row - 1 : 0;
-    return -kindPitch() * static_cast<float>(std::min(first, last));
 }
 } // namespace home
 } // namespace nativetv

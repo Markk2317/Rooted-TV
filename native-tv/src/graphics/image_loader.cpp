@@ -168,6 +168,19 @@ DecodedImage decodeImage(const std::string &bytes, int width, int height, ImageF
         result.tone = (static_cast<int>(sum[0] / samples) << 16) |
                       (static_cast<int>(sum[1] / samples) << 8) | static_cast<int>(sum[2] / samples);
     result.glow = glowColour(result.rgba.data(), result.width, result.height);
+    if (result.opaque && result.width > 0 && result.height > 0) {
+        auto rowMean = [&result](int y) {
+            double total[3] = {0, 0, 0};
+            for (int x = 0; x < result.width; ++x)
+                for (int c = 0; c < 3; ++c)
+                    total[c] += result.rgba[(static_cast<size_t>(y) * result.width + x) * 4 + c];
+            return (static_cast<int>(total[0] / result.width) << 16) |
+                   (static_cast<int>(total[1] / result.width) << 8) |
+                   static_cast<int>(total[2] / result.width);
+        };
+        result.top = rowMean(0);
+        result.bottom = rowMean(result.height - 1);
+    }
     return result;
 }
 
@@ -241,6 +254,8 @@ ImageView ImageLoader::get(const std::string &id, int width, int height, ImageFi
         view.opaque = slot->opaque;
         view.tone = slot->tone;
         view.glow = slot->glow;
+        view.top = slot->top;
+        view.bottom = slot->bottom;
     }
     view.failed = slot->state == Slot::State::Failed;
     return view;
@@ -318,6 +333,8 @@ size_t ImageLoader::pump(size_t uploadBudgetBytes, double nowMs) {
         slot.opaque = slot.pixels.opaque;
         slot.tone = slot.pixels.tone;
         slot.glow = slot.pixels.glow;
+        slot.top = slot.pixels.top;
+        slot.bottom = slot.pixels.bottom;
         slot.state = Slot::State::Uploading;
         uploads_.push_back(result.slot);
     }

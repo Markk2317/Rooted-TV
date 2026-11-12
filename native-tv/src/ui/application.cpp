@@ -302,12 +302,36 @@ bool Application::isRecents() const {
 }
 // Pictures are asked for at the size they are drawn at; a node whose picture has not arrived
 // stays invisible (the kit draws a placeholder under it) and fades in when it has.
+namespace {
+// How much of an app card's height a see-through icon takes.
+constexpr float kSeeThroughIcon = .6f;
+} // namespace
 void Application::resolvePictures() {
     if (!pictures_)
         return;
     const double now = static_cast<double>(now_);
     for (size_t index = 0; index < scene_.nodes.size(); ++index) {
         Node &node = scene_.nodes[index];
+        if (node.kind == Node::Kind::Rectangle && !node.value.empty() && node.edges) {
+            const int side = pictureTexels(node.rect.h);
+            const std::string picture = node.value;
+            const ImageView view = pictures_->view(picture, side, side, ImageFit::Cover, now);
+            node.value.clear();
+            auto colour = [&node](int rgb) {
+                return Color{((rgb >> 16) & 0xff) / 255.0f, ((rgb >> 8) & 0xff) / 255.0f, (rgb & 0xff) / 255.0f,
+                             node.color.a};
+            };
+            if (view.texture && view.top >= 0)
+                node.gradient = Gradient::between(180, colour(view.top), colour(view.bottom));
+            // A see-through icon (an app's own, not a tile of the pack) sits smaller on the colour.
+            Node *icon = index + 1 < scene_.nodes.size() ? &scene_.nodes[index + 1] : nullptr;
+            if (view.texture && view.top < 0 && icon && icon->kind == Node::Kind::Image && icon->value == picture) {
+                const float side = icon->rect.h * kSeeThroughIcon;
+                icon->rect = {icon->rect.x + (icon->rect.w - side) / 2, icon->rect.y + (icon->rect.h - side) / 2, side,
+                              side};
+            }
+            continue;
+        }
         if (node.kind == Node::Kind::Rectangle && !node.value.empty()) {
             // A focus glow takes its picture's colour, asked at the size the picture is drawn.
             const ImageView view = pictures_->view(node.value, pictureTexels(node.rect.w),
@@ -466,6 +490,7 @@ Json Application::snapshot() const {
                                                 : 0));
         value.set("rowGroup",
                   Json::text(home.row < home.rows.size() ? home.rows[home.row].group : ""));
+        value.set("rowKey", Json::text(home.row < home.rows.size() ? home.rows[home.row].key : ""));
         value.set("heroTitle", Json::text(home.art.text.title));
         value.set("slides", Json::numeric(home.spotlight.size()));
         value.set("idle", Json::flag(flow_.idle));

@@ -60,10 +60,21 @@ int main() {
               "Input launch uses the existing API contract");
         Json byKind = Json::parse(
             R"({"apps":[{"id":"a","title":"Alpha","kind":"video"},{"id":"b","title":"Beta","kind":"tools"},{"id":"c","title":"Gamma","kind":"video"}],"devices":[],"channels":[],"order":{"app":["a","b","c"],"dev":[],"ch":[]},"kinds":[{"key":"tools","label":"Tools"},{"key":"video","label":"Movies & TV"}],"layout":{"rows":["app"],"hidden":{"app":[]},"sort":{"app":"kind"},"showLgHome":false},"sources":{"channels":0}})");
+        // Google TV's Apps tab: banners of the apps of films, music and games, Your apps, the
+        // search bar, a button per kind opening its page, then a row per kind in the owner's order.
         auto kinds = homeRows("apps", byKind, Json(), Json());
-        check(kinds.size() == 2 && kinds[0].group == "tools" && kinds[0].title == "Tools" &&
-                  kinds[0].cards.size() == 1 && kinds[1].cards.size() == 2 &&
-                  kinds[1].cards[1].id == "c",
+        check(kinds.size() == 6 && kinds[0].key == "appfeature" && kinds[0].cards.size() == 2 &&
+                  kinds[0].cards[0].id == "a" && kinds[0].cards[1].id == "c",
+              "The Apps tab's banners are its apps of films, music and games");
+        check(kinds[1].key == "app" && kinds[1].title == "Your apps" && kinds[1].cards.size() == 3 &&
+                  kinds[1].cards[0].id == "b" && kinds[2].key == "search" &&
+                  kinds[2].cards[0].command.route == "search",
+              "Your apps, sorted by kind, and the search bar follow");
+        check(kinds[3].key == "chips" && kinds[3].cards.size() == 2 && kinds[3].cards[0].title == "Tools" &&
+                  kinds[3].cards[1].command.route == "apps:video",
+              "A button per kind opens the kind's page");
+        check(kinds[4].key == "appkind" && kinds[4].group == "tools" && kinds[4].title == "Tools" &&
+                  kinds[4].cards.size() == 1 && kinds[5].cards.size() == 2 && kinds[5].cards[1].id == "c",
               "Apps sorted by kind come as one row per kind, in the owner's order");
         auto flat = homeRows("home", byKind, Json(), Json());
         check(flat.size() == 1 && flat[0].cards.size() == 3 && flat[0].cards[0].id == "b",
@@ -73,25 +84,26 @@ int main() {
         Json hiddenByKind = Json::parse(
             R"({"apps":[{"id":"a","title":"Alpha","kind":"video"},{"id":"b","title":"Beta","kind":"tools"},{"id":"c","title":"Gamma","kind":"video"}],"devices":[],"channels":[],"order":{"app":["a","b","c"],"dev":[],"ch":[]},"kinds":[{"key":"tools","label":"Tools"},{"key":"video","label":"Movies & TV"}],"layout":{"rows":["app"],"hidden":{"app":[],"appsTab":["b"]},"sort":{"app":"kind"},"showLgHome":false},"sources":{"channels":0}})");
         auto kindRows = homeRows("apps", hiddenByKind, Json(), Json());
-        check(kindRows.size() == 1 && kindRows[0].group == "video" && kindRows[0].cards.size() == 2,
-              "A kind whose apps are all hidden on the Apps page has no row there");
+        check(kindRows.size() == 5 && kindRows[3].cards.size() == 1 && kindRows[3].cards[0].id == "kind:video" &&
+                  kindRows[4].group == "video" && kindRows[4].cards.size() == 2,
+              "A kind whose apps are all hidden on the Apps page has no row there, nor a button");
         auto homeApps = homeRows("home", hiddenByKind, Json(), Json());
         check(homeApps.size() == 1 && homeApps[0].cards.size() == 3,
               "An app hidden on the Apps page is still on Home's row");
-        Json hiddenGrid = hiddenByKind;
-        hiddenGrid.set("layout", Json::parse(
+        Json hiddenApps = hiddenByKind;
+        hiddenApps.set("layout", Json::parse(
             R"({"rows":["app"],"hidden":{"app":["c"],"appsTab":["a"]},"sort":{"app":"custom"},"showLgHome":false})"));
-        auto gridRows = homeRows("apps", hiddenGrid, Json(), Json());
-        check(gridRows.size() == 1 && gridRows[0].cards.size() == 2 &&
-                  gridRows[0].cards[0].id == "b" && gridRows[0].cards[1].id == "c",
-              "The Apps grid leaves out what the Apps page hides, and keeps what only Home hides");
-        homeApps = homeRows("home", hiddenGrid, Json(), Json());
+        auto tabRows = homeRows("apps", hiddenApps, Json(), Json());
+        check(tabRows.size() == 6 && tabRows[1].cards.size() == 2 && tabRows[1].cards[0].id == "b" &&
+                  tabRows[1].cards[1].id == "c" && tabRows[0].cards.size() == 1 && tabRows[0].cards[0].id == "c",
+              "The Apps tab leaves out what it hides, and keeps what only Home hides");
+        homeApps = homeRows("home", hiddenApps, Json(), Json());
         check(homeApps[0].cards.size() == 2 && homeApps[0].cards[0].id == "a" &&
                   homeApps[0].cards[1].id == "b",
               "Home's row leaves out what Home hides, and keeps what only the Apps page hides");
-        CardRow pageShown = appsRow(hiddenGrid, Json(), false, "appsTab"),
-                pageListed = appsRow(hiddenGrid, Json(), true, "appsTab"),
-                homeListed = appsRow(hiddenGrid, Json(), true);
+        CardRow pageShown = appsRow(hiddenApps, Json(), false, "appsTab"),
+                pageListed = appsRow(hiddenApps, Json(), true, "appsTab"),
+                homeListed = appsRow(hiddenApps, Json(), true);
         check(pageShown.cards.size() == 2 && pageListed.cards.size() == 3 &&
                   pageListed.cards[2].id == "a" && pageListed.cards[2].hidden &&
                   !pageListed.cards[0].hidden && homeListed.cards.size() == 3 &&

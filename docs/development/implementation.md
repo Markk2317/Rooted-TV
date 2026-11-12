@@ -1675,7 +1675,7 @@ order, which `/api/home/layout` saves after dropping unknown keys and appending
 missing ones; the TV client builds one row per non-empty kind from them, and a
 long press on a row of the Apps screen moves it, posting the new `kinds`.
 
-Editing the apps (a long press on an app of Home's apps row or the Apps grid) saves in one `/api/home/layout` request: `order.app`
+Editing the apps (a long press on an app of Home's apps row or of the Apps tab's Your apps) saves in one `/api/home/layout` request: `order.app`
 (`orderAfterMove` in `domain/home.cpp`, which leaves the hidden apps where they were), `sort.app: "custom"` unless the apps are by
 kind, and `hidden.app` (Home's row) or `hidden.appsTab` (the Apps page) when one was hidden or shown. The two lists are independent:
 `home_profiles.cpp` keeps `hidden.appsTab` next to `hidden.app`, seeds it from `hidden.app` the first time a layout without it is

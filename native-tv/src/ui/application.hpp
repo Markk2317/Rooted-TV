@@ -62,7 +62,6 @@ struct HomeState {
     // The banner itself has the focus, as on Google TV: Left and Right change its title, OK opens
     // it, Up reaches the bar and Down the rows.
     bool heroFocus = false;
-    bool grid = false; // the Apps tab as one grid; false while its apps are grouped in rows by kind
     bool arranging = false; // a row of apps is lifted to be moved among the kinds
     // Editing the apps (a long press on an app): the arrows swap it with its neighbour, OK or Back
     // saves, Up from the first row reaches the button that hides it (`editHide`; Show on Home for
@@ -287,6 +286,7 @@ class Application : private ScreenHost {
     void longPress();
     // Whether holding OK would do something here (longPress); elsewhere OK acts when pressed.
     bool okHoldable() const;
+    bool arrangeable() const;
     // Back held: on Home it opens the recent apps, the only way to them; a tap of Back never does.
     void longBack();
     void input(const std::string &text);

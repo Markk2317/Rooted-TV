@@ -218,6 +218,37 @@ struct AppCircle {
 };
 void appCircle(Paint paint, const AppCircle &circle);
 
+// Google TV's Apps tab. An app's card (the tab's banners and the wide cards of its rows): its icon
+// tile at the card's height in the middle, the tile's own background carried out to both sides, and
+// with `caption` (0..1) its name under the card.
+struct AppCard {
+    Rect rest;
+    std::string id, name;
+    std::string image;          // the app's icon tile ("app:<id>"); none draws `icon` on `color`
+    std::string icon = "apps";
+    Color color = color::surface3; // until the tile is in, and around a see-through one
+    float radius = layout::cardR;
+    float zoom = motion::scale::appCard;
+    float focus = 0, caption = 0;
+    Enter enter;
+};
+void appCard(Paint paint, const AppCard &card);
+// Its "Search apps" bar, and one of its category buttons.
+struct SearchPill {
+    Rect rest;
+    std::string id, label;
+    float focus = 0;
+    Enter enter;
+};
+void searchPill(Paint paint, const SearchPill &pill);
+struct CategoryChip {
+    Rect rest;
+    std::string id, label;
+    float focus = 0;
+    Enter enter;
+};
+void categoryChip(Paint paint, const CategoryChip &chip);
+
 struct InputTile {
     Rect rest;
     std::string id, name, sub;

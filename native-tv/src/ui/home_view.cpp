@@ -25,15 +25,6 @@ kit::Enter textEnter(const Motion &motion, int index) {
     return {static_cast<float>(std::max(0.0, alpha)),
             static_cast<float>(value >= 0 ? 18 * value : 8 * value)};
 }
-Color appColor(const Card &card) {
-    std::string value = card.data["color"].string();
-    if (!value.empty() && value[0] == '#')
-        value.erase(0, 1);
-    if (value.size() == 6 && value.find_first_not_of("0123456789abcdefABCDEF") == std::string::npos)
-        return kit::rgb(static_cast<unsigned>(std::strtoul(value.c_str(), nullptr, 16)));
-    // No colour from the TV: a steady one per app, dark enough for white text.
-    return home::hsl(static_cast<float>(home::hashOf(card.id) % 360), .5f, .36f);
-}
 std::string clockText(const ViewState &state) {
     char text[16];
     if (state.catalogue["layout"]["clockFormat"].string() == "12h")
@@ -158,8 +149,6 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
     const Motion &motion = frame.motion;
     const float stack = static_cast<float>(motion.value("sy")) + top;
     const bool appNames = state.catalogue["layout"]["appNames"].boolean(true);
-    // On the Apps page every circle carries its name; on Home only the focused one does.
-    const bool namedApps = home.tabs[home.tab].key == "apps";
     const float risen = static_cast<float>(motion.value("rs")), up = static_cast<float>(motion.value("ru"));
     const bool titles = titlesTab(home.tabs[home.tab].key);
     std::vector<home::RowLook> looks;
@@ -169,7 +158,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         look.risen = risen;
         look.grow = static_cast<float>(motion.value(home::id("rg", ri)));
         look.names = static_cast<float>(motion.value(home::id("rn", ri)));
-        look.captions = titles ? look.grow : 0;
+        look.captions = titles || home.rows[ri].key == "appkind" ? look.grow : 0;
         looks.push_back(look);
     }
     const std::vector<float> tops = home::rowTops(home.rows, looks);
@@ -188,14 +177,12 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
             const float left = kit::canvas::safeX - kPad;
             float right = kit::canvas::width - kit::canvas::safeX + kPad / 2;
             if (!row.cards.empty()) {
-                const Rect last = home::item(row, itemsY, row.cards.size() - 1, namedApps);
-                const float overhang = namedApps ? (layout::appGapNamed - 8) / 2 : 0;
-                right = std::min(right, last.x + last.w + overhang + kPad +
+                const Rect last = home::item(row, itemsY, row.cards.size() - 1);
+                right = std::min(right, last.x + last.w + kPad +
                                             static_cast<float>(motion.value(home::id("rx", ri))));
                 right = std::max(right, left + 480);
             }
-            const float height = home::labelArea(look) - 12 +
-                                 (home::isApps(row) ? layout::appD + 56 : home::itemHeight(row) + 12);
+            const float height = home::labelArea(look) - 12 + home::itemHeight(row) + 12;
             Node &slab = paint.scene.shape({left, labelY - 12, right - left, height + 36},
                                            kit::color::surface2, kit::radius::lg);
             slab.ring = {1, 0, kit::alpha::outline};
@@ -214,11 +201,11 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         // The next row's name is not shown cut by the screen's edge: it fades in as it rises.
         label.enter.alpha *=
             kit::focus::clamp01((kit::canvas::height - 40 - labelY) / 48);
-        if (!home::isFeature(row)) // the featured titles have no row title
+        if (!row.title.empty()) // the featured cards and the Apps tab's search bar have none
             kit::row(paint, label);
         const float scroll = static_cast<float>(motion.value(home::id("rx", ri)));
         for (size_t ci = 0; ci < row.cards.size(); ++ci) {
-            Rect rest = home::item(row, itemsY, ci, namedApps);
+            Rect rest = home::item(row, itemsY, ci);
             rest.x += scroll;
             if (rest.x + rest.w < -140 || rest.x > kit::canvas::width + 140)
                 continue;
@@ -226,7 +213,40 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
             std::string id = home::hit(ri, ci);
             float focus = static_cast<float>(motion.value(home::id("f", ri, ci)));
             kit::Enter enter = enterOf(motion, home::id("EC", ri, ci));
-            if (home::isFeature(row)) {
+            if (row.key == "appfeature" || row.key == "appkind") {
+                // Google TV's Apps tab: its banners, and the wide cards of its rows of apps with the
+                // focused one's name under it.
+                const bool banner = row.key == "appfeature";
+                kit::AppCard app;
+                app.rest = rest;
+                app.id = id;
+                app.name = card.title;
+                app.image = card.image;
+                app.icon = card.id == "lg-home" ? "home" : "apps";
+                app.color = home::appColor(card);
+                app.radius = banner ? layout::featureR : layout::cardR;
+                app.zoom = banner ? kit::motion::scale::card : kit::motion::scale::appCard;
+                app.focus = focus;
+                app.caption = banner ? 0 : std::min(look.captions, focus);
+                app.enter = enter;
+                kit::appCard(paint, app);
+            } else if (home::isSearch(row)) {
+                kit::SearchPill pill;
+                pill.rest = rest;
+                pill.id = id;
+                pill.label = card.title;
+                pill.focus = focus;
+                pill.enter = enter;
+                kit::searchPill(paint, pill);
+            } else if (home::isChips(row)) {
+                kit::CategoryChip chip;
+                chip.rest = rest;
+                chip.id = id;
+                chip.label = card.title;
+                chip.focus = focus;
+                chip.enter = enter;
+                kit::categoryChip(paint, chip);
+            } else if (home::isFeature(row)) {
                 kit::FeatureCard feature;
                 feature.rest = rest;
                 feature.id = id;
@@ -243,14 +263,11 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 kit::AppCircle circle;
                 circle.rest = rest;
                 circle.id = id;
-                circle.name = appNames || namedApps ? card.title : "";
+                circle.name = appNames ? card.title : "";
                 circle.icon = card.id == "lg-home" ? "home" : "apps";
                 circle.image = card.image;
-                circle.color = appColor(card);
-                circle.named = namedApps;
+                circle.color = home::appColor(card);
                 circle.names = look.names;
-                if (namedApps)
-                    circle.nameWidth = layout::appD + layout::appGapNamed - 8;
                 circle.focus = focus;
                 circle.enter = enter;
                 if (card.hidden) // hidden from Home: listed only while the apps are edited
@@ -314,9 +331,6 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
     }
 }
 
-// While the apps are edited the Apps page makes room, above its first row, for the button that
-// hides the focused app.
-constexpr float kEditLift = 64;
 // The hint keys on a band of ink, so a row that reaches the bottom passes under them.
 void hintBand(kit::Paint paint, const std::vector<kit::Hint> &hints) {
     Node &band = paint.scene.shape({0, 900, kit::canvas::width, 180}, kit::color::ink);
@@ -331,59 +345,9 @@ void hintBand(kit::Paint paint, const std::vector<kit::Hint> &hints) {
     kit::hintBar(paint, {kit::canvas::safeX, 998, 0, 30}, hints);
 }
 
-// The Apps page: the same circles as Home's apps row, larger, with their names, six to a row.
-// It has no head: the first row starts under the bar.
-void grid(kit::Paint paint, const Frame &frame) {
-    const HomeState &home = frame.state.home;
-    const Motion &motion = frame.motion;
-    if (home.rows.empty())
-        return;
-    const CardRow &row = home.rows[0];
-    const float lift = kEditLift * static_cast<float>(motion.value("lift"));
-    const float scroll = static_cast<float>(motion.value("gy")) + lift;
-    // Rows that scroll away disappear under the bar rather than over it.
-    const float clipTop = kit::layout::appsTop + lift - 16;
-    bool clipped = scroll - lift < -.5f;
-    if (clipped)
-        paint.scene.pushClip({0, clipTop, kit::canvas::width, kit::canvas::height});
-    for (size_t i = 0; i < row.cards.size(); ++i) {
-        Rect rest = kit::geometry::appTile(static_cast<int>(i));
-        rest.y += scroll;
-        if (rest.y > kit::canvas::height + 40 || rest.y + rest.h < clipTop - 44)
-            continue;
-        const Card &card = row.cards[i];
-        kit::AppCircle circle;
-        circle.rest = rest;
-        circle.id = home::hit(0, i);
-        circle.name = card.title;
-        circle.icon = card.id == "lg-home" ? "home" : "apps";
-        circle.image = card.image;
-        circle.color = appColor(card);
-        circle.named = true;
-        circle.nameWidth = layout::tilePitchX - 40;
-        circle.focus = static_cast<float>(motion.value(home::id("f", 0, i)));
-        circle.enter = enterOf(motion, home::id("EC", 0, i));
-        if (card.hidden) // hidden from the Apps page: listed only while its apps are edited
-            circle.enter.alpha *= .4f;
-        kit::appCircle(paint, circle);
-    }
-    if (clipped)
-        paint.scene.popClip();
-}
-
-// The Apps page with its apps grouped by kind: rows as on Home from under the bar, which pass
-// under it once they scroll.
-void appRows(kit::Paint paint, const Frame &frame) {
-    const HomeState &home = frame.state.home;
-    const Motion &motion = frame.motion;
-    const float lift = kEditLift * static_cast<float>(motion.value("lift"));
-    bool clipped = motion.value("sy") < -.5;
-    if (clipped)
-        paint.scene.pushClip({0, layout::appsTop + lift - 16, kit::canvas::width, kit::canvas::height});
-    rows(paint, frame, layout::appsTop - layout::rowsTop + lift);
-    if (clipped)
-        paint.scene.popClip();
-    if (home.arranging)
+// The hint band while the Apps tab's rows of apps are moved among themselves.
+void arrangeHints(kit::Paint paint, const Frame &frame) {
+    if (frame.state.home.arranging)
         hintBand(paint, {{"", "Move"}, {"OK", "Save"}, {"Back", "Cancel"}});
 }
 
@@ -420,14 +384,10 @@ void drawHome(kit::Paint paint, const Frame &frame) {
         none.wallAlpha = wall;
         kit::heroWall(paint, none);
         scene.pushTransform(Transform::translate(slide, 0));
-        // Films and Shows: Google TV's featured titles from y 192, the rows under them.
-        if (titles)
-            rows(paint, frame, layout::featureTop - layout::rowsTop);
-        else if (home.grid)
-            grid(paint, frame);
-        else
-            appRows(paint, frame);
+        // Films, Shows and Apps: Google TV's featured cards from y 192, the rows under them.
+        rows(paint, frame, layout::featureTop - layout::rowsTop);
         scene.popTransform();
+        arrangeHints(paint, frame);
     } else {
         kit::Hero hero = heroOf(frame);
         kit::heroWall(paint, hero);
@@ -483,10 +443,10 @@ void drawHome(kit::Paint paint, const Frame &frame) {
     const float barDim = apps || titles ? static_cast<float>(motion.value("bd")) : 0;
     if (barDim > .002f)
         scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::focus::withAlpha(kit::alpha::barDim, barDim));
-    // On Home's first page the bar leaves with the page once the rows below the first two are
-    // scrolled up under it, and comes back with the focus.
+    // The bar leaves with the page once the rows are scrolled up under it (on Home past its first
+    // two rows, on Films, Shows and Apps past the featured cards), and comes back with the focus.
     float away = 0;
-    if (!apps && !home.navigation && !home.editing)
+    if (!home.navigation && !home.editing)
         away = std::max(static_cast<float>(motion.value("ba")),
                         kit::focus::clamp01(-static_cast<float>(motion.value("sy")) / kBarLeaveSpan));
     drawTopBar(paint, frame, static_cast<int>(home.tab), away);

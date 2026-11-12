@@ -18,8 +18,10 @@
 #include "ui/keyboard_pad.hpp"
 #include "ui/kit/overlay.hpp"
 #include "ui/kit/tuning.hpp"
+#include "ui/optimistic.hpp"
 #include "ui/overlay_routes.hpp"
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 
@@ -251,6 +253,11 @@ class SearchScreen final : public ScreenView {
             loading_ = false;
             failed_ = !usable;
             rows_.clear();
+            // The TV's own apps whose name has the words lead, as Google TV's Apps results do.
+            CardRow apps = matchingApps(host);
+            if (!apps.cards.empty())
+                rows_.push_back(apps);
+            failed_ = failed_ && rows_.empty();
             if (usable) {
                 // Google TV's results come in rows; TMDB's are films and series, a row of each.
                 CardRow films, series;
@@ -479,9 +486,44 @@ class SearchScreen final : public ScreenView {
 
     // ---- Details -------------------------------------------------------------------------------
 
+    CardRow matchingApps(ScreenHost &host) const {
+        CardRow row;
+        row.key = "search:apps";
+        row.title = msg("tv.search.apps", "Apps");
+        if (!genre_.empty())
+            return row;
+        auto lower = [](std::string text) {
+            for (char &c : text)
+                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            return text;
+        };
+        const std::string words = lower(trim(query_));
+        if (words.empty())
+            return row;
+        const ViewState &view = host.view();
+        for (const Card &card : appsRow(view.catalogue, view.guide, false, "appsTab").cards)
+            if (lower(card.title).find(words) != std::string::npos)
+                row.cards.push_back(card);
+        return row;
+    }
+    // OK on a result: an app opens, a title opens its details over the search.
     void openDetails(ScreenHost &host) {
         if (row_ >= rows_.size() || columns_[row_] >= rows_[row_].cards.size())
             return;
+        if (rows_[row_].key == "search:apps") {
+            const Command &command = rows_[row_].cards[columns_[row_]].command;
+            if (!command.route.empty()) {
+                host.open(command.route);
+                return;
+            }
+            const Json body = command.body;
+            Write write;
+            write.operation = command.operation;
+            write.body = [body](const Json &) { return body; };
+            write.failure = msg("tv.apps.openFailed", "That did not open");
+            host.optimistic().run("search.open", write);
+            return;
+        }
         const Json &item = rows_[row_].cards[columns_[row_]].data;
         details_.reset(new DetailsScreen(item["type"].string(), item["id"].string(), item, true));
         details_->enter(host);
@@ -688,6 +730,20 @@ class SearchScreen final : public ScreenView {
                 if (rest.x > kit::canvas::width + 40 || rest.x + rest.w < -40)
                     continue;
                 const Card &card = row.cards[c];
+                const float focus = static_cast<float>(motion.value("search:f:" + std::to_string(r) + "." + std::to_string(c)));
+                if (row.key == "search:apps") {
+                    kit::AppCard app;
+                    app.rest = rest;
+                    app.id = "search:card:" + std::to_string(r) + ":" + std::to_string(c);
+                    app.name = card.title;
+                    app.image = card.image;
+                    app.icon = card.id == "lg-home" ? "home" : "apps";
+                    app.color = home::appColor(card);
+                    app.focus = focus;
+                    app.caption = std::min(look.captions, focus);
+                    kit::appCard(paint, app);
+                    continue;
+                }
                 kit::PosterCard poster;
                 poster.rest = rest;
                 poster.id = "search:card:" + std::to_string(r) + ":" + std::to_string(c);
@@ -696,7 +752,7 @@ class SearchScreen final : public ScreenView {
                     poster.title = card.title;
                     poster.subtitle = card.subtitle;
                 }
-                poster.focus = static_cast<float>(motion.value("search:f:" + std::to_string(r) + "." + std::to_string(c)));
+                poster.focus = focus;
                 if (look.captions > 0) {
                     if (poster.focus > .5f)
                         poster.caption = card.title;

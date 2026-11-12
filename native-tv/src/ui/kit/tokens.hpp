@@ -94,6 +94,8 @@ constexpr Color genreReality = rgb(0x486547);
 constexpr Color genreRomance = rgb(0x716A41);
 constexpr Color genreScifi = rgb(0x8C5A33);
 constexpr Color genreThriller = rgb(0x85432B);
+constexpr Color appsSearch = rgb(0x0D1114);
+constexpr Color appsChip = rgb(0x151515);
 } // namespace color
 // Colours that carry an alpha.
 namespace alpha {
@@ -169,6 +171,9 @@ constexpr TypeStyle tvChip = {30, 40, 400, 0};
 constexpr TypeStyle chooserMark = {34, 44, 400, 0};
 constexpr TypeStyle chooserTitle = {55, 68, 400, 0};
 constexpr TypeStyle chooserName = {24, 30, 400, 0};
+constexpr TypeStyle appsSearch = {40, 52, 400, 0};
+constexpr TypeStyle appsChip = {24, 32, 500, 0};
+constexpr TypeStyle appsPageTitle = {71, 84, 400, 0};
 } // namespace type
 namespace space {
 constexpr float x4 = 4;
@@ -451,6 +456,25 @@ constexpr float chooserButtonY = 883;
 constexpr float chooserButtonH = 80;
 constexpr float chooserButtonPad = 32;
 constexpr float chooserButtonIcon = 34;
+constexpr float appsSearchX = 96;
+constexpr float appsSearchW = 1728;
+constexpr float appsSearchH = 120;
+constexpr float appsSearchGap = 60;
+constexpr float appsSearchNames = 81;
+constexpr float appsSearchFoot = 62;
+constexpr float appsSearchFootUp = 48;
+constexpr float appsSearchIconCx = 156;
+constexpr float appsSearchIcon = 30;
+constexpr float appsSearchTextX = 225;
+constexpr float appsChipW = 248;
+constexpr float appsChipH = 140;
+constexpr float appsChipGap = 40;
+constexpr float appsChipR = 20;
+constexpr float appsChipFoot = 31;
+constexpr float appCardRowGap = 52;
+constexpr float appCardCaptionFoot = 80;
+constexpr float appsPageTitleTop = 263;
+constexpr float appsPageRowTop = 530;
 constexpr int dotSlots = 6;
 constexpr int tileCols = 6;
 constexpr int statCols = 4;
@@ -514,6 +538,8 @@ constexpr float quickButton = 1.1f;
 constexpr float tvKey = 1.15f;
 constexpr float chooser = 1.1f;
 constexpr float chooserButton = 1.05f;
+constexpr float appCard = 1.1f;
+constexpr float appChip = 1.14f;
 } // namespace scale
 namespace stagger {
 constexpr int homeBase = 80;

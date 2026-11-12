@@ -512,7 +512,7 @@ struct Walk {
             "live", "catalog", "qr", "dashboard"};
         if (exact.count(name))
             return true;
-        for (const char *prefix : {"dashboard:", "quick:", "setup:"})
+        for (const char *prefix : {"dashboard:", "quick:", "setup:", "apps:"})
             if (name.compare(0, std::string(prefix).size(), prefix) == 0)
                 return true;
         return false;
@@ -576,6 +576,9 @@ struct Walk {
                    "focus beyond the profiles");
         } else if (name == "details") {
             expect(snap["depth"].number() >= 1 || snap["depth"].number() == 0, "details.depth", "no depth");
+        } else if (name.compare(0, 5, "apps:") == 0) {
+            expect(snap["apps"].number() > 0 && snap["column"].number() < snap["apps"].number(), "apps.column",
+                   "a category page with no apps, or the focus beyond them");
         }
         if (!quiet)
             return;
@@ -749,7 +752,7 @@ struct Walk {
     } anchor;
     static bool isOverlay(const std::string &name) {
         return name == "details" || name == "quick" || name == "profiles" || name == "search" ||
-               name == "quick:recents";
+               name == "quick:recents" || name.compare(0, 5, "apps:") == 0;
     }
     void trackAnchor(const std::string &before, const std::string &after, const std::string &focusBefore,
                      const std::string &action, bool plain, bool calm) {

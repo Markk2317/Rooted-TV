@@ -24,6 +24,9 @@ struct DecodedImage {
     // logo) the mean of what is drawn; -1 unknown.
     int tone = -1;
     int glow = -1; // graphics/palette.hpp: the colour of Google TV's focus glow, -1 white
+    // 0xRRGGBB: the mean of the top row and of the bottom row of an opaque picture (an app's
+    // icon tile, whose background a wider box carries on); -1 for a see-through one.
+    int top = -1, bottom = -1;
 };
 // JPEG or PNG (SDL_image) resampled to the size it will be drawn at, so the GPU never
 // minifies a large texture. Safe to call from any thread.
@@ -38,6 +41,7 @@ struct ImageView {
     double remainingMs = -1;   // a trailer (graphics/video_player.hpp): until its last picture
     int tone = -1;             // see DecodedImage
     int glow = -1;             // see DecodedImage
+    int top = -1, bottom = -1; // see DecodedImage
 };
 // Pictures keyed by (id, size) under a texture byte budget. Decoding runs on worker threads;
 // the render thread only copies finished rows into textures, as many bytes per frame as
@@ -62,7 +66,7 @@ class ImageLoader {
         TextureId texture = 0;
         int textureWidth = 0, textureHeight = 0, rowsUploaded = 0;
         bool opaque = false;
-        int tone = -1, glow = -1;
+        int tone = -1, glow = -1, top = -1, bottom = -1;
         size_t bytes = 0;
         unsigned usedTick = 0;
         double arrivedMs = 0, retryAtMs = 0;

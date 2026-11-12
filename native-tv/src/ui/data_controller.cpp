@@ -20,8 +20,6 @@ void Application::rebuildHome() {
     home.rows = homeRows(tab, state_.catalogue, state_.discover, state_.guide);
     home.rowsTab = tab;
     home.arranging = false; // the rows are the server's again
-    home.grid = home.tabs[home.tab].key == "apps" &&
-                state_.catalogue["layout"]["sort"]["app"].string() != "kind";
     home.row = clampIndex(home.row, home.rows.size());
     if (home.row < home.rows.size()) {
         const auto &cards = home.rows[home.row].cards;

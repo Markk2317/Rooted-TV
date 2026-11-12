@@ -175,15 +175,14 @@ HeroText linesOf(const ViewState &state, const Card &card) {
 }
 // How many of a row's items start on the screen; the ones past it have no entrance, they are
 // scrolled to.
-size_t shownOf(const CardRow &row, bool named) {
-    float pitch = home::itemWidth(row) + home::itemGap(row, named);
+size_t shownOf(const CardRow &row) {
+    float pitch = home::itemWidth(row) + home::itemGap(row);
     size_t fit = static_cast<size_t>((kit::canvas::width - kit::canvas::safeX) / pitch) + 1;
     return std::min(row.cards.size(), fit);
 }
 // Whether the icons of the apps on the first screen of a page of `rows` have arrived (or can
 // not). Asking is also what starts their fetch, at the size the circles draw them at.
-bool iconsReady(Pictures *pictures, const std::vector<CardRow> &rows, bool grid, bool named,
-                double now) {
+bool iconsReady(Pictures *pictures, const std::vector<CardRow> &rows, double now) {
     if (!pictures)
         return true;
     bool ready = true;
@@ -191,8 +190,8 @@ bool iconsReady(Pictures *pictures, const std::vector<CardRow> &rows, bool grid,
         const CardRow &row = rows[r];
         if (!home::isApps(row))
             continue;
-        size_t shown = grid ? std::min(row.cards.size(), home::kGridColumns * 3) : shownOf(row, named);
-        int texels = pictureTexels(grid ? kit::layout::tileW : kit::layout::appD);
+        size_t shown = shownOf(row);
+        int texels = pictureTexels(kit::layout::appD);
         for (size_t c = 0; c < shown; ++c) {
             if (row.cards[c].image.empty())
                 continue;
@@ -224,7 +223,7 @@ void Application::homeStart() {
         flow_.beatAt = now_ + kBeatMs;
     for (const char *prefix :
          {"f:", "rx", "rd", "rg", "rn", "rs", "ru", "bd", "he", "hb", "ht", "hn", "hu", "ba", "E", "ha", "hx", "hv", "dot",
-          "pgx", "pgs", "dim", "gy", "sy", "lift"})
+          "pgx", "pgs", "dim", "sy"})
         motion_.erasePrefix(prefix);
     home.art = HeroArt();
     home.hero = Card();
@@ -291,8 +290,7 @@ void Application::homeData() {
         const bool homeTab = home.tabs[home.tab].key == "home";
         const bool feed = !homeTab || state_.discover.valid() || due(now_, flow_.waitFrom + 600);
         const bool icons = flow_.rowsEntered ||
-                           iconsReady(pictures_, home.rows, home.grid,
-                                      home.tabs[home.tab].key == "apps", now_) ||
+                           iconsReady(pictures_, home.rows, now_) ||
                            due(now_, flow_.waitFrom + kIconWaitMs);
         if (feed && icons) {
             flow_.entered = true;
@@ -321,28 +319,16 @@ void Application::homePlayEntrance(size_t firstRow, size_t endRow) {
     Timeline timeline;
     Tween rise(1, 0, ms::base, easing(ease::out));
     motion_.set("pgx", 0); // the page was held hidden until now
-    if (home.grid) {
-        size_t count = home.rows.empty() ? 0 : home.rows[0].cards.size();
-        for (size_t i = 0; i < count && i < 30; ++i) // every tile that can be on screen
-            timeline.add(home::id("EC", 0, i),
-                         rise.delayedBy(stagger::pageBase +
-                                        stagger::pageItem *
-                                            std::min(static_cast<int>(i), stagger::pageItemMax)));
-        flow_.rowsEntered = home.rows.size();
-    } else {
-        const bool named = home.tabs[home.tab].key == "apps";
-        endRow = std::min(endRow, home.rows.size());
-        for (size_t r = firstRow; r < endRow && r < 3; ++r) {
-            double rowDelay = stagger::homeBase + stagger::homeRow * static_cast<double>(r);
-            timeline.add(home::id("ER", r), rise.delayedBy(rowDelay));
-            for (size_t c = 0; c < shownOf(home.rows[r], named); ++c)
-                timeline.add(home::id("EC", r, c),
-                             rise.delayedBy(rowDelay +
-                                            stagger::homeCell *
-                                                std::min(static_cast<int>(c), stagger::homeCellMax)));
-        }
-        flow_.rowsEntered = endRow;
+    endRow = std::min(endRow, home.rows.size());
+    for (size_t r = firstRow; r < endRow && r < 3; ++r) {
+        double rowDelay = stagger::homeBase + stagger::homeRow * static_cast<double>(r);
+        timeline.add(home::id("ER", r), rise.delayedBy(rowDelay));
+        for (size_t c = 0; c < shownOf(home.rows[r]); ++c)
+            timeline.add(home::id("EC", r, c),
+                         rise.delayedBy(rowDelay +
+                                        stagger::homeCell * std::min(static_cast<int>(c), stagger::homeCellMax)));
     }
+    flow_.rowsEntered = endRow;
     timeline.play(motion_);
 }
 
@@ -419,28 +405,18 @@ void Application::homeFocus(bool jump) {
             glide(now, 1);
         flow_.focusId = now;
     }
-    bool grid = home.grid;
     for (size_t r = 0; r < home.rows.size(); ++r)
         glide(home::id("rd", r), !home.navigation && !home.heroFocus && r != home.row ? 1 : 0);
     if (!home.navigation && !home.heroFocus && home.row < home.rows.size()) {
         const CardRow &row = home.rows[home.row];
-        if (grid) {
-            double target = home::gridScrollTarget(home.column, row.cards.size());
-            if (jump)
-                motion_.set("gy", target);
-            else
-                motion_.spring("gy", target, springParams(kit::motion::spring::list));
-        } else {
-            std::string name = home::id("rx", home.row);
-            bool named = home.tabs[home.tab].key == "apps";
-            double target = kit::geometry::rowScrollTarget(
-                static_cast<int>(home.column), static_cast<int>(row.cards.size()),
-                home::itemWidth(row), home::itemGap(row, named));
-            if (jump)
-                motion_.set(name, target);
-            else
-                motion_.spring(name, target, springParams(kit::motion::spring::row));
-        }
+        std::string name = home::id("rx", home.row);
+        double target = kit::geometry::rowScrollTarget(static_cast<int>(home.column),
+                                                       static_cast<int>(row.cards.size()),
+                                                       home::itemWidth(row), home::itemGap(row));
+        if (jump)
+            motion_.set(name, target);
+        else
+            motion_.spring(name, target, springParams(kit::motion::spring::row));
     }
     // Google TV's Home, as measured on a Chromecast with Google TV (Android 14, 2025): with the bar
     // focused the banner is compact and the top picks and Your apps sit under it; the banner focused
@@ -450,11 +426,10 @@ void Application::homeFocus(bool jump) {
     // 24 to 36 px as soon as anything under the bar has the focus. Without a banner of its own (the
     // Live tab, an older server) the first rows stay under the hero and past them the focused row
     // takes the first row's place.
-    const bool kindRows = home.tabs[home.tab].key == "apps" && !grid;
     const bool overBanner = homeHeroOffered();
     enum class Place { Bar, Banner, Picks, Lower, Other };
     Place place = Place::Other;
-    if (overBanner && !grid) {
+    if (overBanner) {
         if (home.navigation)
             place = Place::Bar;
         else if (home.heroFocus)
@@ -462,14 +437,17 @@ void Application::homeFocus(bool jump) {
         else if (home.row < home.rows.size())
             place = home.rows[home.row].key == "trending" ? Place::Picks : Place::Lower;
     }
-    // Films and Shows: the featured titles stay where they are; a row under them rises to the top,
-    // its title large, as Home's lower rows do.
+    // Films, Shows and Apps: the featured cards stay where they are; a row under them rises to the
+    // top, its title large, as Home's lower rows do. On Apps the rows' titles grow to 36 px as soon
+    // as its banners have the focus, as on Google TV.
     const bool titles = titlesTab(home.tabs[home.tab].key);
-    if (titles && !grid && !home.navigation && home.row > 0 && home.row < home.rows.size())
+    const bool apps = home.tabs[home.tab].key == "apps";
+    // While apps are edited the rows keep their place, under the button that hides an app.
+    if ((titles || apps) && !home.navigation && !home.editing && home.row > 0 && home.row < home.rows.size())
         place = Place::Lower;
     const bool risen = place == Place::Lower;
-    const bool titlesUp = place == Place::Banner || place == Place::Picks || risen;
-    const bool namedApps = home.tabs[home.tab].key == "apps";
+    const bool titlesUp = place == Place::Banner || place == Place::Picks || risen ||
+                          (apps && !home.navigation && !home.editing && !home.rows.empty());
     auto tween = [&](const std::string &name, double to) {
         if (jump)
             motion_.set(name, to);
@@ -496,8 +474,8 @@ void Application::homeFocus(bool jump) {
         look.up = titlesUp ? 1 : 0;
         look.risen = risen ? 1 : 0;
         look.grow = risen && r == home.row ? 1 : 0;
-        look.names = namedApps ? 1 : home::isApps(home.rows[r]) && risen && r == home.row ? 1 : 0;
-        look.captions = titles ? look.grow : 0;
+        look.names = home::isApps(home.rows[r]) && risen && r == home.row ? 1 : 0;
+        look.captions = titles || home.rows[r].key == "appkind" ? look.grow : 0;
         tween(home::id("rg", r), look.grow);
         tween(home::id("rn", r), look.names);
         looks.push_back(look);
@@ -512,17 +490,15 @@ void Application::homeFocus(bool jump) {
     else if (place == Place::Picks)
         stack = kit::layout::picksDrop;
     else if (place == Place::Lower)
-        stack = kit::layout::rowsRisenTop - tops[home.row] -
-                (titles ? kit::layout::featureTop - kit::layout::rowsTop : 0);
-    else if (home.row < home.rows.size() && !home.navigation && !home.heroFocus && !grid) {
-        if (kindRows)
-            stack = home::kindStackTarget(home.row, home.rows.size());
-        else if (contentRow > firstScreenRows && first < tops.size())
-            stack = tops[first] - tops[home.row];
-    }
+        // The Apps tab's search bar has no title: it rises to where a risen row's items stand.
+        stack = (home::isSearch(home.rows[home.row]) ? home::risenItemsTop() : kit::layout::rowsRisenTop) -
+                tops[home.row] - (titles || apps ? kit::layout::featureTop - kit::layout::rowsTop : 0);
+    else if (home.row < home.rows.size() && !home.navigation && !home.heroFocus && contentRow > firstScreenRows &&
+             first < tops.size())
+        stack = tops[first] - tops[home.row];
     // A row of the first screen that reaches past the bottom (Your apps, with the focused app's
     // name under it) rises just enough to show it whole.
-    if (place == Place::Other && !home.navigation && !home.heroFocus && !grid && !kindRows && !titles &&
+    if (place == Place::Other && !home.navigation && !home.heroFocus && !titles && !apps &&
         contentRow >= 0 && contentRow <= firstScreenRows && home.row < home.rows.size()) {
         const CardRow &row = home.rows[home.row];
         const float bottom = tops[home.row] + home::labelArea(looks[home.row]) +
@@ -568,6 +544,8 @@ void Application::homeArrange(Key key) {
         if ((key == Key::Up && home.row == 0) || (key == Key::Down && home.row + 1 >= home.rows.size()))
             return;
         size_t to = key == Key::Up ? home.row - 1 : home.row + 1;
+        if (home.rows[to].key != home.rows[home.row].key) // the rows of apps move among themselves
+            return;
         std::swap(home.rows[home.row], home.rows[to]);
         double fromScroll = motion_.value(home::id("rx", home.row)),
                toScroll = motion_.value(home::id("rx", to));
@@ -584,18 +562,20 @@ void Application::homeArrange(Key key) {
     if (key == Key::Ok) {
         // The server keeps every kind: one with no app has no row here and holds its place, the
         // rows on screen take the order they were left in.
+        std::vector<std::string> shownKinds;
+        for (const CardRow &row : home.rows)
+            if (row.key == "appkind")
+                shownKinds.push_back(row.group);
         Json kinds = Json::array();
         size_t next = 0;
         for (const Json &kind : state_.catalogue["kinds"].items()) {
-            bool shown = false;
-            for (const CardRow &row : home.rows)
-                shown = shown || row.group == kind["key"].string();
-            kinds.add(Json::text(shown && next < home.rows.size() ? home.rows[next++].group
-                                                                  : kind["key"].string()));
+            const std::string key = kind["key"].string();
+            const bool shown = std::find(shownKinds.begin(), shownKinds.end(), key) != shownKinds.end();
+            kinds.add(Json::text(shown && next < shownKinds.size() ? shownKinds[next++] : key));
         }
         if (!kinds.size())
-            for (const CardRow &row : home.rows)
-                kinds.add(Json::text(row.group));
+            for (const std::string &key : shownKinds)
+                kinds.add(Json::text(key));
         home.arranging = false;
         execute(post(Operation::SetHomeLayout, fields({{"kinds", kinds}})));
         homeFocus();
@@ -655,9 +635,7 @@ void Application::homeSelectTab(size_t tab) {
     // The Apps page's icons (a larger size than Home's) are asked for while the old page leaves,
     // so its entrance does not wait for them.
     if (home.tabs[tab].key == "apps")
-        iconsReady(pictures_,
-                   homeRows("apps", state_.catalogue, state_.discover, state_.guide),
-                   state_.catalogue["layout"]["sort"]["app"].string() != "kind", true, now_);
+        iconsReady(pictures_, homeRows("apps", state_.catalogue, state_.discover, state_.guide), now_);
     motion_.tween("pgx", 1, ms::pageOut, easing(ease::out));
     // Google TV's tab change: the page slides away from the tab chosen as it fades.
     flow_.pageDirection = tab > flow_.shown ? 1 : -1;
@@ -692,7 +670,7 @@ void Application::homeUpdate() {
         flow_.heroWaiting = false;
         for (const char *prefix : {"f:", "rx", "rd", "E"})
             motion_.erasePrefix(prefix);
-        for (const char *name : {"gy", "sy", "pgx"})
+        for (const char *name : {"sy", "pgx"})
             motion_.set(name, 0);
         // and the new one comes in from the other side.
         motion_.set("pgs", flow_.pageDirection * kit::layout::pageSlide);

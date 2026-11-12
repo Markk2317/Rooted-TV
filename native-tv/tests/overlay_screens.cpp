@@ -473,6 +473,28 @@ void searchChecks() {
     check(world.screen() == "home", "Back from the field returns Home");
 }
 
+// The TV's apps whose name has the words searched lead the results, and open as apps.
+void searchAppsChecks() {
+    World world;
+    world.openSearch();
+    world.press(Key::Ok);
+    world.app.input("al");
+    world.settle(600);
+    check(world.app.activate("search:kb:3:6"), "The search key is on the keyboard");
+    world.reply("title:search", R"({"ok":true,"enabled":true,"items":[{"id":7,"type":"movie","title":"Alien"}]})");
+    world.settle(300);
+    check(world.snapshot()["results"].number() == 2 && world.app.shows("Apps") && world.app.shows("Films"),
+          "An app whose name has the words is a row of its own, over the films");
+    world.press(Key::Down);
+    world.settle(600);
+    check(world.snapshot()["row"].number() == 0 && world.app.shows("Alpha"),
+          "The apps lead the results, the focused one's name under it");
+    world.press(Key::Ok);
+    check(world.screen() == "search" && world.transport.requests.back().operation == Operation::OpenHomeItem &&
+              world.transport.requests.back().body["id"].string() == "a",
+          "OK on an app opens it rather than a title's details");
+}
+
 void searchGenreChecks() {
     World world;
     world.openSearch();
@@ -840,6 +862,7 @@ int main() {
         profilesChecks();
         profilesFailureChecks();
         searchChecks();
+        searchAppsChecks();
         assistantChecks();
         searchStateChecks();
         searchRowsChecks();

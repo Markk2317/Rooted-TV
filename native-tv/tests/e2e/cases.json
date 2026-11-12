@@ -4985,14 +4985,14 @@
     {
       "id": "E2E-120",
       "title": "Arranging the kinds on the Apps tab",
-      "purpose": "With the apps sorted by kind, the Apps tab is one row per kind. A long press on a row lifts it, Down moves it under the next row with the focus travelling along, OK saves the kinds' order to the server (the focused row keeps its place after the catalogue is read again), a second long press and Up move it back, and Back puts the server's order back without saving. The case sets the apps' order to By kind first and ends with it at Your order and the kinds in their default order, which is how a TV that never chose it stores them. The B3's first kind is Movies & TV (LG Channels, Netflix, YouTube, Peacock); a TV with no app of that kind does not pass.",
+      "purpose": "With the apps sorted by kind, the Apps tab has one row per kind under its banners, Your apps, the search bar and the category buttons. A long press on the first kind's row lifts it, Down moves it under the next kind's row with the focus travelling along, OK saves the kinds' order to the server (the focused row keeps its place after the catalogue is read again), a second long press and Up move it back, and Back puts the server's order back without saving. The case sets the apps' order to By kind first and ends with it at Your order and the kinds in their default order, which is how a TV that never chose it stores them. The B3's first kind is Movies & TV (LG Channels, Netflix, YouTube, Peacock); a TV with no app of that kind does not pass.",
       "kind": "run",
       "requires": [
         "control"
       ],
       "screen": "home",
       "script": "home-arrange.json",
-      "durationMs": 16500,
+      "durationMs": 17500,
       "before": [
         {
           "api": "POST /api/home/layout",
@@ -5041,7 +5041,7 @@
         "Take the lock folder /tmp/nativetv-e2e.lock (mkdir).",
         "Read the server's port from the TV, as deploy.py does (the access token is never read).",
         "POST /api/home/layout with the apps sorted by kind and the kinds in their default order.",
-        "Send the script over ssh and run the client for 16.5 s through the app's jailer: Up twice and Right three times (past Films and Shows) reach the Apps tab, OK opens it on the first kind's row; a long press lifts the row, Down moves it under the next one, OK saves; a second long press and Up move it back up, and Back puts the server's order back.",
+        "Send the script over ssh and run the client for 17.5 s through the app's jailer: Up twice and Right three times (past Films and Shows) reach the Apps tab, OK opens it on its banners and Down four times reaches the first kind's row; a long press lifts the row, Down moves it under the next one, OK saves; a second long press and Up move it back up, and Back puts the server's order back.",
         "Read the report and judge the checkpoints.",
         "Always, even after a failure: POST /api/home/layout with the apps back in Your order and the kinds in their default order; delete the script and the lock folder."
       ],
@@ -5077,7 +5077,7 @@
           {
             "name": "moved",
             "path": "row",
-            "equals": 1
+            "equals": 5
           },
           {
             "name": "moved",
@@ -5092,7 +5092,7 @@
           {
             "name": "saved",
             "path": "row",
-            "equals": 1
+            "equals": 5
           },
           {
             "name": "saved",
@@ -5102,7 +5102,7 @@
           {
             "name": "moved-back",
             "path": "row",
-            "equals": 0
+            "equals": 4
           },
           {
             "name": "moved-back",
@@ -5117,7 +5117,7 @@
           {
             "name": "cancelled",
             "path": "row",
-            "equals": 1
+            "equals": 5
           },
           {
             "name": "cancelled",
@@ -6813,14 +6813,14 @@
     {
       "id": "E2E-178",
       "title": "Hiding an app on the Apps tab leaves Home's row alone",
-      "purpose": "On the Apps tab with the apps in Your order, a long press on an app starts editing with a Hide from Apps button above the grid: Up reaches it and OK takes the app off the Apps tab, and the grid no longer lists it (the next app is first). The server's `hidden.appsTab` list then holds it, and Home's own list stays as it was: after Back to the Home tab, its Your apps row still starts with the same app. The case starts and ends with no custom order and the same six apps hidden on Home's row and on the Apps tab (the B3's own, which leave LG Channels shown). The checks name the B3's first apps (Discovery, LG Channels, Netflix); a TV whose first apps differ does not pass.",
+      "purpose": "On the Apps tab with the apps in Your order, a long press on an app of Your apps starts editing with a Hide from Apps button over the tab: Up reaches it and OK takes the app off the Apps tab, and Your apps no longer lists it (the next app is first). The server's `hidden.appsTab` list then holds it, and Home's own list stays as it was: after Back to the Home tab, its Your apps row still starts with the same app. The case starts and ends with no custom order and the same six apps hidden on Home's row and on the Apps tab (the B3's own, which leave LG Channels shown). The checks name the B3's first apps (Discovery, LG Channels, Netflix); a TV whose first apps differ does not pass.",
       "kind": "run",
       "requires": [
         "control"
       ],
       "screen": "home",
       "script": "home-edit-hide.json",
-      "durationMs": 17000,
+      "durationMs": 17500,
       "before": [
         {
           "api": "POST /api/home/layout",
@@ -6859,7 +6859,7 @@
         "Take the lock folder /tmp/nativetv-e2e.lock (mkdir).",
         "Read the server's port from the TV, as deploy.py does (the access token is never read).",
         "POST /api/home/layout with the apps in Your order and the six hidden apps on both Home's row and the Apps tab.",
-        "Send the script over ssh and run the client for the case's time through the app's jailer: Up twice and Right three times (past Films and Shows) reach the Apps tab, OK opens it on the first app; a long press starts editing, Up reaches the Hide from Apps button and OK hides the app; Back returns to the Home tab and Up reaches its apps row.",
+        "Send the script over ssh and run the client for the case's time through the app's jailer: Up twice and Right three times (past Films and Shows) reach the Apps tab, OK opens it on its banners and Down reaches Your apps; a long press starts editing, Up reaches the Hide from Apps button and OK hides the app; Back returns to the Home tab and Up reaches its apps row.",
         "Read the report and judge the checkpoints, then read the server's catalogue: the first app is in the Apps tab's hidden list.",
         "Always, even after a failure: POST /api/home/layout with an empty app order and the six hidden apps on both lists again; delete the script and the lock folder."
       ],

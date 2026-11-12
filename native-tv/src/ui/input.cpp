@@ -69,23 +69,16 @@ void Application::key(Key key) {
             if (key == Key::Up)
                 home.navigation = true; // nothing to move on: Up reaches the bar
         } else {
-            bool grid = home.grid;
             if (key == Key::Up) {
-                if (grid && home.column >= 6)
-                    home.column -= 6;
-                else if (home.row)
+                if (home.row)
                     --home.row;
                 else if (homeHeroOffered())
                     home.heroFocus = true; // the banner is above the first row, as on Google TV
                 else
                     home.navigation = true;
             }
-            if (key == Key::Down) {
-                if (grid && home.column + 6 < home.rows[home.row].cards.size())
-                    home.column += 6;
-                else if (!grid && home.row + 1 < home.rows.size())
-                    ++home.row;
-            }
+            if (key == Key::Down && home.row + 1 < home.rows.size())
+                ++home.row;
             if (key == Key::Left && home.column)
                 --home.column;
             if (key == Key::Right && home.column + 1 < home.rows[home.row].cards.size())
@@ -255,11 +248,21 @@ bool Application::okHoldable() const {
         return false;
     if (home.editing)
         return true;
-    if (!home.grid && !home.navigation && !home.heroFocus && !home.tabs.empty() &&
-        home.tabs[home.tab].key == "apps" && home.rows.size() > 1)
+    if (arrangeable())
         return true;
     return !home.navigation && !home.heroFocus && home.row < home.rows.size() &&
            home::isApps(home.rows[home.row]) && home.column < home.rows[home.row].cards.size();
+}
+// The Apps tab's rows of apps by kind can be moved among themselves, when there are two.
+bool Application::arrangeable() const {
+    const auto &home = state_.home;
+    if (home.navigation || home.heroFocus || home.tabs.empty() || home.tabs[home.tab].key != "apps" ||
+        home.row >= home.rows.size() || home.rows[home.row].key != "appkind")
+        return false;
+    size_t kinds = 0;
+    for (const CardRow &row : home.rows)
+        kinds += row.key == "appkind";
+    return kinds > 1;
 }
 void Application::longPress() {
     if (state_.screen != Screen::Home || state_.home.heroFocus)
@@ -273,11 +276,10 @@ void Application::longPress() {
         homeEditDone(false); // the hold that started the edit is not a second request for it
         return;
     }
-    // On the Apps tab with the apps sorted by kind, holding OK lifts the focused row to be moved
-    // among the kinds; on any other app it starts editing the apps; anywhere else it does nothing
-    // (the recent apps are Back held).
-    if (!home.grid && !home.navigation && !home.tabs.empty() &&
-        home.tabs[home.tab].key == "apps" && home.rows.size() > 1) {
+    // On one of the Apps tab's rows of apps by kind, holding OK lifts the row to be moved among the
+    // kinds; on Your apps it starts editing the apps; anywhere else it does nothing (the recent
+    // apps are Back held).
+    if (arrangeable()) {
         home.arranging = true;
         homeFocus();
         dirty_ = true;
@@ -313,7 +315,6 @@ void Application::homeEditStart() {
     for (size_t i = 0; i < row.cards.size(); ++i)
         if (row.cards[i].id == focused)
             home.column = i;
-    motion_.tween("lift", 1, kit::motion::ms::fast, Easing::out());
     homeFocus();
     dirty_ = true;
 }
@@ -324,7 +325,6 @@ void Application::homeEditKey(Key key) {
         return;
     }
     auto &cards = home.rows[home.row].cards;
-    const long columns = static_cast<long>(home::kGridColumns);
     if (key == Key::Red || key == Key::Delete) {
         homeEditDone(true);
         return;
@@ -343,7 +343,7 @@ void Application::homeEditKey(Key key) {
         homeEditDone(cards[home.column].hidden);
         return;
     }
-    if (key == Key::Up && (!home.grid || home.column < static_cast<size_t>(columns))) {
+    if (key == Key::Up) {
         home.editHide = true;
         return;
     }
@@ -352,10 +352,6 @@ void Application::homeEditKey(Key key) {
         target -= 1;
     else if (key == Key::Right)
         target += 1;
-    else if (home.grid && key == Key::Up)
-        target -= columns;
-    else if (home.grid && key == Key::Down)
-        target += columns;
     if (target < 0 || target >= static_cast<long>(cards.size()) ||
         target == static_cast<long>(home.column))
         return;
@@ -372,7 +368,6 @@ void Application::homeEditKey(Key key) {
 void Application::homeEditDone(bool toggle) {
     auto &home = state_.home;
     home.editing = home.editHide = false;
-    motion_.tween("lift", 0, kit::motion::ms::fast, Easing::out());
     dirty_ = true;
     if (home.row >= home.rows.size() || home.column >= home.rows[home.row].cards.size()) {
         rebuildHome();

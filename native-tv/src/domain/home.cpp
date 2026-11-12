@@ -402,15 +402,70 @@ std::string titleCaption(const Card &card) {
         line += (line.empty() ? "" : "  \xc2\xb7  ") + facts;
     return line;
 }
+namespace {
+// Google TV's Apps tab: large banners over Your apps, a bar that searches the apps, a button for
+// each category and a row of each category's apps. Google's banners and rows come from the Play
+// Store; here they are the TV's own apps: the banners its apps of films, music and games in Your
+// apps' order, the rows its apps by kind in the owner's order of the kinds.
+constexpr size_t kAppBanners = 6;
+std::vector<CardRow> appsTabRows(const Json &catalogue, const Json &guide) {
+    std::vector<CardRow> result;
+    CardRow apps = appsRow(catalogue, guide, false, "appsTab");
+    apps.title = "Your apps";
+    if (apps.cards.empty())
+        return result;
+    CardRow banners;
+    banners.key = "appfeature";
+    for (const Card &card : apps.cards) {
+        const std::string kind = kindOf(card);
+        if (banners.cards.size() < kAppBanners && (kind == "video" || kind == "music" || kind == "games"))
+            banners.cards.push_back(card);
+    }
+    if (!banners.cards.empty())
+        result.push_back(banners);
+    result.push_back(apps);
+    CardRow search;
+    search.key = "search";
+    Card field;
+    field.id = "search";
+    field.kind = "search";
+    field.title = "Search apps";
+    field.command = navigate("search");
+    search.cards.push_back(field);
+    result.push_back(search);
+    CardRow chips;
+    chips.key = "chips";
+    chips.title = "App categories";
+    std::vector<CardRow> kinds;
+    for (const auto &kind : catalogue["kinds"].items()) {
+        CardRow row;
+        row.key = "appkind";
+        row.group = kind["key"].string();
+        row.title = kind["label"].string(row.group);
+        for (const Card &card : apps.cards)
+            if (kindOf(card) == row.group)
+                row.cards.push_back(card);
+        if (row.cards.empty())
+            continue;
+        Card chip;
+        chip.id = "kind:" + row.group;
+        chip.kind = "chip";
+        chip.title = row.title;
+        chip.command = navigate("apps:" + row.group);
+        chips.cards.push_back(chip);
+        kinds.push_back(row);
+    }
+    if (!chips.cards.empty())
+        result.push_back(chips);
+    result.insert(result.end(), kinds.begin(), kinds.end());
+    return result;
+}
+} // namespace
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide) {
     std::vector<CardRow> result;
-    if (tab == "apps") {
-        for (const CardRow &row : appRows(catalogue, guide, "appsTab"))
-            if (!row.cards.empty())
-                result.push_back(row);
-        return result;
-    }
+    if (tab == "apps")
+        return appsTabRows(catalogue, guide);
     if (tab == "inputs" || tab == "live") {
         CardRow row = catalogueRow(tab == "inputs" ? "dev" : "ch", catalogue, guide);
         if (!row.cards.empty())
