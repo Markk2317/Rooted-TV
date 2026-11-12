@@ -667,7 +667,8 @@ void card(Paint paint, const PosterCard &poster) {
     scene.shape(poster.rest, color::surface2, layout::cardR);
     if (!poster.image.empty())
         scene.picture(poster.rest, 0, layout::cardR).value = poster.image;
-    if (!poster.title.empty() && !captioned) {
+    // The caption's title stands in for the card's own; a line of facts alone does not.
+    if (!poster.title.empty() && poster.caption.empty()) {
         // The title sits on a veil over the lower part of the art; on focus it rises to make
         // room for the facts line under it.
         float amount = focus::clamp01(poster.focus);

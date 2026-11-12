@@ -186,7 +186,7 @@ struct PosterCard {
     float progress = -1;
     // Google TV's Continue watching: what OK does, in capitals over the art ("RESUME"), and two
     // lines under the card that the focus leaves in place (the title, then its service and how
-    // much is left). With a caption the card prints no title of its own.
+    // much is left). With a caption the card prints no title of its own; with only the line it does.
     std::string action, caption, captionLine;
     float captionAlpha = 1; // the lines fade in and out with the row that has them
     Enter enter;
