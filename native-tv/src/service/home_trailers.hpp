@@ -15,10 +15,19 @@
 namespace nativetv {
 namespace service {
 
-// Trailers for Native Tv Home's banner, from Apple's movie previews: the start of a film's preview
-// (about 20 s of it) is kept on the TV under home-trailers/, so the banner plays it from the TV.
-// Finding the preview (Wikidata, then the iTunes lookup) is the caller's; this keeps the files,
-// fetches them one at a time in the background and drops the least recently played.
+// Trailers for the details pages of Native Tv Home: the start of a film's trailer (about 30 s of
+// Apple TV's HLS one, or of the iTunes Store's preview) is kept on the TV under
+// home-trailers/, so the page plays it from the TV. Finding the trailer (Wikidata, then Apple TV's
+// page or the iTunes lookup) is the caller's; this keeps the files, fetches them one at a time in
+// the background and drops the least recently played.
+// HLS, as Apple TV serves its trailers. The variant whose H.264 SDR picture is the widest up to
+// `maxWidth`, its address resolved against the master playlist's at `base`; "" when there is none
+// on an https apple.com address.
+std::string hlsVariant(const std::string &master, const std::string &base, int maxWidth);
+// A media playlist's init segment (EXT-X-MAP) and then its segments, resolved against `base`;
+// empty unless there is one init segment first and every address is https on apple.com.
+std::vector<std::string> hlsSegments(const std::string &media, const std::string &base);
+
 class HomeTrailers {
   public:
     // The preview's https URL for a film's TMDB id; "" when it has none.
@@ -29,7 +38,9 @@ class HomeTrailers {
     using Clock = std::function<int64_t()>;
     enum class State { Ready, Pending, None };
 
-    static const size_t kClipBytes = 6u << 20;
+    // Under the 8 MB the TV app takes in one answer (adapters/http_services.cpp): about 33 s of
+    // Apple TV's 894 px trailers.
+    static const size_t kClipBytes = 7u << 20;
     static const size_t kFilesMax = 6;
 
     HomeTrailers(std::string dataRoot, Resolve resolve, Download download = Download(),

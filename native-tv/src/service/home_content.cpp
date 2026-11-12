@@ -233,6 +233,23 @@ bool itunesId(const std::string &id) {
 }
 
 // A preview on Apple's servers (video-ssl.itunes.apple.com), over https.
+// Apple TV's page of a film names its trailer's HLS playlist, as the address of Apple's player:
+// the first one on the page is the film's own; "" when the page has none.
+std::string appleTvPlaylist(const std::string &page) {
+    static const std::string kPlayer =
+        "https://play-edge.itunes.apple.com/WebObjects/MZPlayLocal.woa/hls/playlist.m3u8?";
+    const size_t at = page.find(kPlayer);
+    if (at == std::string::npos) return "";
+    size_t end = at + kPlayer.size();
+    while (end < page.size() && end - at < 512 &&
+           std::string("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789&;=._%-")
+                   .find(page[end]) != std::string::npos)
+        ++end;
+    std::string url = page.substr(at, end - at);
+    for (size_t entity = url.find("&amp;"); entity != std::string::npos; entity = url.find("&amp;", entity + 1))
+        url.erase(entity + 1, 4);
+    return url.find(';') == std::string::npos ? url : "";
+}
 bool applePreview(const std::string &url) {
     const std::string scheme = "https://";
     if (url.compare(0, scheme.size(), scheme) != 0 || url.size() > 512) return false;
@@ -300,6 +317,8 @@ Json chartValue(const Json &document) {
         if (url.empty() || name.empty()) continue;
         Json film = Json::object();
         film.set("name", Json::text(name));
+        const std::string store = entry["id"]["attributes"]["im:id"].string();
+        if (itunesId(store)) film.set("id", Json::text(store));
         film.set("year", Json::text(entry["im:releaseDate"]["label"].string().substr(0, 4)));
         film.set("url", Json::text(url));
         films.add(film);
@@ -722,6 +741,24 @@ Json HomeContent::trailer(const std::string &tmdbKey, const std::string &id) {
     countries.push_back("us");
     const std::string itunes =
         wikidataLookup(tmdbKey, "movie", id, "P6398", itunesId, "itunesId")["itunesId"].string();
+    // Apple TV's page of the film names its trailer as HLS in widths up to 1912 px
+    // (service/home_trailers.cpp picks the one the TV plays in time): preferred to the iTunes
+    // Store's 640 px preview.
+    auto appleTv = [&](const std::string &store, const std::string &country) {
+        return request(tmdbKey, "appletv/" + country + "/" + store, "", 3 * kDayMs, [](const Json &document) {
+            if (!document["page"].isString()) return Json();
+            Json result = Json::object();
+            result.set("ok", Json::flag(true));
+            result.set("enabled", Json::flag(true));
+            result.set("url", Json::text(appleTvPlaylist(document["page"].string())));
+            return result;
+        });
+    };
+    if (!itunes.empty())
+        for (const std::string &country : countries) {
+            const Json found = appleTv(itunes, country);
+            if (!found["url"].string().empty()) return found;
+        }
     if (!itunes.empty())
         for (const std::string &country : countries) {
             const Json found = request(tmdbKey, "itunes/" + itunes, "&country=" + country,
@@ -747,12 +784,17 @@ Json HomeContent::trailer(const std::string &tmdbKey, const std::string &id) {
     const std::string original = titleKey(film["item"]["originalTitle"].string());
     const int year = std::atoi(film["item"]["year"].string().c_str());
     for (const std::string &country : countries) {
-        const Json chart = request(tmdbKey, "itunes-chart/" + country, "", kDayMs / 4, chartValue);
+        // "ids" keys the charts apart from those kept before they carried the films' store ids.
+        const Json chart = request(tmdbKey, "itunes-chart/" + country, "ids", kDayMs / 4, chartValue);
         for (const Json &entry : chart["films"].items()) {
             const std::string name = entry["name"].string();
             const int released = std::atoi(entry["year"].string().c_str());
             if ((name == title || (!original.empty() && name == original)) && year &&
                 std::abs(released - year) <= 1) {
+                if (entry["id"].isString()) {
+                    const Json found = appleTv(entry["id"].string(), country);
+                    if (!found["url"].string().empty()) return found;
+                }
                 Json result = Json::parse(none.dump());
                 result.set("url", entry["url"]);
                 return result;
@@ -917,6 +959,12 @@ bool HomeContent::fetch(const std::string &url, Json &document,
         error = "remote server returned HTTP " + std::to_string(status);
         return false;
     }
+    // Apple TV's pages are HTML: their text is kept for the trailer named in it.
+    if (url.compare(0, 21, "https://tv.apple.com/") == 0) {
+        document = Json::object();
+        document.set("page", Json::text(body));
+        return true;
+    }
     document = Json::parse(body);
     if (!document.valid()) {
         error = "remote server did not return JSON";
@@ -936,6 +984,11 @@ std::string HomeContent::urlFor(const std::string &apiKey,
         return "https://itunes.apple.com/lookup?id=" + resource.substr(7) + query;
     if (resource.compare(0, 13, "itunes-chart/") == 0)
         return "https://itunes.apple.com/" + resource.substr(13) + "/rss/topmovies/limit=100/json";
+    // "appletv/<country>/<iTunes id>": the film's page on Apple TV, which redirects to its name.
+    if (resource.compare(0, 8, "appletv/") == 0) {
+        const size_t slash = resource.find('/', 8);
+        return "https://tv.apple.com/" + resource.substr(8, slash - 8) + "/movie/id" + resource.substr(slash + 1);
+    }
     return std::string(kTmdbApi) + resource + "?api_key=" +
            urlEncode(apiKey) + "&language=en-US" + query;
 }

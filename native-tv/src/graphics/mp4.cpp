@@ -8,6 +8,7 @@ const uint32_t kSamplesMax = 200000;
 struct Box {
     std::string type;
     size_t start = 0, size = 0; // the payload
+    size_t header = 8;
 };
 uint32_t be16(const std::string &bytes, size_t at) {
     return (static_cast<uint8_t>(bytes[at]) << 8) | static_cast<uint8_t>(bytes[at + 1]);
@@ -40,7 +41,7 @@ bool children(const std::string &bytes, size_t start, size_t end, std::vector<Bo
             return false;
         if (size > end - at)
             return partialLast;
-        boxes.push_back({bytes.substr(at + 4, 4), at + header, static_cast<size_t>(size) - header});
+        boxes.push_back({bytes.substr(at + 4, 4), at + header, static_cast<size_t>(size) - header, header});
         at += static_cast<size_t>(size);
     }
     return true;
@@ -61,10 +62,15 @@ bool entries(const std::string &bytes, const Box &box, size_t entry, uint32_t &c
     return entry && count <= (box.size - 8) / entry;
 }
 bool videoTrack(const std::string &bytes, const Box &trak, std::vector<Box> &stbl,
-                uint32_t &timescale) {
+                uint32_t &timescale, uint32_t &trackId) {
     std::vector<Box> boxes;
     if (!children(bytes, trak.start, trak.start + trak.size, boxes))
         return false;
+    if (const Box *tkhd = find(boxes, "tkhd")) {
+        const bool wide = tkhd->size >= 1 && bytes[tkhd->start] == 1;
+        if (tkhd->size >= (wide ? 24u : 16u))
+            trackId = be32(bytes, tkhd->start + (wide ? 20 : 12));
+    }
     const Box *mdia = find(boxes, "mdia");
     if (!mdia)
         return false;
@@ -139,6 +145,124 @@ bool sampleEntry(const std::string &bytes, const Box &stsd, Mp4Video &video, std
     }
     return true;
 }
+// The samples of a fragmented file, as HLS serves Apple TV's trailers (fMP4: an empty sample
+// table, then moof and mdat pairs): each track fragment's runs, their data counted from the moof
+// unless the fragment names a base, their durations, sizes and flags from the run, else the
+// fragment's defaults, else the track's (trex). `ticks` ends after the last sample.
+void fragmentSamples(const std::string &bytes, const std::vector<Box> &top, const Box &moov,
+                     uint32_t trackId, std::vector<Mp4Sample> &samples, uint64_t &ticks) {
+    uint32_t trexDuration = 0, trexSize = 0, trexFlags = 0;
+    std::vector<Box> index, extends;
+    if (children(bytes, moov.start, moov.start + moov.size, index))
+        if (const Box *mvex = find(index, "mvex"))
+            if (children(bytes, mvex->start, mvex->start + mvex->size, extends))
+                for (const Box &trex : extends)
+                    if (trex.type == "trex" && trex.size >= 24 && be32(bytes, trex.start + 4) == trackId) {
+                        trexDuration = be32(bytes, trex.start + 12);
+                        trexSize = be32(bytes, trex.start + 16);
+                        trexFlags = be32(bytes, trex.start + 20);
+                    }
+    const uint32_t kNotSync = 0x10000;
+    for (const Box &moof : top) {
+        if (moof.type != "moof")
+            continue;
+        std::vector<Box> fragments;
+        if (!children(bytes, moof.start, moof.start + moof.size, fragments))
+            continue;
+        for (const Box &traf : fragments) {
+            std::vector<Box> parts;
+            if (traf.type != "traf" || !children(bytes, traf.start, traf.start + traf.size, parts))
+                continue;
+            const Box *tfhd = find(parts, "tfhd");
+            if (!tfhd || tfhd->size < 8 || be32(bytes, tfhd->start + 4) != trackId)
+                continue;
+            const uint32_t headFlags = be32(bytes, tfhd->start) & 0xffffff;
+            size_t at = tfhd->start + 8;
+            const size_t headEnd = tfhd->start + tfhd->size;
+            uint64_t base = moof.start - moof.header;
+            uint32_t duration = trexDuration, size = trexSize, flags = trexFlags;
+            auto field = [&](uint32_t bit, size_t width, uint64_t &value) {
+                if (!(headFlags & bit) || headEnd - at < width)
+                    return;
+                value = width == 8 ? be64(bytes, at) : be32(bytes, at);
+                at += width;
+            };
+            uint64_t value = 0, unused = 0;
+            field(0x1, 8, value);
+            if (headFlags & 0x1)
+                base = value;
+            field(0x2, 4, unused);
+            value = duration;
+            field(0x8, 4, value);
+            duration = static_cast<uint32_t>(value);
+            value = size;
+            field(0x10, 4, value);
+            size = static_cast<uint32_t>(value);
+            value = flags;
+            field(0x20, 4, value);
+            flags = static_cast<uint32_t>(value);
+            if (const Box *tfdt = find(parts, "tfdt")) {
+                const bool wide = tfdt->size >= 1 && bytes[tfdt->start] == 1;
+                if (tfdt->size >= (wide ? 12u : 8u))
+                    ticks = wide ? be64(bytes, tfdt->start + 4) : be32(bytes, tfdt->start + 4);
+            }
+            uint64_t offset = base;
+            for (const Box &trun : parts) {
+                if (trun.type != "trun" || trun.size < 8)
+                    continue;
+                const uint32_t runFlags = be32(bytes, trun.start) & 0xffffff;
+                const uint32_t count = be32(bytes, trun.start + 4);
+                size_t entry = trun.start + 8;
+                const size_t end = trun.start + trun.size;
+                if (runFlags & 0x1) {
+                    if (end - entry < 4)
+                        continue;
+                    offset = base + static_cast<int32_t>(be32(bytes, entry));
+                    entry += 4;
+                }
+                uint32_t firstFlags = flags;
+                bool firstGiven = false;
+                if (runFlags & 0x4) {
+                    if (end - entry < 4)
+                        continue;
+                    firstFlags = be32(bytes, entry);
+                    firstGiven = true;
+                    entry += 4;
+                }
+                const size_t width = 4 * (((runFlags & 0x100) != 0) + ((runFlags & 0x200) != 0) +
+                                          ((runFlags & 0x400) != 0) + ((runFlags & 0x800) != 0));
+                for (uint32_t i = 0; i < count && samples.size() < kSamplesMax; ++i) {
+                    if (width && end - entry < width)
+                        break;
+                    uint32_t sampleDuration = duration, sampleSize = size,
+                             sampleFlags = i == 0 && firstGiven ? firstFlags : flags;
+                    if (runFlags & 0x100) {
+                        sampleDuration = be32(bytes, entry);
+                        entry += 4;
+                    }
+                    if (runFlags & 0x200) {
+                        sampleSize = be32(bytes, entry);
+                        entry += 4;
+                    }
+                    if (runFlags & 0x400) {
+                        sampleFlags = be32(bytes, entry);
+                        entry += 4;
+                    }
+                    if (runFlags & 0x800)
+                        entry += 4; // the composition offset: pictures take decode times in turn
+                    Mp4Sample sample;
+                    sample.offset = offset;
+                    sample.size = sampleSize;
+                    sample.atMs = static_cast<double>(ticks); // in ticks until the timescale is applied
+                    sample.key = !(sampleFlags & kNotSync);
+                    samples.push_back(sample);
+                    offset += sampleSize;
+                    ticks += sampleDuration;
+                }
+            }
+        }
+    }
+}
 } // namespace
 
 bool parseMp4Video(const std::string &bytes, Mp4Video &video, std::string &error) {
@@ -156,10 +280,10 @@ bool parseMp4Video(const std::string &bytes, Mp4Video &video, std::string &error
         return false;
     }
     std::vector<Box> stbl;
-    uint32_t timescale = 0;
+    uint32_t timescale = 0, trackId = 0;
     bool found = false;
     for (const Box &box : tracks)
-        if (box.type == "trak" && videoTrack(bytes, box, stbl, timescale)) {
+        if (box.type == "trak" && videoTrack(bytes, box, stbl, timescale, trackId)) {
             found = true;
             break;
         }
@@ -191,8 +315,9 @@ bool parseMp4Video(const std::string &bytes, Mp4Video &video, std::string &error
     uint32_t chunkCount = 0, runCount = 0, timeCount = 0, keyCount = 0;
     size_t chunkFirst = 0, runFirst = 0, timeFirst = 0, keyFirst = 0;
     const bool wideOffsets = !stco;
+    const bool fragmented = !sampleCount && find(top, "moof");
     if (!entries(bytes, wideOffsets ? *co64 : *stco, wideOffsets ? 8 : 4, chunkCount, chunkFirst) ||
-        !entries(bytes, *stsc, 12, runCount, runFirst) || !runCount ||
+        !entries(bytes, *stsc, 12, runCount, runFirst) || (!runCount && !fragmented) ||
         !entries(bytes, *stts, 8, timeCount, timeFirst) ||
         (stss && !entries(bytes, *stss, 4, keyCount, keyFirst))) {
         error = "The sample table is damaged";
@@ -207,6 +332,15 @@ bool parseMp4Video(const std::string &bytes, Mp4Video &video, std::string &error
     samples.reserve(sampleCount);
     uint32_t run = 0, timeEntry = 0, timeLeft = timeCount ? be32(bytes, timeFirst) : 0;
     uint64_t ticks = 0;
+    if (fragmented) {
+        fragmentSamples(bytes, top, *moov, trackId, samples, ticks);
+        // From the first sample's decode time, which a later segment does not start at 0.
+        const double first = samples.empty() ? 0 : samples[0].atMs;
+        for (Mp4Sample &sample : samples)
+            sample.atMs = 1000.0 * (sample.atMs - first) / timescale;
+        ticks -= static_cast<uint64_t>(first);
+        chunkCount = 0;
+    }
     for (uint32_t chunk = 1; chunk <= chunkCount && samples.size() < sampleCount; ++chunk) {
         while (run + 1 < runCount && be32(bytes, runFirst + 12 * (run + 1)) <= chunk)
             ++run;

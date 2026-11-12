@@ -185,7 +185,8 @@ void VideoClip::run() {
                 start = i;
             break;
         }
-    // Baseline has no B-frames, so pictures come out in the order their samples went in.
+    // Pictures come out in display order, later than their samples went in where High profile's
+    // B-frames are reordered; at a constant frame rate each takes the next sample's time in turn.
     std::deque<double> times;
     std::string unit;
     YuvPicture decoded;

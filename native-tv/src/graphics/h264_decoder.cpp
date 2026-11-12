@@ -39,6 +39,8 @@ struct Codec {
     void (*freeFrame)(void **) = nullptr;
     void (*initPacket)(void *) = nullptr;
     void (*logLevel)(int) = nullptr;
+    int (*dictSet)(void **, const char *, const char *, int) = nullptr;
+    void (*dictFree)(void **) = nullptr;
 };
 template <typename Function> bool symbol(void *library, const char *name, Function &function) {
     function = reinterpret_cast<Function>(dlsym(library, name));
@@ -67,6 +69,7 @@ const Codec &codec() {
                 symbol(library, "av_frame_free", found.freeFrame) &&
                 symbol(library, "av_init_packet", found.initPacket) &&
                 symbol(library, "av_log_set_level", found.logLevel) &&
+                symbol(library, "av_dict_set", found.dictSet) && symbol(library, "av_dict_free", found.dictFree) &&
                 found.version() >> 16 == major) {
                 found.logLevel(kLogQuiet);
                 found.registerAll();
@@ -103,7 +106,15 @@ bool H264Decoder::open(std::string &error) {
     }
     context_ = library.allocContext(decoder);
     frame_ = library.allocFrame();
-    if (!context_ || !frame_ || library.openContext(context_, decoder, nullptr) < 0) {
+    // The C6's libavcodec 55 is built with --disable-pthreads and --disable-asm, so it decodes on
+    // one core in C. Leaving out the loop filter of the pictures no other refers to (B-frames)
+    // takes Apple TV's 894 x 372 trailers from 28.8 to 30.3 pictures a second there, more room
+    // over their 24 for the scenes that cost most.
+    void *options = nullptr;
+    library.dictSet(&options, "skip_loop_filter", "noref", 0);
+    const bool opened = context_ && frame_ && library.openContext(context_, decoder, &options) >= 0;
+    library.dictFree(&options);
+    if (!opened) {
         error = "The H.264 decoder did not open";
         return false;
     }

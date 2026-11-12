@@ -348,11 +348,14 @@ weather from the server on the TV itself, with the token in `k`.
 
 With a TMDB key and `homeTrailers` on (the default), the films of Home's carousel, and a
 film whose details page opens, are looked up for a trailer: the film's exact Wikidata
-QID (from TMDB) goes to `www.wikidata.org` for its `P6398` iTunes movie ID, which goes to
-`itunes.apple.com/lookup` with the TV's country (then `us`); a film without one is matched
-by title and year in `itunes.apple.com/<country>/rss/topmovies`, fetched at most every six
-hours per country. The preview's URL is accepted only over https on an `apple.com` host, and
-its first 6 MB are fetched from there (`video-ssl.itunes.apple.com`). Apple and Wikidata
+QID (from TMDB) goes to `www.wikidata.org` for its `P6398` iTunes movie ID; a film without
+one is matched by title and year in `itunes.apple.com/<country>/rss/topmovies`, fetched at
+most every six hours per country, which gives its id too. The id goes to Apple TV's page of
+the film, `tv.apple.com/<country>/movie/id<id>` (then `us`), whose trailer playlist
+(`play-edge.itunes.apple.com`) names its segments on `*.tv.apple.com`; without one, to
+`itunes.apple.com/lookup` with the TV's country (then `us`) for the iTunes Store's preview.
+Every address is accepted only over https on an `apple.com` host, and the first 7 MB of the
+trailer are fetched from there. Apple and Wikidata
 receive those ids and the TV's public IP, never the TMDB key or a profile. The TV app reads
 the clip from the server on the TV itself (`/api/home/trailer`).
 

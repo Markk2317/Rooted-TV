@@ -247,8 +247,9 @@ waits in `/tmp/nativetv-frame-<service>.jpg` until the play ends.
 A saved Gemini API key is kept in `config.json` as `geminiKey`.
 
 Trailers for films' details pages on Native Tv Home are kept in `home-trailers/` in the data directory,
-mode 0700: the first 6 MB of up to six films' previews (`movie-<TMDB id>.m4v`, about 36 MB),
-the one played longest ago deleted to make room. `"homeTrailers": false` in `config.json`
+mode 0700: the first 7 MB of up to six films' trailers (`movie-<TMDB id>.mp4`, about 42 MB),
+the one played longest ago deleted to make room. Previews kept by earlier releases
+(`movie-<TMDB id>.m4v`) are deleted when the server starts. `"homeTrailers": false` in `config.json`
 (the dashboard's **Film trailers**) stops new ones; the folder can be deleted.
 
 The Photos screen saver's pictures are kept in `screensaver-photos/` in the data directory

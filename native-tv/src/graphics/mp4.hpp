@@ -4,13 +4,14 @@
 #include <vector>
 
 namespace nativetv {
-// The H.264 track of an MP4 file (Apple's movie previews): where each sample lies, when it shows
-// and whether decoding can start at it. Samples that end past the bytes given are left out, so the
+// The H.264 track of an MP4 file (Apple's movie previews, or the fragmented MP4 of Apple TV's
+// HLS trailers): where each sample lies, when it shows and whether decoding can start at it. Samples that end past the bytes given are left out, so the
 // first megabytes of a "fast start" file (its index before the media) play as a shorter clip.
 struct Mp4Sample {
     uint64_t offset = 0;
     uint32_t size = 0;
-    double atMs = 0; // decode time; Baseline H.264 has no B-frames, so it is also when it shows
+    double atMs = 0; // decode time; the decoder hands pictures back in display order, each taking
+                     // the next of these times, which are evenly spaced
     bool key = false;
 };
 struct Mp4Video {

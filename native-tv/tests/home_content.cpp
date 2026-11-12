@@ -45,6 +45,7 @@ nativetv::Json rawTitle(int id, const std::string &type = "movie") {
 }
 
 bool lookupHasPreviews = true;
+bool appleTvHasTrailer = false;
 
 nativetv::Json responseFor(const std::string &url) {
     using nativetv::Json;
@@ -61,6 +62,7 @@ nativetv::Json responseFor(const std::string &url) {
             "{\"im:name\":{\"label\":\"Film 51\"},\"im:releaseDate\":{\"label\":\"2026-02-01\"},"
             "\"link\":{\"attributes\":{\"rel\":\"alternate\",\"href\":\"https://itunes.apple.com/x\"}}},"
             "{\"im:name\":{\"label\":\"FILM 52 (2027)\"},\"im:releaseDate\":{\"label\":\"2027-03-01\"},"
+            "\"id\":{\"attributes\":{\"im:id\":\"6793590242\"}},"
             "\"link\":[{\"attributes\":{\"rel\":\"alternate\"}},{\"attributes\":{\"im:assetType\":"
             "\"preview\",\"href\":\"" + preview + "\"}}]}]}}");
     }
@@ -91,6 +93,15 @@ nativetv::Json responseFor(const std::string &url) {
         Json result = Json::object();
         result.set("entities", entities);
         return result;
+    }
+    // Apple TV's page of a film, HTML that names its HLS trailer where it has one.
+    if (url.compare(0, 21, "https://tv.apple.com/") == 0) {
+        Json page = Json::object();
+        page.set("page", Json::text(appleTvHasTrailer
+                                        ? "<a href=\"https://play-edge.itunes.apple.com/WebObjects/MZPlayLocal.woa/hls/"
+                                          "playlist.m3u8?cc=IT&amp;a=219214592&amp;id=7&amp;l=it-IT&amp;aec=HD\">"
+                                        : "<html></html>"));
+        return page;
     }
     // Apple's store: the Italian one has no preview of the film, the US one has, and a page
     // elsewhere is not taken.
@@ -343,9 +354,20 @@ int main() {
         clock += 4LL * 24 * 60 * 60 * 1000; // past the lookups' three days
         assert(trailers.trailer("private-test-key", "52")["url"].string() ==
                "https://video-ssl.itunes.apple.com/it.m4v");
-        assert(asked.back() == "https://itunes.apple.com/it/rss/topmovies/limit=100/json");
+        // The chart's store id is asked of Apple TV first, which has no trailer here.
+        assert(asked.back() == "https://tv.apple.com/it/movie/id6793590242");
+        assert(asked[asked.size() - 2] == "https://itunes.apple.com/it/rss/topmovies/limit=100/json");
         assert(trailers.trailer("private-test-key", "51")["url"].string().empty());
         assert(asked.back() == "https://itunes.apple.com/us/rss/topmovies/limit=100/json");
+        // Apple TV's page of the film, in the TV's country, names its HLS trailer, which goes
+        // before the iTunes Store's preview.
+        lookupHasPreviews = true;
+        appleTvHasTrailer = true;
+        clock += 4LL * 24 * 60 * 60 * 1000;
+        assert(trailers.trailer("private-test-key", "41")["url"].string() ==
+               "https://play-edge.itunes.apple.com/WebObjects/MZPlayLocal.woa/hls/"
+               "playlist.m3u8?cc=IT&a=219214592&id=7&l=it-IT&aec=HD");
+        assert(asked.back() == "https://tv.apple.com/it/movie/id219214592");
     }
     return 0;
 }

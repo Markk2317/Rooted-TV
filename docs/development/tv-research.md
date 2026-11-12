@@ -1858,3 +1858,17 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   app draws, and Netflix's logo then follows straight away. sam accepts it on webOS 3.4.3
   (`returnValue: true`).
 - The capture service's `DISPLAY` method gives black frames where the splash shows.
+
+## Decoding H.264 on the C6 (webOS 3.4.3)
+
+- The system's `/usr/lib/libavcodec.so.55.69.100` (FFmpeg 2.4) is built with `--disable-pthreads`
+  and `--disable-asm`: it decodes on one core, in C. A `threads` option changes nothing.
+- Pictures a second it decodes of Apple TV's trailers (H.264 High, Interstellar), one core:
+  1188 × 496 18.4, 1004 × 418 22.3, 894 × 372 28.8, 778 × 324 38.8. Skipping the loop filter
+  of non-reference pictures (`skip_loop_filter` `noref`) gives 894 × 372 30.3; skipping it on
+  every picture (`all`) gives 37.4 but blocks.
+- Apple TV's page of a film, `tv.apple.com/<country>/movie/id<iTunes id>`, needs no account and
+  names its trailer's HLS playlist (`play-edge.itunes.apple.com/.../playlist.m3u8?cc=..&a=..&id=..`)
+  in the page itself. The playlist's variants are fragmented MP4 (an init segment, then
+  segments of about 9 s, each several `moof`/`mdat` pairs), H.264 High from 556 to 1912 px wide,
+  with the audio apart. The Italian page of a film gives the Italian trailer from the same id.

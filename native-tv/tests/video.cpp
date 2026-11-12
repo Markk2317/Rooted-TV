@@ -63,6 +63,44 @@ std::string movie() {
     return ftyp + index(mediaAt) + box("mdat", media);
 }
 
+// The same pictures as HLS serves Apple TV's trailers, fragmented: an init segment whose sample
+// table is empty and whose trex gives defaults, then a moof whose track fragment names the
+// default duration, size and flags, starts at decode time 9009 (a later segment) and holds one
+// run with its own data offset, sizes, flags and composition offsets, then the mdat.
+std::string fragmentedMovie() {
+    std::vector<std::string> samples = {be32(3) + kKey, be32(2) + kOther, be32(2) + kOther};
+    std::string entry = std::string(6, '\0') + be16(1) + std::string(16, '\0') + be16(1190) +
+                        be16(496) + std::string(50, '\0');
+    const std::string avcc = std::string("\x01\x64\x00\x1f\xff\xe1", 6) + be16(4) + kSps +
+                             std::string("\x01", 1) + be16(2) + kPps;
+    entry += box("avcC", avcc);
+    const std::string stbl =
+        box("stbl", full("stsd", be32(1) + box("avc1", entry)) + full("stts", be32(0)) +
+                        full("stsc", be32(0)) + full("stsz", be32(0) + be32(0)) + full("stco", be32(0)));
+    const std::string trak =
+        box("trak", full("tkhd", be32(0) + be32(0) + be32(7) + std::string(68, '\0')) +
+                        box("mdia", full("mdhd", be32(0) + be32(0) + be32(24000) + be32(0) + be32(0)) +
+                                        full("hdlr", be32(0) + "vide" + std::string(13, '\0')) +
+                                        box("minf", stbl)));
+    const std::string mvex = box("mvex", full("trex", be32(7) + be32(1) + be32(500) + be32(0) + be32(0)));
+    const std::string init = box("ftyp", "iso6" + be32(0) + "iso6") + box("moov", trak + mvex);
+    std::string media;
+    for (const std::string &sample : samples)
+        media += sample;
+    auto fragment = [&](uint32_t dataOffset) {
+        // tfhd: default-base-is-moof, default duration, size and flags (non-sync).
+        const std::string tfhd = box("tfhd", be32(0x20038) + be32(7) + be32(1001) + be32(9) + be32(0x10000));
+        const std::string tfdt = box("tfdt", be32(0x01000000) + be32(0) + be32(9009));
+        std::string run = be32(0x00000e01) + be32(3) + be32(dataOffset);
+        const uint32_t flags[] = {0x02000000, 0x01010000, 0x01010000};
+        for (size_t i = 0; i < samples.size(); ++i)
+            run += be32(static_cast<uint32_t>(samples[i].size())) + be32(flags[i]) + be32(1001);
+        return box("moof", box("mfhd", be32(0) + be32(1)) + box("traf", tfhd + tfdt + box("trun", run)));
+    };
+    const uint32_t moofSize = static_cast<uint32_t>(fragment(0).size());
+    return init + fragment(moofSize + 8) + box("mdat", media);
+}
+
 class Store final : public TextureStore {
   public:
     TextureId create(int, int, TextureFormat, bool) override {
@@ -124,6 +162,20 @@ int main() {
     assert(!annexBSample(damaged, video, 1, unit));
     assert(!parseMp4Video("not a movie", cut, error) && !error.empty());
     assert(!parseMp4Video(bytes.substr(0, 200), cut, error));
+
+    // A fragmented file: the samples come from the fragment's run, from decode time 0.
+    const std::string fragmented = fragmentedMovie();
+    Mp4Video fragments;
+    assert(parseMp4Video(fragmented, fragments, error));
+    assert(fragments.width == 1190 && fragments.height == 496 && fragments.samples.size() == 3);
+    assert(fragments.samples[0].key && !fragments.samples[1].key && !fragments.samples[2].key);
+    assert(fragments.samples[0].atMs == 0 && fragments.samples[2].atMs > 83.4 && fragments.samples[2].atMs < 83.5);
+    assert(fragments.durationMs > 125.1 && fragments.durationMs < 125.2);
+    assert(annexBSample(fragmented, fragments, 0, unit) && unit == sets + std::string("\0\0\0\1", 4) + kKey);
+    assert(annexBSample(fragmented, fragments, 2, unit) && unit == std::string("\0\0\0\1", 4) + kOther);
+    // Cut inside its media, the clip ends at the first sample the bytes do not hold.
+    assert(parseMp4Video(fragmented.substr(0, fragmented.size() - 2), fragments, error) &&
+           fragments.samples.size() == 2);
 
     // The part that fills 16:9: Apple's 640x458 at 4:3 loses its sides, a 4:3 picture its top and
     // bottom, a letterboxed one its bars first.

@@ -37,9 +37,12 @@ int main() {
     char pattern[] = "/tmp/nativetv-home-trailers-XXXXXX";
     const std::string root = mkdtemp(pattern);
     const std::string directory = root + "/home-trailers";
-    // A download the daemon was stopped in the middle of is cleared at start.
+    // A download the daemon was stopped in the middle of is cleared at start, and so is an iTunes
+    // preview kept before the trailers came from Apple TV.
     (void)mkdir(directory.c_str(), 0700);
-    std::ofstream(directory + "/movie-5.m4v.part") << "half";
+    std::ofstream(directory + "/movie-5.mp4.part") << "half";
+    std::ofstream(directory + "/movie-6.m4v") << "an old preview";
+    std::ofstream(directory + "/movie-8.mp4") << std::string(HomeTrailers::kClipBytes + 1, 'x');
 
     std::mutex mutex;
     std::vector<std::string> resolved, downloaded;
@@ -70,7 +73,7 @@ int main() {
     assert(trailers.request("603", path) == HomeTrailers::State::Pending && path.empty());
     trailers.settle();
     assert(trailers.request("603", path) == HomeTrailers::State::Ready &&
-           path == directory + "/movie-603.m4v");
+           path == directory + "/movie-603.mp4");
     std::string bytes;
     assert(HomeTrailers::read(path, bytes) && bytes.compare(4, 4, "ftyp") == 0);
     assert(downloaded.size() == 1 && downloaded[0] == "https://video-ssl.itunes.apple.com/603.m4v");
@@ -106,6 +109,38 @@ int main() {
     assert(trailers.request("603", path) != HomeTrailers::State::None);
     trailers.settle();
     removeAll(root);
+
+    // Apple TV's HLS: the widest H.264 SDR variant up to the width asked for, past the I-frame
+    // lists, Dolby Vision and HEVC, its address beside the master playlist's.
+    const std::string base = "https://play-edge.itunes.apple.com/hls/playlist.m3u8?cc=US&a=1&id=2";
+    const std::string master =
+        "#EXTM3U\r\n"
+        "#EXT-X-I-FRAME-STREAM-INF:CODECS=\"avc1.64001f\",RESOLUTION=1190x496,URI=\"https://vod.tv.apple.com/i.m3u8\"\r\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=385840,CODECS=\"avc1.64001f,mp4a.40.5\",VIDEO-RANGE=SDR,RESOLUTION=556x232\r\n"
+        "https://vod.tv.apple.com/a/556.m3u8\r\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=3074315,CODECS=\"avc1.64001f,mp4a.40.2\",VIDEO-RANGE=SDR,RESOLUTION=1190x496\r\n"
+        "v1190.m3u8\r\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=3810485,CODECS=\"avc1.640020,mp4a.40.2\",VIDEO-RANGE=SDR,RESOLUTION=1484x618\r\n"
+        "https://vod.tv.apple.com/a/1484.m3u8\r\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=3000000,CODECS=\"hvc1.2.4.L123.B0\",VIDEO-RANGE=SDR,RESOLUTION=1180x492\r\n"
+        "https://vod.tv.apple.com/a/hevc.m3u8\r\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=3000000,CODECS=\"avc1.64001f\",VIDEO-RANGE=PQ,RESOLUTION=1100x460\r\n"
+        "https://vod.tv.apple.com/a/hdr.m3u8\r\n";
+    assert(hlsVariant(master, base, 1200) == "https://play-edge.itunes.apple.com/hls/v1190.m3u8");
+    assert(hlsVariant(master, base, 1500) == "https://vod.tv.apple.com/a/1484.m3u8");
+    assert(hlsVariant(master, base, 500).empty());
+    assert(hlsVariant("#EXT-X-STREAM-INF:CODECS=\"avc1.64001f\",RESOLUTION=1190x496\nhttps://example.com/v.m3u8\n",
+                      base, 1200)
+               .empty());
+    // The init segment, then the segments beside the media playlist.
+    const std::string mediaBase = "https://vod.tv.apple.com/assets/v1190.m3u8";
+    const std::string media = "#EXTM3U\n#EXT-X-MAP:URI=\"P_-0.mp4\"\n#EXTINF:9.6,\n#EXT-X-BITRATE:2519\n"
+                              "P_-1.mp4\n#EXTINF:9.3,\nP_-2.mp4\n#EXT-X-ENDLIST\n";
+    const std::vector<std::string> parts = hlsSegments(media, mediaBase);
+    assert(parts.size() == 3 && parts[0] == "https://vod.tv.apple.com/assets/P_-0.mp4" &&
+           parts[2] == "https://vod.tv.apple.com/assets/P_-2.mp4");
+    assert(hlsSegments("#EXTM3U\nP_-1.mp4\n", mediaBase).empty());
+    assert(hlsSegments("#EXT-X-MAP:URI=\"P_-0.mp4\"\nhttps://example.com/x.mp4\n", mediaBase).empty());
     std::printf("Home trailers passed.\n");
     return 0;
 }
