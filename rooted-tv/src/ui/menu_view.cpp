@@ -13,7 +13,7 @@ void dashboard(Scene &scene, const ViewState &state) {
     char clock[16];
     std::snprintf(clock, sizeof(clock), "%02d:%02d", state.hour, state.minute);
     scene.text({154, 54, 400, 50}, clock, 48, theme.secondary(), 50);
-    scene.image({1800, 54, 43, 50}, "local:icons/logo.svg", 0, true, theme.foreground());
+    scene.image({1794, 54, 49, 50}, "local:icons/logo.svg", 0, true, theme.foreground());
     auto tabs = dashboardTabs();
     size_t firstTab = menu.tab > 3 ? menu.tab - 3 : 0;
     float x = 122;

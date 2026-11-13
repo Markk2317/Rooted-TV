@@ -2,7 +2,7 @@
 description: "Open-source dashboard, privacy controls and Home Assistant MQTT bridge for rooted LG webOS TVs. Turn off ACR and ads, debloat apps, protect OLED panels, remap the remote."
 ---
 
-<p align="center"><img src="logo/rootedtv-512.png" width="112" alt="Rooted TV logo: an n whose arch is a screen corner, with a green pixel"></p>
+<p align="center"><img src="logo/rootedtv-512.png" width="112" alt="Rooted TV logo: a screen with a sprout for its aerial, and a pixel"></p>
 
 # Rooted TV
 

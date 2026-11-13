@@ -83,7 +83,7 @@
   }
 
   // docs/logo/rootedtv.svg without its tile.
-  var MARK = '<svg class="mark" viewBox="140 128 232 266" role="img" aria-label="Rooted TV" translate="no"><path d="M168 362 V154 M168 254 Q168 154 258 154 Q344 154 344 254 V362" fill="none" stroke="currentColor" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/><circle cx="256" cy="362" r="24" fill="currentColor"/></svg>';
+  var MARK = '<svg class="mark" viewBox="84 72 344 352" role="img" aria-label="Rooted TV" translate="no"><rect x="108" y="200" width="296" height="200" rx="48" fill="none" stroke="currentColor" stroke-width="38"/><path d="M256 200 V150" fill="none" stroke="currentColor" stroke-width="30" stroke-linecap="round"/><path d="M252 156 C214 158 186 134 180 96 C220 94 248 118 252 156 Z M260 146 C268 102 300 76 344 78 C344 122 312 148 260 146 Z" fill="currentColor"/><circle cx="256" cy="300" r="26" fill="currentColor"/></svg>';
 
   function show(name) {
     screenRevision++;

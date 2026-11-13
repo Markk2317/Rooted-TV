@@ -1735,7 +1735,9 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
 - BusyBox 1.22's `timeout` takes the limit as `-t SECONDS` and fails on a bare
   number. `date +%N` prints `%N`.
 - `luna-send` started over SSH prints nothing unless its standard input is closed
-  (`< /dev/null`).
+  (`< /dev/null`). A pipe with lines still in it does the same, and the call is
+  still carried out: under deploy.sh's `ssh ... sh -s`, `install-app.sh` closed
+  the open tile without seeing that it was in front, so it closes its own input.
 - Nothing runs as root at boot. `/etc/init/devmode.conf` runs
   `start-devmode.sh` only with LG's signature beside it, the surface manager has no
   `keyFilters` config for the early service to hang on, and the Homebrew

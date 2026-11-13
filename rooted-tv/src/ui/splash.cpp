@@ -7,7 +7,7 @@ namespace {
 constexpr float kPi = 3.14159265358979f;
 constexpr Color kGreen = {0x30 / 255.0f, 0xde / 255.0f, 0x61 / 255.0f, 1};
 // Where the dot sits in icons/mark.svg, as fractions of its square view box.
-constexpr float kDotX = .5f, kDotY = .8797f, kDotRadius = .0902f;
+constexpr float kDotX = .5f, kDotY = .6477f, kDotRadius = .0739f;
 constexpr float kMarkSide = 150, kDotsGap = 56, kDotSide = 10, kDotPitch = 26;
 constexpr double kBreathMs = 1400;
 } // namespace

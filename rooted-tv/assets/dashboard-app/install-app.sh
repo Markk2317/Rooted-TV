@@ -13,6 +13,11 @@
 # rejects it. That service answers on webOS 9. Where it is absent or the install
 # does not complete - as on older webOS - this exits without failing.
 
+# luna-send carries out a call but prints no answer when its standard input is a
+# pipe (webOS 3.4), as it is under deploy.sh's `ssh ... sh -s`: the checks for a
+# running or front app then read as no.
+exec </dev/null
+
 ACTION=${1:-install}
 SRC=${2:-/var/lib/tvweb/assets/dashboard-app}
 # refresh-open is the refresh an update runs (deploy.sh). On webOS 3 the tile is

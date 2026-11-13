@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Rooted TV: an n whose arch is a screen's rounded corner, with the pixel it draws. -->
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5df08a"/><stop offset="1" stop-color="#1fb653"/></linearGradient></defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <rect x="1.5" y="1.5" width="509" height="509" rx="110.5" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="3"/>
-  
-  <path transform="translate(0 -16)" d="M168 378 V170 M168 270 Q168 170 258 170 Q344 170 344 270 V378" fill="none" stroke="#000" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="256" cy="362" r="24" fill="#000"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!-- Rooted TV: a screen with a sprout for its aerial, and the pixel it draws. --><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5df08a"/><stop offset="1" stop-color="#1fb653"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#bg)"/><rect x="1.5" y="1.5" width="509" height="509" rx="110.5" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="3"/><rect x="108" y="200" width="296" height="200" rx="48" fill="none" stroke="#000" stroke-width="38"/><path d="M256 200 V150" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/><path d="M252 156 C214 158 186 134 180 96 C220 94 248 118 252 156 Z M260 146 C268 102 300 76 344 78 C344 122 312 148 260 146 Z" fill="#000"/><circle cx="256" cy="300" r="26" fill="#000"/></svg>

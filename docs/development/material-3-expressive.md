@@ -107,6 +107,8 @@ The sleep timer's moon (`bedtime.svg`), Google TV's icon for it in quick setting
 
 App icons are Google TV's circles: the brand's logo large on the brand's own colour (Netflix's red wordmark on white, Prime Video's on blue), and LG's own apps a Material Symbol in a tonal colour on its lighter container.
 
+Rooted TV's own logo is a screen with a sprout for its aerial and the pixel it draws, black on the green tile. `tools/gen_logo.py` writes every copy from one drawing: the tile (`docs/logo/rootedtv.svg`, the favicon), the marks the client draws (`icons/logo.svg` at the bar's end, `icons/mark.svg` on the splash, whose green pixel `splash.cpp` places), and the PNG icons of the TV apps and the phone dashboard. The pages that inline the mark copy `icons/logo.svg`.
+
 ## Not adopted
 
 * Tracking on the baseline values.

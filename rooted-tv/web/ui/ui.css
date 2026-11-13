@@ -46,7 +46,7 @@ kbd { font: var(--type-label-m); padding: 2px 6px; border-radius: var(--shape-xs
 .appbar.scrolled::before { opacity: 1; }
 .nav { display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; }
 .nav-brand { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #f2b27a, #b05e8a 55%, #5c5aa8); color: #ffffff; }
-.nav-brand .mark-logo { width: 15px; }
+.nav-brand .mark-logo { width: 18px; }
 .nav-capsule { position: relative; display: flex; align-items: center; min-width: 0; padding: 4px; border-radius: var(--shape-full); background: color-mix(in srgb, var(--c-on-surface) 12%, transparent); overflow-x: auto; scrollbar-width: none; }
 .nav-capsule::-webkit-scrollbar { display: none; }
 .nav-search { flex: none; display: grid; place-items: center; width: 52px; height: 40px; border-radius: var(--shape-full); color: var(--c-on-surface); transition: background-color var(--dur-state); }
