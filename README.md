@@ -1,59 +1,140 @@
-<h1 align="center">Rooted TV</h1>
-
-<p align="center"><b>Google TV's home on LG webOS TVs.</b><br>A native launcher for rooted LG TVs, built for webOS 3.4.</p>
+<p align="center">
+  <img src="docs/assets/readme-hero.jpg" alt="Rooted TV: Google TV's Home on an LG webOS TV, with its dashboard on a phone" width="100%">
+</p>
 
 <p align="center">
-  <img src="docs/screenshots/readme-home.jpg" alt="Rooted TV's Home on an LG C6: the banner with a trending film, More info and the Top picks for you row" width="100%">
+  <a href="https://github.com/Markk2317/Rooted-TV/releases"><img alt="Download the latest release" src="https://img.shields.io/badge/download-latest%20release-1fb653?style=for-the-badge&logo=github&logoColor=white"></a>
+  <img alt="webOS 3.4 and later" src="https://img.shields.io/badge/webOS-3.4%2B-111613?style=for-the-badge&logo=lg&logoColor=white">
+  <img alt="C++ and OpenGL ES" src="https://img.shields.io/badge/C%2B%2B-OpenGL%20ES-111613?style=for-the-badge&logo=cplusplus&logoColor=white">
+  <a href="docs/integrations/home-assistant.md"><img alt="Home Assistant over MQTT" src="https://img.shields.io/badge/Home%20Assistant-MQTT-111613?style=for-the-badge&logo=homeassistant&logoColor=white"></a>
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-111613?style=for-the-badge"></a>
 </p>
+
+<h3 align="center">Google TV's Home, running natively on rooted LG webOS TVs.</h3>
+
+<p align="center">
+  <a href="#-install"><b>Install</b></a> &nbsp;·&nbsp;
+  <a href="#-screens"><b>Screens</b></a> &nbsp;·&nbsp;
+  <a href="#-features"><b>Features</b></a> &nbsp;·&nbsp;
+  <a href="docs/index.md"><b>Docs</b></a> &nbsp;·&nbsp;
+  <a href="https://github.com/Markk2317/Rooted-TV/releases"><b>Releases</b></a>
+</p>
+
+---
 
 **Rooted TV**, inspired by [Native Tv](https://github.com/ihtisham1211/native-tv), replaces an LG webOS TV's home screen with a copy of Google TV's: the same Home with its banner and rows of titles, the Films, Shows, Apps and Inputs tabs, a page for each title, Search, Quick settings and profiles. It is a C++ and OpenGL ES app that runs on the TV itself, with no browser behind it, at the display's 60 frames a second, and it speaks the TV's menu language.
 
 Beside the app, a server on the TV gives phones and computers a dashboard, privacy tools and a Home Assistant bridge.
 
-<p align="center">
-  <img src="docs/screenshots/readme-apps.jpg" alt="The Apps tab: favourite apps, Search apps, app categories and the Movies and TV row" height="300">
-  <img src="docs/screenshots/readme-quick-settings.jpg" alt="Quick settings after Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps" height="300">
-</p>
-<p align="center"><sub>Captured on an LG OLED55C6V.</sub></p>
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🎬 Google TV, faithfully</h3>
+      Home, tabs, title pages, Search and Quick settings follow Google TV's own layout, type, motion and system sounds.
+    </td>
+    <td width="33%" valign="top">
+      <h3>⚡ Native and smooth</h3>
+      Drawn in OpenGL ES at 60 frames a second by a C++ app on the TV. No web page, no browser engine.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🌍 The TV's language</h3>
+      Menus follow the TV's menu language, with titles, overviews and genres from TMDB in the same language.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>📱 A phone dashboard</h3>
+      Remote control, apps, OLED care, hardware readings, backup and logs, in Google TV's look.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🛡️ Privacy</h3>
+      LG's content recognition and ad tracking switched off, and LG's ad and telemetry servers blocked.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🏠 Smart home</h3>
+      The TV as Home Assistant entities over MQTT, and its readings as Prometheus metrics.
+    </td>
+  </tr>
+</table>
 
-## Features
+## 📸 Screens
 
-* **Google TV's Home.** A banner of trending titles with their logos and HD trailers; rows of Top picks for you (chosen by Gemini when a Gemini key is set), Continue watching, what is popular on Netflix, Prime Video and Disney+ in the TV's country, and YouTube's trending videos and each profile's subscriptions.
-* **Films, Shows, Apps and Inputs tabs.** Rows by genre with a caption for the focused row, the installed apps laid out as Google TV's Apps tab, and the HDMI inputs named after the device on each.
-* **A title's page.** Overview, rating, cast and crew, similar titles and rows of its genres, with Watch on Prime Video or Disney+, which opens the title itself, Trailer, Watchlist, Watched it? and Like or Not for me.
-* **Search.** By title or genre, and in LG Content Store, whose apps install from the results.
-* **Quick settings.** Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps.
-* **Profiles and assistant.** Google TV's account chooser, with YouTube signed in for each profile, and a Gemini assistant.
-* **Sounds and screen savers.** Google TV's system sound on each key press; Google TV's screen saver, an ambient mode with the owner's photos, a clock and other savers in place of LG's.
-* **The TV's language.** The app follows the TV's menu language where it has a translation, in Google TV's own words where it has the same string, with titles, overviews and genres from TMDB in that language. The app's settings, setup and tools stay in English.
-* **Switching on.** The TV opens Home when it comes on and on the Home key. If the device on the input, such as a Chromecast woken with the TV over HDMI-CEC, takes the screen back within 10 seconds, Home comes back over it; if that device switched the TV on, the device stays in front.
-* **Built for webOS 3.4.** The server starts from the app's tile, since the firmware runs nothing as root at boot; still logos dim on OLED panels that have no logo dimming of their own; memory is freed for the streaming apps.
-* **A dashboard in the browser.** For a phone or computer, in Google TV's look: remote control, apps, privacy (LG's ACR and ad tracking, a blocker for LG's ad and telemetry servers), OLED care, hardware readings, backup and logs. The TV appears in [Home Assistant](docs/integrations/home-assistant.md) over MQTT.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/readme-home.jpg" alt="Rooted TV's Home on an LG C6: the banner with a trending film, More info and the Top picks for you row"></td>
+    <td width="50%"><img src="docs/screenshots/readme-apps.jpg" alt="The Apps tab: favourite apps, Search apps, app categories and the Movies and TV row"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Home</b><br><sub>Trending titles with their trailers, and rows picked for each profile</sub></td>
+    <td align="center"><b>Apps</b><br><sub>Favourite apps, app search and categories, as on Google TV</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/readme-quick-settings.jpg" alt="Quick settings after Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps" height="340"></td>
+    <td align="center">
+      <img src="docs/screenshots/phone-overview.png" alt="The dashboard on a phone: what is playing, the remote and quick controls" height="340">
+      <img src="docs/screenshots/phone-privacy.png" alt="The dashboard's Privacy tab on a phone" height="340">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><b>Quick settings</b><br><sub>Picture, sound, input, sleep timer and recent apps from one panel</sub></td>
+    <td align="center"><b>Dashboard</b><br><sub>The TV from any phone or computer on the network</sub></td>
+  </tr>
+</table>
 
-## Compatibility
+<p align="center"><sub>Captured from the running app on an LG TV and from the dashboard in a phone's browser.</sub></p>
 
-| | |
-| :-- | :-- |
-| **Tested on** | LG OLED55C6V (2016), webOS 3.4.3, firmware 05.70.45 |
-| **Other models** | Untried with Rooted TV. The server and the app are written for webOS 3.4 and later |
-| **Requirements** | A rooted TV with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and root SSH access |
+## ✨ Features
 
-## Install
+* 🏠 **Google TV's Home.** A banner of trending titles with their logos and HD trailers; rows of Top picks for you (chosen by Gemini when a Gemini key is set), Continue watching, what is popular on Netflix, Prime Video and Disney+ in the TV's country, and YouTube's trending videos and each profile's subscriptions.
+* 🗂️ **Films, Shows, Apps and Inputs tabs.** Rows by genre with a caption for the focused row, the installed apps laid out as Google TV's Apps tab, and the HDMI inputs named after the device on each.
+* 🎞️ **A title's page.** Overview, rating, cast and crew, similar titles and rows of its genres, with Watch on Prime Video or Disney+, which opens the title itself, Trailer, Watchlist, Watched it? and Like or Not for me.
+* 🔍 **Search.** By title or genre, and in LG Content Store, whose apps install from the results.
+* 🎛️ **Quick settings.** Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps.
+* 👤 **Profiles and assistant.** Google TV's account chooser, with YouTube signed in for each profile, and a Gemini assistant.
+* 🔊 **Sounds and screen savers.** Google TV's system sound on each key press; Google TV's screen saver, an ambient mode with the owner's photos, a clock and [other savers](docs/dashboard/screen-savers.md) in place of LG's.
+* 🌍 **The TV's language.** The app follows the TV's menu language where it has a translation, in Google TV's own words where it has the same string, with titles, overviews and genres from TMDB in that language. The app's settings, setup and tools stay in English.
+* 🔌 **Switching on.** The TV opens Home when it comes on and on the Home key. If the device on the input, such as a Chromecast woken with the TV over HDMI-CEC, takes the screen back within 10 seconds, Home comes back over it; if that device switched the TV on, the device stays in front.
+* 📺 **Built for webOS 3.4.** The server starts from the app's tile, since the firmware runs nothing as root at boot; still logos dim on OLED panels that have no logo dimming of their own; memory is freed for the streaming apps.
+* 📱 **A dashboard in the browser.** For a phone or computer, in Google TV's look: remote control, apps, [privacy](docs/dashboard/privacy.md) (LG's ACR and ad tracking, a blocker for LG's ad and telemetry servers), [OLED care](docs/dashboard/oled-care.md), hardware readings, backup and logs. The TV appears in [Home Assistant](docs/integrations/home-assistant.md) over MQTT and in [Prometheus](docs/integrations/prometheus.md).
 
-Rooted TV is installed from a computer on the TV's network over SSH, with the TV's root SSH key. The TV needs no internet access to install it. First root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel): Rooted TV does not root the TV.
+## 🧩 How it works
 
-### From a release
+```mermaid
+flowchart LR
+    remote(["Remote"]) --> app
+    phone(["Phone or computer<br/>dashboard"]) --> server
+    subgraph tv ["LG webOS TV"]
+        app["Rooted TV app<br/>C++ · OpenGL ES · 60 fps"] <--> server["Rooted TV server<br/>port 8080"]
+        server <--> webos["webOS services"]
+    end
+    server --> ha(["Home Assistant<br/>MQTT"])
+    server --> cloud(["TMDB · YouTube · Gemini<br/>titles, trailers, picks"])
+```
 
-Each version on the [Releases](https://github.com/Markk2317/Rooted-TV/releases) page carries `rooted-tv-<version>.tar.gz`, with the TV's server and app already built, so the computer needs no SDK or compiler. Unpack it and send it to the TV:
+The app draws every screen; the server on the TV gathers titles and trailers, talks to webOS for apps, inputs and picture settings, and serves the dashboard. Neither needs a cloud account of its own: the [optional keys](#-optional-keys) add the rows of titles.
+
+## 🚀 Install
+
+> [!IMPORTANT]
+> Rooted TV does not root the TV. The TV needs root, the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and root SSH access first.
+
+Rooted TV is installed from a computer on the TV's network over SSH, with the TV's root SSH key. The TV needs no internet access to install it.
+
+**1. Download** `rooted-tv-<version>.tar.gz` from the [latest release](https://github.com/Markk2317/Rooted-TV/releases). It holds the TV's server and app already built, so the computer needs no SDK or compiler.
+
+**2. Send it to the TV:**
 
 ```bash
 tar -xzf rooted-tv-<version>.tar.gz && cd rooted-tv-<version>
 ROOTEDTV_SSH_KEY=~/.ssh/lgtv_root bash deploy.sh <tv-ip> --bundle=bundle.tar
 ```
 
-The same command updates a TV that has Rooted TV, keeping its settings. Then open the app from its tile on the TV: it starts the server and runs the first-run setup. The dashboard is at `http://<tv-ip>:8080/`.
+**3. Open the app** from its tile on the TV: it starts the server and runs the first-run setup. The dashboard is at `http://<tv-ip>:8080/`.
 
-### From source
+The same command updates a TV that has Rooted TV, keeping its settings; on webOS 3 it also reopens Home on the new version.
+
+<details>
+<summary><b>Build from source</b></summary>
 
 1. Clone the repository:
 
@@ -86,9 +167,11 @@ The same command updates a TV that has Rooted TV, keeping its settings. Then ope
 
 5. Open the app from its tile on the TV, as after a release install.
 
+</details>
+
 The [installation guide](docs/getting-started/install.md) and [what it changes on the TV](docs/administration/tv-changes.md) have the details.
 
-## Optional keys
+## 🔑 Optional keys
 
 The app, the dashboard and the tools need no account or key. Keys add Home's rows of titles, and go in the dashboard's Home tab (`http://<tv-ip>:8080/?tab=home`):
 
@@ -101,16 +184,29 @@ The app, the dashboard and the tools need no account or key. Keys add Home's row
 
 The keys stay on the TV, in `/var/lib/tvweb/config.json`. This product uses the TMDB API but is not endorsed or certified by TMDB.
 
-## Security
+## ✅ Compatibility
 
-The dashboard has **no login by default**, so any phone on the home network can use it. **Never expose port 8080 to the internet.** [Security](docs/administration/security.md) covers the access token and closing the port to the network.
+| | |
+| :-- | :-- |
+| **Tested on** | LG OLED55C6V (2016), webOS 3.4.3, firmware 05.70.45 |
+| **Other models** | Untried with Rooted TV. The server and the app are written for webOS 3.4 and later |
+| **Requirements** | A rooted TV with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and root SSH access |
 
-## Disclaimer
+## 🔒 Security
+
+> [!CAUTION]
+> The dashboard has **no login by default**, so any phone on the home network can use it. **Never expose port 8080 to the internet.**
+
+[Security](docs/administration/security.md) covers the access token and closing the port to the network.
+
+## ⚠️ Disclaimer
 
 Rooted TV runs as `root` on the TV and is used at the owner's own risk: no responsibility is accepted for damage, bricked TVs, voided warranties or panel issues.
 
 An independent, unofficial project, not affiliated with or endorsed by LG Electronics or Google. webOS is a trademark of LG Electronics; Google TV and Chromecast are trademarks of Google LLC.
 
-## License
+## 📄 License
 
 MIT, see [LICENSE](LICENSE). Bundled fonts, icons, sounds and libraries keep their own licences, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+<p align="center"><sub>Inspired by <a href="https://github.com/ihtisham1211/native-tv">Native Tv</a> · built on the work of <a href="https://github.com/webosbrew">webOSbrew</a> and <a href="https://github.com/openlgtv">openlgtv</a></sub></p>
