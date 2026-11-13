@@ -3,20 +3,14 @@
 # shows only when a tab opens, which the unit tests never do.
 name: Dashboards
 
+# Not on pushes to main: in the private repository they would spend the Actions
+# minutes the release build (release.yml) needs. Run by hand or on a pull request.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'native-tv/src/**'
-      - 'native-tv/web/**'
-      - 'native-tv/assets/**'
-      - 'scripts/check-dashboards.js'
-      - '.github/workflows/dashboards.yml'
   pull_request:
     paths:
-      - 'native-tv/src/**'
-      - 'native-tv/web/**'
-      - 'native-tv/assets/**'
+      - 'rooted-tv/src/**'
+      - 'rooted-tv/web/**'
+      - 'rooted-tv/assets/**'
       - 'scripts/check-dashboards.js'
       - '.github/workflows/dashboards.yml'
   workflow_dispatch:
@@ -39,7 +33,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends cmake ninja-build g++ pkg-config libjson-c-dev libcurl4-openssl-dev
-          python3 native-tv/build.py --service-only
+          python3 rooted-tv/build.py --service-only
       - run: npm install --no-save playwright-core
       - run: node scripts/check-dashboards.js
         env:

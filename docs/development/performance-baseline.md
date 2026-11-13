@@ -57,9 +57,9 @@ Steady state, one 5 s run on Home:
 | Draw calls, vertices | 24, 3,816 |
 | GPU time per frame | about 8 ms (see below) |
 
-GPU time: with `NATIVETV_DEBUG_SKIP=finish` (a `glFinish` after the draws, so `submitMs` includes the GPU's work), five paired runs of 6 s gave `submit` 1.25 ms without and 9.18 ms with it for ambient frames (runs 9.16 to 9.22), and 1.28 and 9.25 ms for full-rate frames. A Home frame therefore keeps the GPU busy for about 8 ms, roughly half of a 60 Hz frame while Home animates and a quarter of the 34.7 ms ambient interval. The figure includes driver work.
+GPU time: with `ROOTEDTV_DEBUG_SKIP=finish` (a `glFinish` after the draws, so `submitMs` includes the GPU's work), five paired runs of 6 s gave `submit` 1.25 ms without and 9.18 ms with it for ambient frames (runs 9.16 to 9.22), and 1.28 and 9.25 ms for full-rate frames. A Home frame therefore keeps the GPU busy for about 8 ms, roughly half of a 60 Hz frame while Home animates and a quarter of the 34.7 ms ambient interval. The figure includes driver work.
 
-Which drawing kinds the ambient frame's build time goes on, from `NATIVETV_DEBUG_SKIP` (each left out in turn, median over about 67 ambient frames; two runs with nothing skipped gave 2.37 and 2.33 ms):
+Which drawing kinds the ambient frame's build time goes on, from `ROOTEDTV_DEBUG_SKIP` (each left out in turn, median over about 67 ambient frames; two runs with nothing skipped gave 2.37 and 2.33 ms):
 
 | Left out | Build ms | Submit ms | Draws |
 |---|---|---|---|

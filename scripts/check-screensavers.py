@@ -93,7 +93,7 @@ def check(path):
 
 files = [pathlib.Path(a) for a in sys.argv[1:]]
 if not files:
-    files = sorted(pathlib.Path('native-tv/assets/screensavers').glob('*.qml'))
+    files = sorted(pathlib.Path('rooted-tv/assets/screensavers').glob('*.qml'))
 
 fails = 0
 for f in files:

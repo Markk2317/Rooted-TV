@@ -38,7 +38,7 @@ EOF
   cat <<'EOF'
 pid=$(cat /var/run/tvweb.pid 2>/dev/null)
 [ -n "$pid" ] && [ -d "/proc/$pid" ] ||
-  pid=$(ps -eo pid,args 2>/dev/null | grep 'nativetv-daemon --config' | grep -v grep | awk '{print $1; exit}')
+  pid=$(ps -eo pid,args 2>/dev/null | grep 'rootedtv-daemon --config' | grep -v grep | awk '{print $1; exit}')
 if [ -z "$pid" ]; then echo "FOOTPRINT_FAIL the server is not running"; exit 0; fi
 watch=$(cat /var/run/tvwebwatch.pid 2>/dev/null)
 hz=100

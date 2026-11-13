@@ -12,8 +12,8 @@
  * Usage:
  *   node scripts/emulate-tv.js [--port 8080] [--model c2|b8|c3] [--open]
  *
- * Needs the host build first: python3 native-tv/build.py --service-only
- * (NATIVETV_DAEMON names another build).
+ * Needs the host build first: python3 rooted-tv/build.py --service-only
+ * (ROOTEDTV_DAEMON names another build).
  */
 'use strict';
 
@@ -117,23 +117,23 @@ async function getAvailablePort(desiredPort) {
 
 async function main() {
   const chosenPort = await getAvailablePort(port);
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nativetv-emulate-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rootedtv-emulate-'));
 
   const webosVer = profile.webosVersion || profile.sdkVersion;
 
-  const daemon = process.env.NATIVETV_DAEMON || path.join(ROOT, 'native-tv', 'build-host-ninja', 'nativetv-daemon');
+  const daemon = process.env.ROOTEDTV_DAEMON || path.join(ROOT, 'rooted-tv', 'build-host-ninja', 'rootedtv-daemon');
   const fakeLuna = path.join(path.dirname(daemon), 'native-fake-luna-send');
   if (!fs.existsSync(daemon) || !fs.existsSync(fakeLuna)) {
-    console.error('build the daemon first: python3 native-tv/build.py --service-only (or set NATIVETV_DAEMON)');
+    console.error('build the daemon first: python3 rooted-tv/build.py --service-only (or set ROOTEDTV_DAEMON)');
     process.exit(1);
   }
 
   // The assets as deploy.sh lays them out on the TV: the TV pages and apps, and
   // the phone dashboard beside them.
   const assets = path.join(root, 'assets');
-  fs.cpSync(path.join(ROOT, 'native-tv', 'assets'), assets, { recursive: true });
-  fs.copyFileSync(path.join(ROOT, 'native-tv', 'web', 'ui.html'), path.join(assets, 'ui.html'));
-  fs.cpSync(path.join(ROOT, 'native-tv', 'web', 'ui'), path.join(assets, 'ui'), { recursive: true });
+  fs.cpSync(path.join(ROOT, 'rooted-tv', 'assets'), assets, { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'rooted-tv', 'web', 'ui.html'), path.join(assets, 'ui.html'));
+  fs.cpSync(path.join(ROOT, 'rooted-tv', 'web', 'ui'), path.join(assets, 'ui'), { recursive: true });
 
   // The TV's own files, under a root the daemon reads in place of /.
   const system = path.join(root, 'system');
@@ -161,7 +161,7 @@ async function main() {
   const dataDir = path.join(root, 'var', 'lib', 'tvweb');
 
   // The same system snapshot every run, in place of a procfs read.
-  const nativeSystem = JSON.parse(fs.readFileSync(path.join(ROOT, 'native-tv', 'tests', 'fixtures', 'system-metrics.json'), 'utf8')).expected;
+  const nativeSystem = JSON.parse(fs.readFileSync(path.join(ROOT, 'rooted-tv', 'tests', 'fixtures', 'system-metrics.json'), 'utf8')).expected;
   nativeSystem.temp = 42;
   nativeSystem.tempMillidegrees = 42000;
   fs.writeFileSync(path.join(root, 'native-system.json'), JSON.stringify(nativeSystem));
@@ -227,8 +227,8 @@ async function main() {
     env: Object.assign({}, process.env, {
       TVWEB_NODE_FREE: '1',
       TVWEB_LUNA_SEND: fakeLuna,
-      NATIVETV_FAKE_LUNA_MODE: 'emulator',
-      NATIVETV_FAKE_LUNA_APPS: JSON.stringify(APPS),
+      ROOTEDTV_FAKE_LUNA_MODE: 'emulator',
+      ROOTEDTV_FAKE_LUNA_APPS: JSON.stringify(APPS),
       TVWEB_DATA_DIR: dataDir,
       TVWEB_STATS_SYSTEM_JSON: path.join(root, 'native-system.json')
     })
@@ -292,7 +292,7 @@ async function main() {
     const binDir = path.join(simulatorApp, 'Contents', 'MacOS');
     const exe = path.join(binDir, fs.readdirSync(binDir)[0]);
     simulator = child.spawn(exe, [
-      path.join(__dirname, 'simulator-apps', 'native-tv'),
+      path.join(__dirname, 'simulator-apps', 'rooted-tv'),
       JSON.stringify({ url: `${base}/assets/google-tv/pages/dashboard/index.html` })
     ], { stdio: 'ignore' });
   }

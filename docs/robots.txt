@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ihtisham1211.github.io/native-tv/sitemap.xml
+Sitemap: https://github.com/Markk2317/Rooted-TV/tree/main/docs/sitemap.xml

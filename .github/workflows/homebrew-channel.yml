@@ -22,13 +22,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The package is named from native-tv/VERSION, which the daemon is built with;
+      # The package is named from rooted-tv/VERSION, which the daemon is built with;
       # a mismatch would ship one version under the other's name.
       - name: tag matches the version in the code
         run: |
-          code=$(tr -d '[:space:]' < native-tv/VERSION)
+          code=$(tr -d '[:space:]' < rooted-tv/VERSION)
           tag="${GITHUB_REF_NAME#v}"
-          [ "$code" = "$tag" ] || { echo "tag v$tag, but native-tv/VERSION says $code"; exit 1; }
+          [ "$code" = "$tag" ] || { echo "tag v$tag, but rooted-tv/VERSION says $code"; exit 1; }
 
       - name: build
         uses: ./.github/actions/package-ipk

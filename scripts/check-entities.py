@@ -10,7 +10,7 @@ the telemetry payload silently - a renamed field just yields an entity stuck
 at "unknown", which nobody notices for weeks.
 
 This walks every discovery entity in the daemon's golden
-(native-tv/tests/fixtures/ha-golden.json, which the native-ha-golden test holds
+(rooted-tv/tests/fixtures/ha-golden.json, which the native-ha-golden test holds
 equal to what the daemon publishes), extracts the telemetry fields its
 templates read (value_json.get('a') and (value_json.get('a') or {}).get('b')),
 and resolves each against a /api/stats response.
@@ -35,8 +35,8 @@ import json, os, re, sys, urllib.request, urllib.error, urllib.parse, pathlib
 
 args = sys.argv[1:]
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-GOLDEN = ROOT / 'native-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
-FIXTURES = ROOT / 'native-tv' / 'tests' / 'fixtures' / 'tv'
+GOLDEN = ROOT / 'rooted-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
+FIXTURES = ROOT / 'rooted-tv' / 'tests' / 'fixtures' / 'tv'
 TELEMETRY = 'tv/telemetry'
 
 
@@ -87,7 +87,7 @@ for f in sorted(FIXTURES.glob('stats-*.json')):
     except ValueError:
         pass
 daemon_source = '\n'.join(f.read_text(encoding='utf-8', errors='replace')
-                          for f in (ROOT / 'native-tv' / 'src').rglob('*.cpp'))
+                          for f in (ROOT / 'rooted-tv' / 'src').rglob('*.cpp'))
 
 
 def resolve(path, doc=None):

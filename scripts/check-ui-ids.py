@@ -23,7 +23,7 @@ Exits non-zero if any id is reached for unguarded and never defined.
 """
 import re, sys, pathlib
 
-path = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else 'native-tv/web/ui.html')
+path = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else 'rooted-tv/web/ui.html')
 page = path.read_text(encoding='utf-8')
 parts = [(path, page)] + [(path.parent / rel, (path.parent / rel).read_text(encoding='utf-8'))
                           for rel in re.findall(r'"/assets/(ui/[\w-]+\.(?:js|css))"', page)]

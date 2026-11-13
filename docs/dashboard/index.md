@@ -16,7 +16,7 @@ The page is laid out as Google TV's home: across the top, the Rooted TV avatar, 
 
 For the app on the TV's home screen, see [The TV app](../apps/tv-app.md).
 
-The page works with no internet access. It is dark, as Google TV is; the button at the top right steps through Dark, Light and Auto (the system's light or dark setting), and `/?theme=light`, `/?theme=dark` or `/?theme=auto` sets it for the visit. The choice is kept in the browser. The dashboard is in English and Spanish: it follows the browser's language, and the Language setting on the [Server tab](server.md#native-tv) or `/?lang=es` or `/?lang=en` changes it.
+The page works with no internet access. It is dark, as Google TV is; the button at the top right steps through Dark, Light and Auto (the system's light or dark setting), and `/?theme=light`, `/?theme=dark` or `/?theme=auto` sets it for the visit. The choice is kept in the browser. The dashboard is in English and Spanish: it follows the browser's language, and the Language setting on the [Server tab](server.md#rooted-tv) or `/?lang=es` or `/?lang=en` changes it.
 
 Use the search button (the magnifier that leads the bar's capsule), or press `/` or `Ctrl`/`Cmd` + `K`,
 to find sections, settings, controls, and installed apps. Useful destinations can be pinned

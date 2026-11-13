@@ -1,37 +1,37 @@
 # Testing and CI
 
-Every pull request is checked on [GitHub Actions](https://github.com/ihtisham1211/native-tv/actions) before it is merged. Most of
+Every pull request is checked on [GitHub Actions](https://github.com/Markk2317/Rooted-TV/actions) before it is merged. Most of
 the checks exist because a mistake of that kind once reached a release, or
 could have without anyone noticing: the TV gives little feedback when
 something is wrong, and Home Assistant and the TV's own browser fail quietly.
 
 ## On every pull request
 
-[`checks.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/checks.yml) runs these on each pull request and each merge to main. [`native-tv.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/native-tv.yml) builds the daemon and its worker for the host with address and undefined-behaviour sanitizers and runs CTest when native sources change.
+[`checks.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/checks.yml) runs these on each pull request, or when started by hand; not on pushes to main, which in the private repository would spend the Actions minutes the release build needs. [`rooted-tv.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/rooted-tv.yml) builds the daemon and its worker for the host with address and undefined-behaviour sanitizers and runs CTest when native sources change.
 
 | Check | What it catches |
 | :--- | :--- |
-| `check-es5.py` | ES6 syntax, or a call or CSS the TV browser lacks, in the pages the TV shows (`native-tv/assets/google-tv/`, the Home app). The phone dashboard is not restricted. |
+| `check-es5.py` | ES6 syntax, or a call or CSS the TV browser lacks, in the pages the TV shows (`rooted-tv/assets/google-tv/`, the Home app). The phone dashboard is not restricted. |
 | `check-ui-ids.py` | An element the dashboard's script reaches for that the page no longer has. |
-| `check-strings.py` | Dashboard text or a `say::msg` message without a key, one key used for two different texts, and a dictionary in `native-tv/assets/i18n/` that does not parse, holds a key nothing uses, or has placeholders or markup that differ from its English. Translations made from English that has since changed are reported, not failed. [Strings](strings.md) has the rules. |
+| `check-strings.py` | Dashboard text or a `say::msg` message without a key, one key used for two different texts, and a dictionary in `rooted-tv/assets/i18n/` that does not parse, holds a key nothing uses, or has placeholders or markup that differ from its English. Translations made from English that has since changed are reported, not failed. [Strings](strings.md) has the rules. |
 | `check-screensavers.py` | Screen saver QML that the TV's QtQuick version cannot load. |
-| `check-drift.py` | The [entity reference](../integrations/home-assistant-entities.md) out of step with the entities the daemon publishes, a file missing from `native-tv/lifecycle/deploy.sh`'s list, which would never be installed, and an asset the TV client names (`local:...`, the Google Sans Flex and Roboto fonts) that `tools/runtime_payload.py` does not stage for it. |
+| `check-drift.py` | The [entity reference](../integrations/home-assistant-entities.md) out of step with the entities the daemon publishes, a file missing from `rooted-tv/lifecycle/deploy.sh`'s list, which would never be installed, and an asset the TV client names (`local:...`, the Google Sans Flex and Roboto fonts) that `tools/runtime_payload.py` does not stage for it. |
 | `check-entity-stability.py` | A Home Assistant entity from the last release that has gone, been renamed or changed domain, which leaves it unavailable and stops every automation that used it. A deliberate removal is listed in `scripts/retired-entities.txt` with its reason. |
-| `shellcheck` | Mistakes in `deploy.sh`, `tvwebctl` and the boot script in `native-tv/lifecycle/`. |
+| `shellcheck` | Mistakes in `deploy.sh`, `tvwebctl` and the boot script in `rooted-tv/lifecycle/`. |
 | `check-entities.py` | A Home Assistant entity reading a field the TV's telemetry does not have, checked against a B8's real telemetry. |
 | `check-retired-files.py` | A file the last Node release installed that `deploy.sh` no longer ships and `retired_files.cpp` does not delete at start, which an upgrade would leave on the TV for good. The release's file list is `scripts/last-node-release-files.txt`. |
-| `check-route-manifest.js`, `check-test-matrix.js` | A route in `native-tv/contract/routes.json` the daemon does not answer or answers without its guards, and a legacy suite that `native-tv/contract/test-migration.json` does not account for. Run by `native-tv.yml`. |
-| CTest: `native-csrf-policy`, the UI suites | A mutating route without its CSRF defences; the dashboard's scripts and the boot hook's launch decision, run on the host (`native-tv/tests/ui/`). |
+| `check-route-manifest.js`, `check-test-matrix.js` | A route in `rooted-tv/contract/routes.json` the daemon does not answer or answers without its guards, and a legacy suite that `rooted-tv/contract/test-migration.json` does not account for. Run by `rooted-tv.yml`. |
+| CTest: `native-csrf-policy`, the UI suites | A mutating route without its CSRF defences; the dashboard's scripts and the boot hook's launch decision, run on the host (`rooted-tv/tests/ui/`). |
 | Package build | The Homebrew Channel `.ipk` still builds, and passes the Homebrew Channel's own compatibility check for webOS 4 and later. |
-| Native tests | Each part of the daemon, and the daemon as a whole against a stand-in `luna-send` and MQTT broker (`native-tv/tests/daemon_runtime.py`), with a TV that answers, one that answers late, wrongly or not at all, MQTT disabled and a Rooted TV Home file missing, checking that the dashboard keeps answering and telemetry keeps flowing. |
+| Native tests | Each part of the daemon, and the daemon as a whole against a stand-in `luna-send` and MQTT broker (`rooted-tv/tests/daemon_runtime.py`), with a TV that answers, one that answers late, wrongly or not at all, MQTT disabled and a Rooted TV Home file missing, checking that the dashboard keeps answering and telemetry keeps flowing. |
 
 ## Running the suites
 
 From the repository root:
 
 ```bash
-python3 native-tv/build.py --service-only --test
-python3 native-tv/build.py --service-only --test --sanitize --out native-tv/build-host-ninja-asan
+python3 rooted-tv/build.py --service-only --test
+python3 rooted-tv/build.py --service-only --test --sanitize --out rooted-tv/build-host-ninja-asan
 ```
 
 `--test-filter REGEX` limits CTest to matching names and `--target NAME` builds
@@ -39,40 +39,40 @@ only that target, so a change to one module builds and runs only what it
 touches. A separate `--out` directory is needed for `--sanitize`, since the
 compiler flags differ.
 
-The tests need no TV. `native-tv/tests/daemon_runtime.py` starts the real
+The tests need no TV. `rooted-tv/tests/daemon_runtime.py` starts the real
 daemon on a fixture root with `native-fake-luna-send` as its `luna-send`
-(`NATIVETV_FAKE_LUNA_MODE` picks a scenario, `NATIVETV_FAKE_LUNA_DETAILS`
+(`ROOTEDTV_FAKE_LUNA_MODE` picks a scenario, `ROOTEDTV_FAKE_LUNA_DETAILS`
 logs each call) and drives it over HTTP. Real captured TV data lives in
-`native-tv/tests/fixtures/tv/`: stats from a B8 (webOS 4), a CX (webOS 5), a G4
+`rooted-tv/tests/fixtures/tv/`: stats from a B8 (webOS 4), a CX (webOS 5), a G4
 and a C4 (webOS 9), and receiver and settings dumps. Expected values recorded
-from the former Node server are in `native-tv/tests/fixtures/*.json`.
+from the former Node server are in `rooted-tv/tests/fixtures/*.json`.
 
-`node native-tv/tests/ui/run.js [filter]` runs the UI suites.
+`node rooted-tv/tests/ui/run.js [filter]` runs the UI suites.
 
 ## Rooted TV checks
 
-[`native-tv.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/native-tv.yml) builds the C++ daemon
+[`rooted-tv.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/rooted-tv.yml) builds the C++ daemon
 with address/undefined-behavior sanitizers and runs CTest when native sources
-change. `python3 native-tv/build.py --test` reuses the host build and runs
+change. `python3 rooted-tv/build.py --test` reuses the host build and runs
 the unit suites, the daemon runtime suite and the contract checks. Native
-tests live under `native-tv/tests/`; they require no running server or TV.
+tests live under `rooted-tv/tests/`; they require no running server or TV.
 Compilation is measured separately from test runtime.
 
 CTest starts the costliest tests first, so a test that takes minutes is given a
-`COST` in `native-tv/CMakeLists.txt`: `native-golden` (188 s under the sanitizers on a
+`COST` in `rooted-tv/CMakeLists.txt`: `native-golden` (188 s under the sanitizers on a
 four-core runner, the longest by four times) has one, and starts beside the rest instead
 of alone at the end. Without it the 257 tests took 465 s there; scheduling the same
 timings with it gives about 340 s, which is the work of the other tests divided by four
 plus the two `RUN_SERIAL` tests, which run alone.
 
 The legacy `test/` suites that tested the Node release are gone.
-`native-tv/contract/test-migration.json` records, for each of them, the native
+`rooted-tv/contract/test-migration.json` records, for each of them, the native
 test that took it over or the reason it was retired, and `check-test-matrix.js`
 keeps that record whole. Where this page says a native test "ports"
 `test-xxx.js`, that is the suite it replaced.
 
-`native-tv/tests/contract/node-free-probe.py BUILD/nativetv-daemon` starts the daemon with no upstream
-and requests every route in `native-tv/contract/routes.json`. It lists the method/path pairs that still
+`rooted-tv/tests/contract/node-free-probe.py BUILD/rootedtv-daemon` starts the daemon with no upstream
+and requests every route in `rooted-tv/contract/routes.json`. It lists the method/path pairs that still
 answer 502, which must stay empty. Routes that outlast the probe's timeout on the fixture bus are listed
 separately. `--flags=STATS,INSTALL,...` adds `TVWEB_NATIVE_*` switches; `--fail-on-node` makes a non-empty
 list a failure, which `native-probe-node-free` uses. The icon listener (main port plus two, `iconServer`
@@ -80,7 +80,7 @@ on) is asked on its own port.
 
 ### The TV client
 
-`nativetv-tv` has three options for tests and for the TV.
+`rootedtv-tv` has three options for tests and for the TV.
 
 - `--probe` opens the same window and GLES 2 context as the client, draws one
   frame, reads a pixel back and prints one JSON line. The exit code says why it
@@ -105,7 +105,7 @@ on) is asked on its own port.
   count, texture bytes, the screens shown, checkpoints, and `startup`, the
   milliseconds from the start of `main` to the window, the renderer, the atlases,
   the prewarm and the first swap.
-- `NATIVETV_DEBUG_SKIP=a,b,...` (environment, read once) leaves one kind of
+- `ROOTEDTV_DEBUG_SKIP=a,b,...` (environment, read once) leaves one kind of
   drawing out, to find what a frame's time goes on: `shadows`, `rings`,
   `images`, `text`, `icons`, `gradients`, `fills`, and `wallimg`, `wallgrad`,
   `wallfill` (or `wall`) for the same kinds when they cover most of the screen.
@@ -114,7 +114,7 @@ on) is asked on its own port.
   `quarter` (a smaller viewport of the same swap), `finish` (a `glFinish` after
   the draws, so the perf log's `submitMs` is GPU time) and `trace` (prints the
   phases of any submit over 8 ms).
-  `NATIVETV_DEBUG_BENCH=<ms>` draws the frame on screen at that time again and
+  `ROOTEDTV_DEBUG_BENCH=<ms>` draws the frame on screen at that time again and
   again under each of those switches, then synthetic full-screen layers and a chain
   of draws, and prints the milliseconds per frame to stderr; the screen script puts
   the client in the state to measure.
@@ -152,7 +152,7 @@ and the Homebrew catalogue with a small install state machine, all from
 `tests/fixtures/tv/dashboard/`. The Live, Settings and Catalog cases use it
 (`live-*`, `settings-*`, `catalog-*`; `settings-subsections` and `settings-follows` show the
 subsection pills and the page following the list), and it also runs alone for a hand-run client;
-`NATIVETV_FIXTURE_DELAY_MS` makes its sections answer late, to see the loading indicator with
+`ROOTEDTV_FIXTURE_DELAY_MS` makes its sections answer late, to see the loading indicator with
 `--duration-ms` (a `--time` run waits for each reply before it draws).
 The Setup cases use
 `"fixture": "setup"` (the first-run routes of `tests/setup_fixture.py` over a wiped data root, so the client opens setup) or `"setup-settled"` (a TV that has done it, so `--screen setup:handoff` stays put); the fixture can run alone
@@ -162,7 +162,7 @@ settled fixture. The tolerance
 absorbs the anti-aliasing difference between GPUs (a Mac and Mesa's llvmpipe),
 so a case that must match exactly on one machine sets `tolerance` and `maxBad`
 itself. The tests that need a GL context skip where there is none (a CI runner
-without Mesa); `NATIVETV_REQUIRE_GL=1` makes that a failure. On Linux without a
+without Mesa); `ROOTEDTV_REQUIRE_GL=1` makes that a failure. On Linux without a
 display they use SDL's `offscreen` driver, which needs Mesa's EGL
 (`libegl1`, `libgl1-mesa-dri`).
 
@@ -170,7 +170,7 @@ display they use SDL's `offscreen` driver, which needs Mesa's EGL
 Catalog. Its model checks snapshot what the screens would show of the real stats of
 four TVs (`tests/fixtures/tv/stats-*.json`) and of every dashboard section's
 rows (text files in `tests/fixtures/tv/dashboard/snapshots/`; change one on
-purpose and rewrite them with `NATIVETV_UPDATE_SNAPSHOTS=1`). Its screen checks
+purpose and rewrite them with `ROOTEDTV_UPDATE_SNAPSHOTS=1`). Its screen checks
 drive the application over a fake `Services`: focus paths, the writes OK issues and
 the routes they use, the second OK a risky change waits for, an install from the
 catalog to its result (an install the server refuses for want of the admin PIN opens the PIN screen over the catalog, and an unlock returns to it), and what each screen does when a read fails. Settings' two
@@ -230,16 +230,16 @@ against a reference integrator, velocity kept on retarget, the bezier curves and
 the stagger on a fake clock. `native-key-hold` checks how OK and Back tell a tap
 from a hold, for a remote that releases in time and for one that sends its
 release late. `native-kit` holds every component's geometry to the
-numbers in `native-tv/design/metrics.json`, and `native-kit-tokens` fails when
-`src/ui/kit/tokens.hpp` is stale against `native-tv/design/tokens.json`
+numbers in `rooted-tv/design/metrics.json`, and `native-kit-tokens` fails when
+`src/ui/kit/tokens.hpp` is stale against `rooted-tv/design/tokens.json`
 (`tools/gen_tokens.py` regenerates it). `native-raster` renders the SDF fill, ring,
 shadow, gradient, clip and a Home-shaped frame on the CPU and compares them with
-the PPMs in `tests/fixtures/raster/` (`NATIVETV_UPDATE_GOLDEN=1` rewrites them
+the PPMs in `tests/fixtures/raster/` (`ROOTEDTV_UPDATE_GOLDEN=1` rewrites them
 after an intended change), and checks that a shape drawn as a flat core inside a
 distance-field rim paints what one field quad over all of it does, and that the
 field stays on rims; `native-renderer-gl` draws the same scenes on the GPU
 and compares them with that raster, and is skipped (exit 77) with no GL context.
-`native-tv-name` (`tests/tv_name.cpp`) names the TV from its model (`OLED65B3PUA` is `B3`,
+`rooted-tv-name` (`tests/tv_name.cpp`) names the TV from its model (`OLED65B3PUA` is `B3`,
 `OLED42C24LA` `C2`, `55UQ8000PUA` `UQ8000`, nothing known `LGTV`), over the model of every
 `stats-*.json` fixture. `native-setup` (`tests/setup_screen.cpp`) drives first-run setup the way a person does,
 with scripted keys and the server's answers handed back by the test: the whole path on a TV with
@@ -263,7 +263,7 @@ session the PIN step answers, as the daemon does, so the broker reaching it show
 Settings do on that wiped root (they must open the welcome page, and Settings' own `setup:handoff`
 entry must stay put) and again once setup is done (they must open what they were asked for).
 `native-setup-daemon` (`tests/setup_daemon.py`) runs the same first run against the real
-`nativetv-daemon` without Node, over a wiped data root and with its stand-in luna-send, as far as
+`rootedtv-daemon` without Node, over a wiped data root and with its stand-in luna-send, as far as
 the broker typed on the TV (written under the session of the default PIN the run chose), and reads back
 what the daemon wrote (`config.json`, the main profile in `home.json`, `admin-pin.json`, the restarts it
 asked for), then marks setup done and launches again. `native-qr-capture` (`tests/qr_capture.py`)
@@ -294,7 +294,7 @@ the network address, that the PicCap switch and its state topic follow PicCap an
 `/_internal/mqtt/forget` (uninstall) clears every retained topic and disconnects cleanly. `native-history` covers
 the watch summary.
 
-`--service-only --out native-tv/build-service --test` builds the worker and its
+`--service-only --out rooted-tv/build-service --test` builds the worker and its
 four suites using json-c, threads and Python.
 `build.py` auto-detects `ccache` and uses it as the compiler launcher when it
 is installed; `--no-ccache` disables it. That reduces clean or header-touching
@@ -309,9 +309,9 @@ related CTest cases. For example, the managed app install front door can be
 checked with:
 
 ```sh
-python3 native-tv/build.py --service-only \
-  --out native-tv/build-host-ninja \
-  --target nativetv-daemon \
+python3 rooted-tv/build.py --service-only \
+  --out rooted-tv/build-host-ninja \
+  --target rootedtv-daemon \
   --target native-app-catalog-frontdoor-tests \
   --test-filter '^(native-app-catalog-frontdoor|native-daemon-runtime-test_native_apps_uninstall_sideload_and_repo_routes)$' \
   --build-jobs 8 --test-jobs 2
@@ -334,11 +334,11 @@ missing/malformed files, bounded reads and real `statvfs` app-storage counters. 
 runtime tests. CPU window arithmetic and Home Assistant's
 publish baseline are covered by the stats collector tests against synthetic native counters. Cold
 stats tests hold the native reply, then verify partial data, timeout ownership
-and late-reply rejection. `native-tv/tests/stats_collector.cpp` runs the native
+and late-reply rejection. `rooted-tv/tests/stats_collector.cpp` runs the native
 `/api/stats` collector against a scripted TV: the always-on, input-key, live-read,
 play-state, power, hostname, sound/volume, HDMI, apps and device cases of
 `test-telemetry.js` and its sibling suites, the 0.4 s reuse, the early (`fast=1`)
-read, and how expire, clear, forget and the volume refusal are taken. `native-tv/tests/retired_files.cpp` runs the start-up removal of files earlier releases
+read, and how expire, clear, forget and the volume refusal are taken. `rooted-tv/tests/retired_files.cpp` runs the start-up removal of files earlier releases
 installed (`test-retired.js`'s two cases on temporary folders).
 
 `native-services-keeper` (`tests/services_keeper.cpp`) runs what `services.js` does besides the toggle, on a
@@ -395,7 +395,7 @@ front door runs it after both.
 the `var PORT = n; // tvweb:port` line of each installed launcher page follows the dashboard port, idempotently,
 skipping absent or unmarked pages and ports outside 1-65535, `appinfo.json` gets `resolution` 1920x1080, and the
 pages that ship (the Home app's and the Homebrew Channel app's; the dashboard tile is a native app with no page)
-carry the marker at port 8080; the daemon runs it at every start. `native-tv-app-manager`
+carry the marker at port 8080; the daemon runs it at every start. `rooted-tv-app-manager`
 (`tests/tv_app_manager.cpp`) runs `TvAppManager` against a stand-in `install-app.sh`: the last line is the answer,
 and the start-up refresh covers the tile and then the splash. `native-install-app` (`tests/install_app.py`) runs the
 real `install-app.sh` against a stand-in `luna-send` that unpacks the package it builds: a native app is installed
@@ -424,11 +424,11 @@ generates (`haConfigText` in `web/ui/mqtt.js`) with Node and compares it, parsed
 Node or PyYAML. `native-ha-golden` (`tests/ha_golden.py`) and `native-prometheus-golden` (`tests/prometheus_golden.py`) hold
 the entity catalogue, the capability filter, the discovery payloads and the Prometheus text to what `ha.js` and
 `prometheus.js` answered when recorded (`tests/fixtures/ha-golden.json`, `prometheus-golden.json`; the recording
-went with the Node server), so they need no Node. The Prometheus golden carries the `nativetv_` names. `test-timers.js` is
+went with the Node server), so they need no Node. The Prometheus golden carries the `rootedtv_` names. `test-timers.js` is
 `test_native_power_timer_writes` (the days bitmask, a timer that is off only stored, one that is on switched off, changed and on
 again, the Live TV no-channel switch to Home and its absence on webOS 3-5, bad times and days refused); the stored
-settings come from the file in `NATIVETV_FAKE_TIME_SETTINGS_FILE` and a Home app missing from the marker named by
-`NATIVETV_FAKE_NO_HOME_APP`. `test-routes.js` is in `test_native_json_body_guards` (content type, origin and JSON
+settings come from the file in `ROOTEDTV_FAKE_TIME_SETTINGS_FILE` and a Home app missing from the marker named by
+`ROOTEDTV_FAKE_NO_HOME_APP`. `test-routes.js` is in `test_native_json_body_guards` (content type, origin and JSON
 shape before any action), `native-config-settings` (the defaults, an empty form's two errors, a broker address with a scheme, path or space and a device name with `<`, `>` or a control character refused, the icon switch) and `native-config`
 (a writer behind a live config lock is waited for, its update kept). `test-apps.js` adds the protected ids
 (`native-app-list`; an empty id is protected) and `test_native_tile_hiding_flag_and_hidden_list` (the flag file, a hidden list
@@ -451,9 +451,9 @@ suite adds the version shown with matching build metadata only (`test-version.js
 an install started after the settings save (`test-restart-wait.js`). The debounce and publish-gap timing of
 `test-state-push.js` belongs to the Home Assistant publication, which is the daemon's now. The suites
 `test-dashboard-nav.js`, `test-dashboard-search.js`, `test-dashboard-view.js`, `test-mqtt-save-ui.js`,
-`test-i18n.js` runs the string loader (`ui/i18n.js`) against a stand-in page, address bar, storage and network: the language is picked from `?lang=`, then the stored choice, then the browser's; the dictionary is read once, synchronously; English that no longer matches an entry's `from` is shown as it is; `data-t` text and attributes are translated in place; the `X-Native-Tv-Lang` header goes on requests to the TV and not to other sites; and the Server tab's list stores a choice and drops `?lang=` before reloading. `test-token-url.js`, `test-admin-session.js`, `test-release-card.js` and `test-home-boot.js` load the shipped sources (`native-tv/web/ui/`,
-`native-tv/assets/google-tv/` and `native-tv/lifecycle/50-tvweb.sh`) and run on the host with
-`node native-tv/tests/ui/run.js`. `test-admin-session.js` runs the fetch wrapper of `ui/core.js` against a stand-in network: the admin session goes out with API requests only, a 403 that says `pin:true` raises the unlock prompt and retries once, a cancelled prompt leaves the refusal, and a 401 raises the passcode screen. `test-dashboard-nav.js` holds the phone dashboard's sections and tabs
+`test-i18n.js` runs the string loader (`ui/i18n.js`) against a stand-in page, address bar, storage and network: the language is picked from `?lang=`, then the stored choice, then the browser's; the dictionary is read once, synchronously; English that no longer matches an entry's `from` is shown as it is; `data-t` text and attributes are translated in place; the `X-Rooted-Tv-Lang` header goes on requests to the TV and not to other sites; and the Server tab's list stores a choice and drops `?lang=` before reloading. `test-token-url.js`, `test-admin-session.js`, `test-release-card.js` and `test-home-boot.js` load the shipped sources (`rooted-tv/web/ui/`,
+`rooted-tv/assets/google-tv/` and `rooted-tv/lifecycle/50-tvweb.sh`) and run on the host with
+`node rooted-tv/tests/ui/run.js`. `test-admin-session.js` runs the fetch wrapper of `ui/core.js` against a stand-in network: the admin session goes out with API requests only, a 403 that says `pin:true` raises the unlock prompt and retries once, a cancelled prompt leaves the refusal, and a 401 raises the passcode screen. `test-dashboard-nav.js` holds the phone dashboard's sections and tabs
 against `ui.html` (the 13 panels, five sections, the tab buttons the scripts reveal), the Android wrapper's
 `navState` call, and the `?theme=` and `data-theme` behaviour. `test-hdmi-grid.js` runs `hdmiTable()` from `ui/lgsettings.js` and holds that no column of the HDMI inputs
 table keeps a minimum width: three of them once did (150, 130 and 130 px), which pushed the Audio format column off a 390 px phone. `test-release-card.js` runs `renderRelease()` from `ui/server.js` against the shapes the server sends for the Updates card: a newer release, none, a failed check (beside the last good answer or alone), a build from a git checkout, a check under way, and no release check at all. `test-pwa.js` holds the install contract: `ui.html` links a manifest with a name, the start URL `/`, standalone display, the page's theme colour and 192, 512 and maskable icons that are PNGs of the size they claim, and the service worker (`assets/pwa/sw.js`) answers page navigations only, with an offline page when the TV is unreachable, and never caches.
@@ -530,12 +530,12 @@ missing key show the English, a body with nothing to change is sent as it came, 
 with values is forgotten once the table fills), and four threads making messages while others are translated stay consistent.
 `native-http-server` checks that `HttpExchange::respond()` translates a JSON answer when the exchange has a language and leaves
 other content types, other languages and requests with none alone. The `test_native_dashboard_language_header_translates_json`
-case of `daemon_runtime.py` runs the daemon with the real `native-tv/assets/i18n/es.json`: `/api/screensaver` answers in
-English without `X-Native-Tv-Lang` (or with another language, a bare `en` or an odd value) and with Spanish names and
+case of `daemon_runtime.py` runs the daemon with the real `rooted-tv/assets/i18n/es.json`: `/api/screensaver` answers in
+English without `X-Rooted-Tv-Lang` (or with another language, a bare `en` or an odd value) and with Spanish names and
 descriptions, with the same ids and states, with `es`; an error from `/api/control` is translated with a matching
 `Content-Length`; and the dictionary is served as an asset.
 
-The end-to-end cases (`native-tv/tests/e2e`, run against a real TV with `NATIVETV_TV_HOST`) run the client as the tile's
+The end-to-end cases (`rooted-tv/tests/e2e`, run against a real TV with `ROOTEDTV_TV_HOST`) run the client as the tile's
 app. Four flow cases (`E2E-080` to `E2E-083`, `requires: ["takeover"]`, so only with `--allow takeover`) switch Home on,
 send the Home key from an HDMI input and check the Rooted TV app is in front within 5 s and stays, send Back and Home on the
 native Home and check it holds, and switch Home off and close the client Home started (one left running refuses every case
@@ -544,7 +544,7 @@ server on loopback (no token) and reads the app in front from the app manager; t
 `run.py --check` enforces, and the flow script itself runs on the host against a stand-in server and `luna-send` in
 `test_runner.py`.
 
-`native-tv/tests/tv-metrics.js` runs with the TV's own Node (LG ships one) against its loopback
+`rooted-tv/tests/tv-metrics.js` runs with the TV's own Node (LG ships one) against its loopback
 API and invokes the native worker directly for snapshot-only fields. It checks
 system metrics, process responses and the HDR/HDMI capability flags against the
 TV filesystem; it also observes the CPU worker and requires concurrent CPU
@@ -565,11 +565,11 @@ same-version component repair, newer-runtime preservation and rejection of an
 incomplete or absent payload before installed files change. Package fixtures
 also require an ARM worker and reject missing builds before deployment.
 `scripts/build-ipk.py
---native-build native-tv/build-webos` includes the shared runtime payload;
-the packager defaults to `native-tv/build-webos` and fails when it is missing. The TV check
-observes the canonical `/var/lib/tvweb/native/nativetv-service` process.
+--native-build rooted-tv/build-webos` includes the shared runtime payload;
+the packager defaults to `rooted-tv/build-webos` and fails when it is missing. The TV check
+observes the canonical `/var/lib/tvweb/native/rootedtv-service` process.
 
-`--sanitize --out native-tv/build-sanitize --test` enables the same sanitizer
+`--sanitize --out rooted-tv/build-sanitize --test` enables the same sanitizer
 checks locally. `tests/smoke/content.json` and `dashboard.json` are bounded,
 read-only hardware scripts for `deploy.py --script`. The content script (search, a
 result's details, the Quick drawer and its picture list, Profiles, the profile
@@ -581,7 +581,7 @@ A separately installed ARM IPK also passed normal app-manager launch,
 background/resume, close and cold relaunch on OLED65B3PUA/webOS 10.3.2.
 Up/Right/OK/Back injected through the TV input service also opened and closed
 the native Quick settings drawer; compositor captures verified the result.
-The [native README](https://github.com/ihtisham1211/native-tv/blob/main/native-tv/README.md) records tested hardware and
+The [native README](https://github.com/Markk2317/Rooted-TV/blob/main/rooted-tv/README.md) records tested hardware and
 migration limits.
 
 The daemon's remote-key reconcile (`/_internal/remote-keys/apply`, secret-guarded) does the start-up, settings-change, power and half-hourly reapply of the keys, the Home key and the starting message. `test_native_webos11_remote_keys_read_and_write` calls the route (refused without the secret). It also waits past the log
@@ -590,22 +590,22 @@ missing file from its `.last-good` copy, so a record deleted on purpose now take
 
 ## End-to-end tests on a TV
 
-`native-tv/tests/e2e/` holds the cases that only a real TV can answer: the client's probe, the
+`rooted-tv/tests/e2e/` holds the cases that only a real TV can answer: the client's probe, the
 screens on the B3's GPU, frame intervals under scripted keys, and the idle dim. `cases.json` lists
 them (id `E2E-nnn`, title, purpose, screen, key script in `scripts/`, duration, the steps and the
 pass criteria), and `run.py` (Python's standard library only) runs them over ssh.
 
 ```
-export NATIVETV_TV_HOST=ADDRESS          # or USER@ADDRESS; the user defaults to root
-export NATIVETV_SSH_KEY=PATH             # optional: the private key (default: ssh's own)
-export NATIVETV_SSH_KNOWN_HOSTS=PATH     # optional: the known-hosts file (default: ssh's own)
-python3 native-tv/tests/e2e/run.py --list
-python3 native-tv/tests/e2e/run.py --show E2E-030   # the case and the commands it runs
-python3 native-tv/tests/e2e/run.py --case E2E-030 --case E2E-041
-python3 native-tv/tests/e2e/run.py --all --report report.md   # .json for the full metrics
+export ROOTEDTV_TV_HOST=ADDRESS          # or USER@ADDRESS; the user defaults to root
+export ROOTEDTV_SSH_KEY=PATH             # optional: the private key (default: ssh's own)
+export ROOTEDTV_SSH_KNOWN_HOSTS=PATH     # optional: the known-hosts file (default: ssh's own)
+python3 rooted-tv/tests/e2e/run.py --list
+python3 rooted-tv/tests/e2e/run.py --show E2E-030   # the case and the commands it runs
+python3 rooted-tv/tests/e2e/run.py --case E2E-030 --case E2E-041
+python3 rooted-tv/tests/e2e/run.py --all --report report.md   # .json for the full metrics
 ```
 
-Without `NATIVETV_TV_HOST` the run options exit 77, so the CTest entry `native-e2e-tv` shows
+Without `ROOTEDTV_TV_HOST` the run options exit 77, so the CTest entry `native-e2e-tv` shows
 as skipped and nothing runs in CI; `native-e2e-runner` checks the runner and the registry without
 a TV (`run.py --check` does the same by hand). The client on the TV is the one already staged;
 `--stage --allow stage` runs `deploy.py` first, which also stages the managed runtime under
@@ -647,7 +647,7 @@ The sweep cases (`E2E-130` to `E2E-149`, and `E2E-146`, `E2E-148`, `E2E-160` to 
 
 `scripts/dashboard-controls.js` is the same round trip through the browser dashboard, for the controls a person clicks (it is not run by `run.py`, which has no browser): open the TV's dashboard, paste the file into the console, and read `window.__rt` once `__rt.done` is true. It changes each switch, drop-down, slider and colour chip of the Apps, Home screen, Rooted TV Home, OLED Care, Screen savers, Game, Privacy, Advanced and Service menu tabs, shows another tab and comes back so the state is read again from the TV, checks the change held, puts the original back the same way and checks that. A run on the B3 changed 90 controls and restored them all with no error message from the page; a switch that hides a tile moves it in the list, so a control is found again by its label, and a group of chips is restored by selecting the original chip. Its recipes cover the Server tab's switches (watch time, daily backup, Prometheus), the MQTT tab's (the icons, a category and an entity, each saved with Save & restart, which waits for the server to restart) and the Tools tab's log viewer switches, whose state belongs to the view and is checked without leaving it; the time server is entered, saved and switched off, and its saved server cleared through the page's own command, because the form cannot save an empty server (Save on an empty field only focuses it), so a server that was switched off stays saved; the experimental tile hiding and Home layout switches are answered yes and switched back, and with the Home layout on, LG's Home screen tiles (HDMI 1 to 4, side icons, quick cards, recommended) are switched one by one. It skips what powers, installs, deletes or restores, the timers, and the experimental Home layout and screen saver switches, and it answers yes only to the OLED protection question; `window.__tabs` and `window.__only` narrow a run.
 
-A client case needs the TV to itself: while someone has the Rooted TV app open (launched from LG's Home) every client case ends with "a nativetv-tv is already running on the TV", and a case that ends that way still runs its `cleanup`. A full run on the B3 takes about an hour, three quarters of it the Settings sweeps (each press waits for a real write to the TV, and LG's promotions service alone takes 12 s). `run.py --all --quick` leaves out the sweeps and the client runs over 45 s (76 of the 103 cases, about 15 minutes), which is what a change needs between releases; the full run is for a release.
+A client case needs the TV to itself: while someone has the Rooted TV app open (launched from LG's Home) every client case ends with "a rootedtv-tv is already running on the TV", and a case that ends that way still runs its `cleanup`. A full run on the B3 takes about an hour, three quarters of it the Settings sweeps (each press waits for a real write to the TV, and LG's promotions service alone takes 12 s). `run.py --all --quick` leaves out the sweeps and the client runs over 45 s (76 of the 103 cases, about 15 minutes), which is what a change needs between releases; the full run is for a release.
 
 A result is **pass** when every criterion holds, **floor** when only the interval limits are missed
 and the case's `floor` limits (what the platform has been seen to keep) hold, **fail** otherwise,
@@ -704,7 +704,7 @@ On the B3 the splash itself has a p95 near 17 ms, so the floor is 20 ms with a f
 
 ## Trying a build on a TV
 
-`native-tv/lifecycle/deploy.sh <tv-ip>` installs the ARM build over ssh (the key and
+`rooted-tv/lifecycle/deploy.sh <tv-ip>` installs the ARM build over ssh (the key and
 known-hosts options are set at the top of the script) and restarts the server.
 `tvwebctl` loads `/var/lib/tvweb/native.env` before it starts the daemon, one
 `NAME=value` per line, so a variable set for a trial survives a restart and a reboot;
@@ -735,7 +735,7 @@ file.
 
 ## Home Assistant
 
-[`home-assistant.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/home-assistant.yml) builds every discovery config the server can publish and
+[`home-assistant.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/home-assistant.yml) builds every discovery config the server can publish and
 runs each through Home Assistant's own validation, then checks that the volume
 entities are available exactly when the TV lets their volume be changed. Home
 Assistant creates no entity for a config it rejects, and says so only in its
@@ -751,7 +751,7 @@ config shows there first.
 
 ## The dashboards in a browser
 
-[`dashboards.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/dashboards.yml) starts the daemon against a stand-in `luna-send`, opens every tab of
+[`dashboards.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/dashboards.yml) starts the daemon against a stand-in `luna-send`, opens every tab of
 the web dashboard and the TV app in a headless browser, and fails on any
 script error or failed request, naming the tab. A 404 for an app's icon is
 not a failure: it is how the server says an app has none, and the stand-in TV's
@@ -762,7 +762,7 @@ no unit test does. It runs when the daemon, the pages or the stand-in TV change.
 For the TV app dashboard, checks verify the two-column layout geometry (the row list on the left and the hint pane on the right with non-zero dimensions and horizontal adjacency), remote D-pad navigation (`ArrowDown`, `ArrowUp`, `PageDown`), list translateY scrolling with the scroll arrow indicator, tab switching (`ArrowRight`, `ArrowLeft`), and that the OLED Care tab is dropped when running on a non-OLED (LCD) TV profile.
 
 Moved pages checks open the TV pages' old addresses and check that each lands
-on its page in `native-tv/assets/google-tv/pages/`.
+on its page in `rooted-tv/assets/google-tv/pages/`.
 
 TV asset assembly checks visit the three production page folders, including
 setup and its one-time phone form. They assert that CSS and JavaScript arrive
@@ -778,31 +778,15 @@ simulated here; actual webOS visibility behavior needs a real-TV check.
 
 ## Documentation
 
-[`docs.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/docs.yml) builds this site on each pull request that changes it, with every
-link and section link checked, and [`docs-publish.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/docs-publish.yml) publishes it when the
-change is merged.
+[`docs.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/docs.yml) builds this site on each pull request that changes it, with every
+link and section link checked, and [`docs-publish.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/docs-publish.yml) publishes it when
+started by hand.
 
 ## Releases
 
-Pushing a version tag runs [`homebrew-channel.yml`](https://github.com/ihtisham1211/native-tv/blob/main/.github/workflows/homebrew-channel.yml), which builds the `.ipk`
-and drafts a release with it and the Homebrew Channel manifest attached; the
-manifest records the package's sha256.
+A push to main that changes `rooted-tv/VERSION` runs [`release.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/release.yml). It builds the ARM runtime and the TV app with the Linux x86_64 SDK, makes the install bundle with `deploy.sh --bundle-out`, and publishes the release `v<version>` with `rooted-tv-<version>.tar.gz` attached: `deploy.sh` and `bundle.tar`, which `deploy.sh <tv-ip> --bundle=bundle.tar` installs with no build. A version that already has a release is skipped, so each update that is to reach the Releases page raises the version. The bundle carries no `config.json`.
 
-To publish one, set `native-tv/VERSION` and merge it, then push the tag `v`
-followed by that version from the merge commit (`git tag v<version> <commit>`,
-`git push origin v<version>`): the workflow stops when the two differ. When the
-run is green, open the draft on the Releases page, check that it lists the `.ipk`
-and the `.manifest.json`, write its notes, and publish it with
-`gh release edit v<version> --draft=false --latest`. Use `--prerelease` instead of
-`--latest` to publish one that is not the latest.
-
-The repository has immutable releases on: once a release is published its assets
-and tag are locked, and the tag name cannot be used again even if the release is
-deleted. That is why the files are attached to a draft. A draft that is wrong is
-deleted with its tag (`gh release delete v<version> --cleanup-tag`) and the tag
-pushed again; a published one needs a new version. The update notice in the Server
-tab and the Homebrew Channel's listing read `releases/latest/download/<id>.manifest.json`,
-so a pre-release reaches only people who install its `.ipk` by hand.
+[`homebrew-channel.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/homebrew-channel.yml) still builds the Homebrew Channel `.ipk` for a pushed version tag, but releases do not carry it: that package makes a web page the TV's tile in place of the TV app.
 
 A release's notes open with a short summary for people using Rooted TV, one
 to three plain lines, then a `## Details` heading with the full notes and their
@@ -816,15 +800,15 @@ and show none.
 From the repository root:
 
 ```bash
-python3 native-tv/build.py --service-only --test
-python3 native-tv/build.py --service-only --test --sanitize --out native-tv/build-host-ninja-asan
-node native-tv/tests/contract/check-route-manifest.js
-python3 native-tv/tests/contract/check-csrf-policy.py
-node native-tv/tests/contract/check-test-matrix.js
-node native-tv/tests/ui/run.js
+python3 rooted-tv/build.py --service-only --test
+python3 rooted-tv/build.py --service-only --test --sanitize --out rooted-tv/build-host-ninja-asan
+node rooted-tv/tests/contract/check-route-manifest.js
+python3 rooted-tv/tests/contract/check-csrf-policy.py
+node rooted-tv/tests/contract/check-test-matrix.js
+node rooted-tv/tests/ui/run.js
 for s in check-es5 check-ui-ids check-strings check-screensavers check-drift check-entity-stability check-retired-files; do ./scripts/$s.py || break; done
-./scripts/check-entities.py --stats native-tv/tests/fixtures/tv/stats-b8-webos4.json
-shellcheck native-tv/lifecycle/deploy.sh native-tv/lifecycle/tvwebctl native-tv/lifecycle/50-tvweb.sh hbc/install.sh scripts/tvstats.sh
+./scripts/check-entities.py --stats rooted-tv/tests/fixtures/tv/stats-b8-webos4.json
+shellcheck rooted-tv/lifecycle/deploy.sh rooted-tv/lifecycle/tvwebctl rooted-tv/lifecycle/50-tvweb.sh hbc/install.sh scripts/tvstats.sh
 ```
 
 The builds need what [Contributing](contributing.md#building-and-testing) lists. The `.py` checks use
@@ -832,9 +816,9 @@ only Python 3's standard library, the `node` lines need Node, and the last line 
 (`brew install shellcheck` or `sudo apt install shellcheck`).
 
 The ARM daemon, which `deploy.sh` and the Homebrew package need, is built with
-`python3 native-tv/build.py --sdk /path/to/arm-webos-linux-gnueabi_sdk-buildroot --service-only --target nativetv-daemon`.
+`python3 rooted-tv/build.py --sdk /path/to/arm-webos-linux-gnueabi_sdk-buildroot --service-only --target rootedtv-daemon`.
 
-The dashboard check opens every tab in a headless browser against the daemon, so it needs the host build (`python3 native-tv/build.py --service-only`; `NATIVETV_DAEMON` names another) and Playwright and its browser:
+The dashboard check opens every tab in a headless browser against the daemon, so it needs the host build (`python3 rooted-tv/build.py --service-only`; `ROOTEDTV_DAEMON` names another) and Playwright and its browser:
 
 ```bash
 npm install --no-save playwright && npx playwright install chromium
@@ -864,7 +848,7 @@ NO_MKDOCS_2_WARNING=1 mkdocs build
 
 ## Local TV emulation
 
-`scripts/emulate-tv.js` runs the host build of the daemon as on a TV with no Node (`TVWEB_NODE_FREE=1`), on the build's stand-in `luna-send`, a fixed system snapshot and a seeded Rooted TV Home. It serves the web dashboard, the TV pages and the API on a computer, for development without a TV; build first with `python3 native-tv/build.py --service-only`.
+`scripts/emulate-tv.js` runs the host build of the daemon as on a TV with no Node (`TVWEB_NODE_FREE=1`), on the build's stand-in `luna-send`, a fixed system snapshot and a seeded Rooted TV Home. It serves the web dashboard, the TV pages and the API on a computer, for development without a TV; build first with `python3 rooted-tv/build.py --service-only`.
 
 ```bash
 node scripts/emulate-tv.js [--port 8080] [--model c2|b8|c3] [--open] [--simulator <app>]
@@ -874,15 +858,15 @@ node scripts/emulate-tv.js [--port 8080] [--model c2|b8|c3] [--open] [--simulato
 
 `scripts/simulator-apps/` holds web apps for the simulator's app list: Rooted TV, YouTube (`youtube.leanback.v4`), Netflix (`netflix`), Prime Video (`amazon`) and a Web Browser with an address bar. Each opens the service's website, so the simulator, which has no Widevine, shows Netflix and Prime Video but does not play their protected video. Add each folder once in the simulator's app dialog; it keeps the list. Rooted TV opened from that list uses port 8080.
 
-The TV app itself, the native client, runs on the computer against the emulator, which is the closest check to a TV without one. Build it without `--service-only` (`python3 native-tv/build.py --out native-tv/build-host-full`, which needs SDL2), then, with the emulator on a port:
+The TV app itself, the native client, runs on the computer against the emulator, which is the closest check to a TV without one. Build it without `--service-only` (`python3 rooted-tv/build.py --out rooted-tv/build-host-full`, which needs SDL2), then, with the emulator on a port:
 
 ```bash
-native-tv/build-host-full/nativetv-tv --server http://127.0.0.1:8080 --screen home --windowed
+rooted-tv/build-host-full/rootedtv-tv --server http://127.0.0.1:8080 --screen home --windowed
 ```
 
 The arrow keys, Enter, Esc (Back), F1 (red) and Page Up and Down stand in for the remote. `--screen` takes `home`, `dashboard`, `setup:welcome`, `splash` and `kit:keyboard`; `--script steps.json` plays timed keys; `--capture frame.ppm --duration-ms 9000` saves a frame (`write_png` in `tests/golden/golden.py` turns the last width x height x 3 bytes of the PPM, the raw RGB, into a PNG). It draws through the computer's own GPU, so frame rate, smoothness and colour say nothing about a TV.
 
-The emulated TV has eight apps installed under their webOS ids (YouTube, Netflix, Prime Video, Disney+, Apple TV, Spotify, Plex and the browser), listed in `APPS` in `scripts/emulate-tv.js`. The script writes each one's `appinfo.json` as a TV has it and passes the list to the stand-in `luna-send` (`NATIVETV_FAKE_LUNA_MODE=emulator`); the client takes each brand icon from the pack by id, then by the title in `appinfo.json`. The Home is otherwise empty, with no feed or catalogue: `tests/home_fixture.py` serves those.
+The emulated TV has eight apps installed under their webOS ids (YouTube, Netflix, Prime Video, Disney+, Apple TV, Spotify, Plex and the browser), listed in `APPS` in `scripts/emulate-tv.js`. The script writes each one's `appinfo.json` as a TV has it and passes the list to the stand-in `luna-send` (`ROOTEDTV_FAKE_LUNA_MODE=emulator`); the client takes each brand icon from the pack by id, then by the title in `appinfo.json`. The Home is otherwise empty, with no feed or catalogue: `tests/home_fixture.py` serves those.
 
 ## Route and Home controller tests
 

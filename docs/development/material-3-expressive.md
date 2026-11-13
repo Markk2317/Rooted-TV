@@ -4,7 +4,7 @@ description: "What Material 3 Expressive specifies for type, colour, shape, spac
 
 # Material 3 Expressive
 
-The TV client draws every screen from tokens in `native-tv/design/` (`tokens.json` and `metrics.json`; `tools/gen_tokens.py` writes `native-tv/src/ui/kit/tokens.hpp`). The tokens come from Google's TV Design Kit, which is Material 3 at 2 px per dp: the 1920×1080 canvas is 960×540 dp.
+The TV client draws every screen from tokens in `rooted-tv/design/` (`tokens.json` and `metrics.json`; `tools/gen_tokens.py` writes `rooted-tv/src/ui/kit/tokens.hpp`). The tokens come from Google's TV Design Kit, which is Material 3 at 2 px per dp: the 1920×1080 canvas is 960×540 dp.
 
 Material 3 Expressive is Google's May 2025 update to Material 3. Google's [Android TV design guide](https://developer.android.com/design/ui/tv/guides/foundations/design-for-tv) and `androidx.tv:tv-material` 1.1.0 do not document any adoption of it for TV: the library's theme has colour, shapes and typography, and no motion scheme. This page records what Expressive specifies, what the client does, and the differences. It was checked on 31 October 2026.
 
@@ -99,7 +99,7 @@ A row's items enter one after another, `stagger::homeCell` 26 ms apart (the tent
 
 | | Material 3 Expressive | Rooted TV |
 |---|---|---|
-| Family | Material Symbols, a variable font: weight 100 to 700, fill 0 to 1, grade, optical size 20 to 48; Outlined, Rounded and Sharp. | Material Symbols Rounded, weight 400, 24 px optical size (Apache-2.0), as SVGs in `native-tv/assets/icons/material`, as Google TV draws its own; play, star and the saved bookmark filled. The Home Assistant mark and the assistant's sparkle stay Material Design Icons. |
+| Family | Material Symbols, a variable font: weight 100 to 700, fill 0 to 1, grade, optical size 20 to 48; Outlined, Rounded and Sharp. | Material Symbols Rounded, weight 400, 24 px optical size (Apache-2.0), as SVGs in `rooted-tv/assets/icons/material`, as Google TV draws its own; play, star and the saved bookmark filled. The Home Assistant mark and the assistant's sparkle stay Material Design Icons. |
 | Size | 24 dp with a 20 dp live area. Icon buttons from 32 dp (20 dp icon) to 136 dp (40 dp icon). | Rasterised from SVG into an alpha atlas at 18, 24, 26, 28, 34, 38, 40 and 52 px (30 and 56 px on demand) and tinted when drawn. |
 | State | A toggle goes from outlined to filled when selected. | A selected item changes colour; the glyph stays. |
 

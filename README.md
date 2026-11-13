@@ -40,16 +40,28 @@ Beside the app, a server on the TV gives phones and computers a dashboard, priva
 
 ## Install
 
-Rooted TV is built on a computer on the TV's network and installed over SSH. The TV needs no internet access to install it.
+Rooted TV is installed from a computer on the TV's network over SSH, with the TV's root SSH key. The TV needs no internet access to install it. First root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel): Rooted TV does not root the TV.
 
-1. Root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel). Rooted TV does not root the TV.
-2. Clone the repository:
+### From a release
+
+Each version on the [Releases](https://github.com/Markk2317/Rooted-TV/releases) page carries `rooted-tv-<version>.tar.gz`, with the TV's server and app already built, so the computer needs no SDK or compiler. Unpack it and send it to the TV:
+
+```bash
+tar -xzf rooted-tv-<version>.tar.gz && cd rooted-tv-<version>
+ROOTEDTV_SSH_KEY=~/.ssh/lgtv_root bash deploy.sh <tv-ip> --bundle=bundle.tar
+```
+
+The same command updates a TV that has Rooted TV, keeping its settings. Then open the app from its tile on the TV: it starts the server and runs the first-run setup. The dashboard is at `http://<tv-ip>:8080/`.
+
+### From source
+
+1. Clone the repository:
 
    ```bash
-   git clone git@github.com:Markk2317/-.git rooted-tv && cd rooted-tv
+   git clone git@github.com:Markk2317/Rooted-TV.git && cd Rooted-TV
    ```
 
-3. Get the webOS SDK. On Linux x86_64:
+2. Get the webOS SDK. On Linux x86_64:
 
    ```bash
    mkdir -p ~/webos-sdk
@@ -59,20 +71,20 @@ Rooted TV is built on a computer on the TV's network and installed over SSH. The
 
    macOS and Linux arm64 use the [webOSbrew native SDK](docs/getting-started/install.md#get-the-sdk).
 
-4. Build the server and the app:
+3. Build the server and the app:
 
    ```bash
    SDK=~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot
-   PATH=$SDK/bin:$PATH python3 native-tv/build.py --sdk $SDK
+   PATH=$SDK/bin:$PATH python3 rooted-tv/build.py --sdk $SDK
    ```
 
-5. Install them on the TV with its root SSH key:
+4. Install them on the TV:
 
    ```bash
-   NATIVETV_SSH_KEY=~/.ssh/lgtv_root bash native-tv/lifecycle/deploy.sh <tv-ip>
+   ROOTEDTV_SSH_KEY=~/.ssh/lgtv_root bash rooted-tv/lifecycle/deploy.sh <tv-ip>
    ```
 
-6. Open the app from its tile on the TV: it starts the server and runs the first-run setup. The dashboard is at `http://<tv-ip>:8080/`.
+5. Open the app from its tile on the TV, as after a release install.
 
 The [installation guide](docs/getting-started/install.md) and [what it changes on the TV](docs/administration/tv-changes.md) have the details.
 

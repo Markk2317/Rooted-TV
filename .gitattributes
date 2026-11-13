@@ -3,4 +3,4 @@
 # on checkout by default, so pin them to plain line endings.
 *.sh            text eol=lf
 *.py            text eol=lf
-native-tv/lifecycle/tvwebctl text eol=lf
+rooted-tv/lifecycle/tvwebctl text eol=lf

@@ -45,7 +45,7 @@ Between frames the loop waits on events instead of sleeping, so that a key press
 
 Files: `src/main.cpp` (`endsPause`).
 
-| 20 runs of 1.2 s with `NATIVETV_AMBIENT=1`, interleaved | Runs paced faster than 30 fps | Median frames per run |
+| 20 runs of 1.2 s with `ROOTEDTV_AMBIENT=1`, interleaved | Runs paced faster than 30 fps | Median frames per run |
 |---|---|---|
 | Before | 9 of 20 and 10 of 20 | 53 and 64 |
 | After | 0 of 20 and 0 of 20 | 36 and 37 |
@@ -77,8 +77,8 @@ Files: `src/main.cpp`, `src/platform/frame_stats.{hpp,cpp}`, `tests/frame_loop.c
 
 ## Regressions checked
 
-- Host test suite (`ctest`, Release), rerun after the last code change: 241 passed, 2 skipped because they need a real TV (`native-tvwebctl`, `native-e2e-tv`). It includes the renderer-on-GPU comparison, the golden captures, the client platform tests and the daemon runtime cases.
-- ARM build of `nativetv-daemon`, `nativetv-tv` and `nativetv-service` with the SDK, rebuilt after the last code change: builds.
+- Host test suite (`ctest`, Release), rerun after the last code change: 241 passed, 2 skipped because they need a real TV (`rooted-tvwebctl`, `native-e2e-tv`). It includes the renderer-on-GPU comparison, the golden captures, the client platform tests and the daemon runtime cases.
+- ARM build of `rootedtv-daemon`, `rootedtv-tv` and `rootedtv-service` with the SDK, rebuilt after the last code change: builds.
 - Deployed to the B3 on 30 October with `deploy.sh --no-app`, at the user's request. It replaced the running daemon (`f77f44db9644`, built by another session from a different working tree) with this build (`e117d5b1a3b8`), and the client in the dashboard and splash apps (`329fde4356ae`) with this build's (`24b47d3f5c04`). The home screen tile was left alone. Whoever relies on the other build has to deploy it again.
 - AddressSanitizer build of the changed test targets: the child, image loader, store and frame-loop tests pass, and so do the client platform tests with the client built under it. `native-ntp-client` aborts in that build on the Mac with and without the NTP change, and passes in the Release build; it is not caused by this work and was not investigated.
 - Route manifest, CSRF policy, test matrix, drift, retired files, strings and UI id checks pass, and `mkdocs build --strict` builds the docs.
@@ -90,7 +90,7 @@ Files: `src/main.cpp`, `src/platform/frame_stats.{hpp,cpp}`, `tests/frame_loop.c
   - E2E-030 (Home navigation) needs 45 draw calls against a limit of 40. A client built from the commit before this work (`d3b96fc`) needs 45 too, in all 17 runs, so it predates these changes.
   - E2E-124, 170, 172, 173, 174 and 176 check UI behaviour (a title's details opening on Trailer, no Home bar in TV Settings, Back from Live, the Live reading rate, Search before Quick settings, the avatar opening Who's watching) that is in the other session's uncommitted working tree and not in this one. That tree's build was on the TV until this deploy replaced it. These were not run against that build, so that they pass there is not confirmed.
 - **Late frames, E2E-030's navigation script, 17 runs of each client interleaved:** the client from before this work and this one are not distinguishable: p95 medians 17.9 to 19.3 ms and 17.7 to 18.2 ms; frames over 33 ms per 17.5 s run, 3.9 on average and 4.5; one run of each had a gap over 100 ms.
-- **15-minute soak of the deployed daemon**, one sample a minute while the E2E cases were running: the same process throughout, 59 threads, 32 to 33 open files, 6 `luna-send` children, no restart. Resident memory rose from 13.6 MB to 25.2 MB over the first 10 minutes, with the E2E cases exercising the API, then stayed at 24.8 to 25.2 MB for the last five samples. That fits caches filling, but 15 minutes cannot exclude a slow leak; a 24-hour run of `scripts/tv-memory-soak.sh` (one sample a minute, read-only) was started detached at 22:45 UTC on 30 October and writes to `~/.cache/nativetv/soak-b3-20261030.log`; `scripts/tv-memory-soak.sh --summary` on that file prints memory, thread, open-file and restart figures at any point. Its result is not in these pages. The 35 minutes after the soak above held resident memory at 24,760 kB.
+- **15-minute soak of the deployed daemon**, one sample a minute while the E2E cases were running: the same process throughout, 59 threads, 32 to 33 open files, 6 `luna-send` children, no restart. Resident memory rose from 13.6 MB to 25.2 MB over the first 10 minutes, with the E2E cases exercising the API, then stayed at 24.8 to 25.2 MB for the last five samples. That fits caches filling, but 15 minutes cannot exclude a slow leak; a 24-hour run of `scripts/tv-memory-soak.sh` (one sample a minute, read-only) was started detached at 22:45 UTC on 30 October and writes to `~/.cache/rootedtv/soak-b3-20261030.log`; `scripts/tv-memory-soak.sh --summary` on that file prints memory, thread, open-file and restart figures at any point. Its result is not in these pages. The 35 minutes after the soak above held resident memory at 24,760 kB.
 
 ## Not changed, and why
 

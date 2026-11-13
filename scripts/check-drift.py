@@ -7,13 +7,13 @@ All three fail silently, which is why they are checked rather than remembered:
   * docs/integrations/home-assistant-entities.md is the entity reference, so an entity added to
     the daemon's catalogue, renamed or dropped leaves the table wrong with
     nothing to notice. The entities are read from the discovery golden
-    (native-tv/tests/fixtures/ha-golden.json), which the native-ha-golden test
+    (rooted-tv/tests/fixtures/ha-golden.json), which the native-ha-golden test
     holds equal to what the daemon publishes.
-  * native-tv/lifecycle/deploy.sh copies a hardcoded FILES list. An asset added
-    to native-tv/assets and left out of it is simply never installed, and the TV
+  * rooted-tv/lifecycle/deploy.sh copies a hardcoded FILES list. An asset added
+    to rooted-tv/assets and left out of it is simply never installed, and the TV
     falls back to whatever the previous deploy left there - so the feature
     works on the developer's set and on nobody else's.
-  * native-tv/tools/runtime_payload.py stages the files the TV client opens
+  * rooted-tv/tools/runtime_payload.py stages the files the TV client opens
     (fonts, icons, scrim) in each app that runs it. A file the client names
     that is not on that list is installed nowhere, and the client draws
     nothing where it should.
@@ -30,10 +30,10 @@ problems = []
 
 # | `sensor` | `sensor.lg_tv_soc_temperature` | SoC Temperature | ... |
 ROW = re.compile(r'^\|\s*`(\w+)`\s*\|\s*`(\w+)\.lg_tv_(\w+)`', re.M)
-GOLDEN = root / 'native-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
-DEPLOY = root / 'native-tv' / 'lifecycle' / 'deploy.sh'
-ASSETS = root / 'native-tv' / 'assets'
-# What deploy.sh installs from native-tv/assets (the rest is the TV client's).
+GOLDEN = root / 'rooted-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
+DEPLOY = root / 'rooted-tv' / 'lifecycle' / 'deploy.sh'
+ASSETS = root / 'rooted-tv' / 'assets'
+# What deploy.sh installs from rooted-tv/assets (the rest is the TV client's).
 SHIPPED = ['app-icons', 'dashboard-app', 'early-service', 'fonts', 'google-tv', 'home-app',
            'i18n', 'pwa', 'screensavers', 'splash-app']
 
@@ -87,8 +87,8 @@ def check_deploy():
                 on_disk.add('assets/' + str(f.relative_to(ASSETS)))
     if (ASSETS / 'favicon.svg').exists():
         on_disk.add('assets/favicon.svg')
-    # The dashboard is installed from native-tv/web (deploy.sh maps assets/ui*).
-    web = root / 'native-tv' / 'web'
+    # The dashboard is installed from rooted-tv/web (deploy.sh maps assets/ui*).
+    web = root / 'rooted-tv' / 'web'
     if web.exists():
         for f in web.rglob('*'):
             if f.is_file():
@@ -103,7 +103,7 @@ def check_deploy():
 def check_client_assets():
     """Every asset file the client's sources name is among those staged for it."""
     spec = importlib.util.spec_from_file_location(
-        'runtime_payload', root / 'native-tv' / 'tools' / 'runtime_payload.py')
+        'runtime_payload', root / 'rooted-tv' / 'tools' / 'runtime_payload.py')
     payload = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(payload)
     try:
@@ -112,7 +112,7 @@ def check_client_assets():
         problems.append('runtime_payload.py: %s' % error)
         return 0
     named = {}
-    for source in (root / 'native-tv' / 'src').rglob('*'):
+    for source in (root / 'rooted-tv' / 'src').rglob('*'):
         if source.suffix not in ('.cpp', '.hpp'):
             continue
         text = source.read_text(encoding='utf-8')

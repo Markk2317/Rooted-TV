@@ -25,7 +25,7 @@ Straight after the server starts, the tab shows what the TV itself reports (load
 
 ## Watch time
 
-Shown while **Watch time** is on in the [Server tab](server.md#native-tv). It
+Shown while **Watch time** is on in the [Server tab](server.md#rooted-tv). It
 is off until then, as it records what the household watches. While on, the
 server counts how long the screen is on with each app or input in front, and
 the time the TV is on with its panel off, such as music, apart as **Screen
@@ -38,7 +38,7 @@ is open.
 The days are the viewing browser's own. The history stays on the TV, in
 `/var/lib/tvweb/history`, for 13 months. Switching watch time off keeps what is
 there and counts no more. With it on, Home Assistant gets [three watch-time sensors](../integrations/home-assistant-entities.md#hardware-remote-system-diagnostics)
-and Prometheus `nativetv_watch_seconds_total`.
+and Prometheus `rootedtv_watch_seconds_total`.
 
 Time is counted while the server runs, so a TV switched off at the wall or
 before the server has started is not counted, and a power cut loses up to the

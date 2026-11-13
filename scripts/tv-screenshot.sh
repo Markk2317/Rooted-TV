@@ -9,7 +9,7 @@
 # screenshot straight away, and leave 62 s before stopping it again (three stops within 120 s
 # trip the Home crash breaker, and LG's Home comes back until the server restarts).
 #
-#   NATIVETV_SSH_KEY=~/.ssh/lg_tv_root NATIVETV_KNOWN_HOSTS=~/.ssh/lg_tv_known_hosts \
+#   ROOTEDTV_SSH_KEY=~/.ssh/lg_tv_root ROOTEDTV_KNOWN_HOSTS=~/.ssh/lg_tv_known_hosts \
 #     ./scripts/tv-screenshot.sh <tv-ip> <out-file> [--screen home] [--ms 9000] [--script keys.json]
 #
 # --screen is a launch screen of the client (home, live, dashboard, dashboard:privacy, setup:welcome,
@@ -35,8 +35,8 @@ case "$MS" in ''|*[!0-9]*) echo "--ms takes a whole number" >&2; exit 2 ;; esac
 [ -z "$SCRIPT" ] || [ -f "$SCRIPT" ] || { echo "no such script: $SCRIPT" >&2; exit 2; }
 
 SSH_OPTS=(-q -o ConnectTimeout=6 -o BatchMode=yes)
-[ -n "${NATIVETV_SSH_KEY:-}" ] && SSH_OPTS+=(-i "$NATIVETV_SSH_KEY" -o IdentitiesOnly=yes)
-[ -n "${NATIVETV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$NATIVETV_KNOWN_HOSTS")
+[ -n "${ROOTEDTV_SSH_KEY:-}" ] && SSH_OPTS+=(-i "$ROOTEDTV_SSH_KEY" -o IdentitiesOnly=yes)
+[ -n "${ROOTEDTV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$ROOTEDTV_KNOWN_HOSTS")
 tv() { ssh "${SSH_OPTS[@]}" "root@$TV" "$@"; }
 
 [ -z "$SCRIPT" ] || tv 'cat > /tmp/nr-script.json' < "$SCRIPT" || exit 1
@@ -48,7 +48,7 @@ S=""; [ "$HAVE_SCRIPT" = 1 ] && S="--script /tmp/nr-script.json"
 # BusyBox 1.22 (webOS 3.4) takes the limit as -t SECONDS and refuses it bare; later BusyBox the reverse.
 T="timeout 60"; timeout -t 1 true 2>/dev/null && T="timeout -t 60"
 env XDG_RUNTIME_DIR=/tmp/xdg $T /usr/bin/jailer -t native_devmode -i com.tvweb.dashboard -p $A \
-  $A/nativetv-tv '{"@system_native_app":true,"nid":"com.tvweb.dashboard"}' \
+  $A/rootedtv-tv '{"@system_native_app":true,"nid":"com.tvweb.dashboard"}' \
   --server http://127.0.0.1:8080 --screen "$SCREEN" --duration-ms "$MS" $S --capture /tmp/nr-cap.ppm > /tmp/nr-out 2>&1
 echo "client exit $?" >&2
 REMOTE

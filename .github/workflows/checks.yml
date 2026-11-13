@@ -3,9 +3,9 @@ name: Checks
 
 # Branch pushes run through their PR, so a push to one runs once rather than
 # once per event. A branch without a PR can be run by hand.
+# Not on pushes to main: in the private repository they would spend the Actions
+# minutes the release build (release.yml) needs. Run by hand or on a pull request.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -38,10 +38,10 @@ jobs:
 
       # Preinstalled on ubuntu-latest.
       - name: shell scripts
-        run: shellcheck native-tv/lifecycle/deploy.sh native-tv/lifecycle/tvwebctl native-tv/lifecycle/50-tvweb.sh hbc/install.sh scripts/tvstats.sh
+        run: shellcheck rooted-tv/lifecycle/deploy.sh rooted-tv/lifecycle/tvwebctl rooted-tv/lifecycle/50-tvweb.sh hbc/install.sh scripts/tvstats.sh
 
       - name: entity templates resolve against fixture
-        run: ./scripts/check-entities.py --stats native-tv/tests/fixtures/tv/stats-b8-webos4.json
+        run: ./scripts/check-entities.py --stats rooted-tv/tests/fixtures/tv/stats-b8-webos4.json
 
       # An install of the last Node release is cleaned at the first start.
       - name: every file the last Node release installed is shipped or retired

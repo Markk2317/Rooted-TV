@@ -65,7 +65,7 @@ runtime_has_file() {
   return 1
 }
 runtime_complete() {
-  for f in nativetv-daemon nativetv-service LICENSE-civetweb.txt LICENSE-json-c.txt remotekeys-filter.js runtime.json; do
+  for f in rootedtv-daemon rootedtv-service LICENSE-civetweb.txt LICENSE-json-c.txt remotekeys-filter.js runtime.json; do
     [ -f "$SRC/native/$f" ] || return 1
   done
   files=$(sed -n 's/^[[:space:]]*"path":[[:space:]]*"\([^"]*\)".*/\1/p' "$SRC/native/runtime.json")
@@ -74,7 +74,7 @@ runtime_complete() {
     case "$f" in *[!A-Za-z0-9._+-]*|'') return 1 ;; esac
     [ -f "$SRC/native/$f" ] || return 1
   done
-  for f in nativetv-daemon nativetv-service LICENSE-civetweb.txt LICENSE-json-c.txt remotekeys-filter.js; do
+  for f in rootedtv-daemon rootedtv-service LICENSE-civetweb.txt LICENSE-json-c.txt remotekeys-filter.js; do
     runtime_has_file "$f" || return 1
   done
 }
@@ -86,11 +86,11 @@ sync_native() {
       mkdir -p "$D/native/$(dirname "$f")" || return 1
       cp "$SRC/native/$f" "$D/native/$f.new" || return 1
       chmod 644 "$D/native/$f.new" || return 1
-      case "$f" in nativetv-daemon|nativetv-service) chmod 755 "$D/native/$f.new" || return 1 ;; esac
+      case "$f" in rootedtv-daemon|rootedtv-service) chmod 755 "$D/native/$f.new" || return 1 ;; esac
       mv -f "$D/native/$f.new" "$D/native/$f" || return 1
     fi
   done
-  chmod 755 "$D/native/nativetv-daemon" "$D/native/nativetv-service" || return 1
+  chmod 755 "$D/native/rootedtv-daemon" "$D/native/rootedtv-service" || return 1
 }
 
 [ -f "$SRC/VERSION" ] || fail "the app has no server files in it"
@@ -125,8 +125,8 @@ done
 chmod +x "$D/tvwebctl" 2>/dev/null
 # The Node server of earlier releases: nothing runs it now.
 rm -rf "${D:?}/tvweb.js" "${D:?}/lib"
-if [ -f "$D/native/nativetv-service" ] && [ -f "$D/native/nativetv-daemon" ]; then
-  chmod 755 "$D/native/nativetv-daemon" "$D/native/nativetv-service" || fail "could not make native runtimes executable"
+if [ -f "$D/native/rootedtv-service" ] && [ -f "$D/native/rootedtv-daemon" ]; then
+  chmod 755 "$D/native/rootedtv-daemon" "$D/native/rootedtv-service" || fail "could not make native runtimes executable"
 fi
 # ares-package stores plain files as 0666. The server runs as root, so nothing
 # else on the TV may be able to change its code.

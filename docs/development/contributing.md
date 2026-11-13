@@ -1,8 +1,8 @@
 # Contributing
 
-The server is a C++14 daemon in `native-tv/`; no Node runs on the TV, and the
-build needs none. The [layout](https://github.com/ihtisham1211/native-tv/blob/main/CLAUDE.md#code-map)
-and [module boundaries](https://github.com/ihtisham1211/native-tv/blob/main/native-tv/ARCHITECTURE.md)
+The server is a C++14 daemon in `rooted-tv/`; no Node runs on the TV, and the
+build needs none. The [layout](https://github.com/Markk2317/Rooted-TV/blob/main/CLAUDE.md#code-map)
+and [module boundaries](https://github.com/Markk2317/Rooted-TV/blob/main/rooted-tv/ARCHITECTURE.md)
 say where a change goes.
 
 ## Building and testing
@@ -17,12 +17,12 @@ brew install cmake pkgconf json-c
 sudo apt install g++ cmake ninja-build pkg-config python3 libjson-c-dev libcurl4-openssl-dev
 ```
 
-`python3 native-tv/build.py --check` lists what a computer lacks and the command that
+`python3 rooted-tv/build.py --check` lists what a computer lacks and the command that
 installs it; `build.py` runs the same check before it starts CMake. Then:
 
 ```bash
-python3 native-tv/build.py --service-only --test
-python3 native-tv/build.py --service-only --test --sanitize --out native-tv/build-host-ninja-asan
+python3 rooted-tv/build.py --service-only --test
+python3 rooted-tv/build.py --service-only --test --sanitize --out rooted-tv/build-host-ninja-asan
 ```
 
 `ninja` and `ccache` are used when installed and make rebuilds faster. `node` runs three
@@ -39,25 +39,25 @@ sudo apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libfreetype6-dev 
 
 The ARM build, which `deploy.sh` and the Homebrew package need, takes the webOSbrew SDK
 ([getting it](../getting-started/install.md#get-the-sdk)) and, on the computer, only
-CMake, pkg-config and Ninja or make: `python3 native-tv/build.py --sdk /path/to/arm-webos-linux-gnueabi_sdk-buildroot`
+CMake, pkg-config and Ninja or make: `python3 rooted-tv/build.py --sdk /path/to/arm-webos-linux-gnueabi_sdk-buildroot`
 builds the daemon, its worker and the TV app. To check only that a daemon change
-cross-compiles, add `--service-only --target nativetv-daemon`. The Homebrew package
+cross-compiles, add `--service-only --target rootedtv-daemon`. The Homebrew package
 (`scripts/build-ipk.py`) also needs LG's `ares-package`, which it runs with `npx` (so Node)
 unless it is on `PATH`.
 
 [Testing and CI](testing.md) lists every check CI runs and how to run
 each one locally. Code compiles with `-Wall -Wextra -Werror`.
 
-A new route goes in `native-tv/contract/routes.json` with its owner, auth and CSRF
+A new route goes in `rooted-tv/contract/routes.json` with its owner, auth and CSRF
 policy; `check-route-manifest.js` and `check-csrf-policy.py` fail without it. New
 logic takes its dependencies as `std::function`s so a test can script the TV; real
-TV readings go in `native-tv/tests/fixtures/tv/`.
+TV readings go in `rooted-tv/tests/fixtures/tv/`.
 
 The pages the TV's own browser shows are strict ES5 and CSS for Chromium 38;
-only `native-tv/web/ui/` may use modern JavaScript.
+only `rooted-tv/web/ui/` may use modern JavaScript.
 
 Text on the phone and computer dashboard, and the daemon's messages it shows, is keyed
-and has a Spanish translation in `native-tv/assets/i18n/es.json`. A change to such text
+and has a Spanish translation in `rooted-tv/assets/i18n/es.json`. A change to such text
 changes its English in one place and leaves the Spanish entry outdated: the English shows
 until the entry is redone (`scripts/check-strings.py` lists them), so a pull request need
 not translate, but may. A string removed or renamed takes its entry with it, or the check
@@ -89,9 +89,9 @@ without a warning.
 Maintainers keep the GitHub description and topics in step with the README:
 
 ```bash
-gh repo edit ihtisham1211/native-tv \
+gh repo edit Markk2317/Rooted-TV \
   --description "Open-source dashboard, privacy controls and Home Assistant MQTT bridge for rooted LG webOS TVs: turn off ACR and ads, debloat apps, protect OLED panels, remap the remote." \
-  --homepage https://ihtisham1211.github.io/native-tv/
+  --homepage https://github.com/Markk2317/Rooted-TV/blob/main/docs/index.md
 ```
 
 The topics are `webos`, `webos-tv`, `lg-tv`, `lg-webos`, `lgtv`, `lg-smart-tv`, `webosbrew`,
@@ -104,7 +104,7 @@ repository's **Settings → General → Social preview**.
 ## Screenshots
 
 Screenshots of the TV app in `docs/screenshots/` and `README.md` are taken on a real TV,
-never with the host's renderer: the images in `native-tv/tests/golden/` are test fixtures
+never with the host's renderer: the images in `rooted-tv/tests/golden/` are test fixtures
 drawn by the host from made-up data, and are not documentation. `scripts/tv-screenshot.sh`
 runs the installed client once on the TV, with the TV's own server and feed, plays a key
 script from `scripts/screenshots/` and brings the last frame back. Stop the Home client first

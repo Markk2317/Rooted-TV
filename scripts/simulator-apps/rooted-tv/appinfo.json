@@ -1,0 +1,9 @@
+{
+  "id": "com.tvweb.simulator",
+  "title": "Rooted TV",
+  "type": "web",
+  "main": "../start.html",
+  "icon": "../../../rooted-tv/assets/dashboard-app/assets/icon130.png",
+  "version": "1.0.0",
+  "vendor": "Rooted TV"
+}

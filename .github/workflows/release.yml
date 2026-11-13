@@ -1,0 +1,66 @@
+# Publishes a release for each version that reaches main: when a push changes
+# rooted-tv/VERSION, this builds the TV's runtime and app and attaches the
+# install bundle that deploy.sh sends, so a TV can be installed or updated from
+# a computer with no SDK or compiler. A version that already has a release is
+# left alone.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [rooted-tv/VERSION]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(tr -d '[:space:]' < rooted-tv/VERSION)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "v$version is already released"
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The x86_64 build of the SDK the project is built with on Linux, pinned so
+      # a new SDK cannot change a build or the glibc symbols it needs. Its own
+      # CMake and Ninja go first on PATH, as on the computers that build it.
+      - name: install the SDK
+        if: steps.version.outputs.released != 'true'
+        run: |
+          curl -fsSL https://github.com/openlgtv/buildroot-nc4/releases/download/webos-d7ed7ee/arm-webos-linux-gnueabi_sdk-buildroot.tar.gz | tar -xz -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh"
+
+      - name: build the ARM runtime and the TV app
+        if: steps.version.outputs.released != 'true'
+        run: |
+          SDK="$RUNNER_TEMP/arm-webos-linux-gnueabi_sdk-buildroot"
+          PATH="$SDK/bin:$PATH" python3 rooted-tv/build.py --sdk "$SDK"
+
+      - name: make the install bundle
+        if: steps.version.outputs.released != 'true'
+        run: |
+          name="rooted-tv-${{ steps.version.outputs.version }}"
+          mkdir -p "dist/$name"
+          bash rooted-tv/lifecycle/deploy.sh --bundle-out="dist/$name/bundle.tar"
+          cp rooted-tv/lifecycle/deploy.sh "dist/$name/deploy.sh"
+          tar -czf "dist/$name.tar.gz" -C dist "$name"
+
+      - name: publish the release
+        if: steps.version.outputs.released != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          gh release create "v$version" "dist/rooted-tv-$version.tar.gz" \
+            --target "$GITHUB_SHA" --title "Rooted TV $version" --generate-notes

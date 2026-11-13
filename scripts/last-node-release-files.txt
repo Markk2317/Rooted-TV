@@ -1,6 +1,6 @@
 # The files deploy.sh of v0.118.0 installed under /var/lib/tvweb (its FILES list).
 # check-retired-files.py needs each to be shipped by the native deploy.sh or
-# deleted at start (native-tv/src/daemon/retired_files.cpp), so an upgrade leaves
+# deleted at start (rooted-tv/src/daemon/retired_files.cpp), so an upgrade leaves
 # no stale Node files on the TV. Fixed: it describes a release that has been made.
 # release: v0.118.0
 assets/dashboard-app/appinfo.json

@@ -32,11 +32,11 @@ The endpoint is under `/api/`, so a [token](../administration/security.md), wher
 
 ```yaml
 scrape_configs:
-  - job_name: nativetv
+  - job_name: rootedtv
     metrics_path: /api/prometheus/metrics
     scrape_interval: 15s
     authorization:
-      credentials_file: /etc/prometheus/nativetv-token
+      credentials_file: /etc/prometheus/rootedtv-token
     static_configs:
       - targets: ["192.168.1.20:8080"]
 ```
@@ -51,7 +51,7 @@ To spin up a local Prometheus instance against your TV without manual setup:
 ./scripts/run-prometheus.sh <tv-ip> [<tv-ip2> ...]
 ```
 
-It downloads a standalone Prometheus binary into `~/.cache/nativetv-prometheus/` if one is not in PATH, starts a server targeting your TV(s) at `http://localhost:9090`, and cleans up its temporary state when stopped.
+It downloads a standalone Prometheus binary into `~/.cache/rootedtv-prometheus/` if one is not in PATH, starts a server targeting your TV(s) at `http://localhost:9090`, and cleans up its temporary state when stopped.
 
 ## Metrics
 
@@ -59,99 +59,99 @@ These names are stable: one is not renamed or removed, so dashboards and alerts 
 
 The OLED protections are `asbl`, the Automatic Static Brightness Limiter (Temporal Peak Control on the TV), which lowers brightness while a bright image is held, and `gsr`, Global Stress Reduction, which dims the screen when it detects a stationary element. They come from the TV's panel service, or from its panel maintenance records where it has none; a TV that reports neither has no sample for them.
 
-`nativetv_signal_info` labels the picture settings in use: `dynamic_range` is `sdr`, `hdr`, `dolby_vision` or `technicolor`, and `picture_mode` is the mode within it: `personalized`, `vivid`, `standard`, `eco`, `cinema`, `cinema_bright`, `sports`, `game`, `photo`, `filmmaker`, `expert_bright`, `expert_dark` or `hdr_effect`. A value the TV adds later keeps its own name in snake case.
+`rootedtv_signal_info` labels the picture settings in use: `dynamic_range` is `sdr`, `hdr`, `dolby_vision` or `technicolor`, and `picture_mode` is the mode within it: `personalized`, `vivid`, `standard`, `eco`, `cinema`, `cinema_bright`, `sports`, `game`, `photo`, `filmmaker`, `expert_bright`, `expert_dark` or `hdr_effect`. A value the TV adds later keeps its own name in snake case.
 
-`nativetv_sound_info` labels the sound settings, the output and mode the dashboard's and Home Assistant's selects show, rather than the audio path in use at the moment. `output` is the output's key, such as `tv_speaker`, `external_arc`, `external_optical`, `bt_soundbar`, `headphone`, or `tv_external_speaker`, and `mode` is `standard`, `ai_sound`, `ai_sound_plus`, `movie`, `news`, `sports`, `music`, or `game`. A value the TV adds later keeps its own name in snake case. `nativetv_sound_input_info` labels the format of the sound being played, from an app or an input: `codec` is the TV's name for it, such as `pcm`, `opus`, `aac`, `ac3`, `eac3`, or `truehd`, and `immersive` is `dolby_atmos`, `dts_x`, or `none`. It has a sample only while something plays, and not at all on webOS 4, which does not report it. `nativetv_volume_ratio` has a sample only while the TV sets the volume level: with an output whose volume it only steps, such as an ARC soundbar, or does not control, such as optical, it has no level to report.
+`rootedtv_sound_info` labels the sound settings, the output and mode the dashboard's and Home Assistant's selects show, rather than the audio path in use at the moment. `output` is the output's key, such as `tv_speaker`, `external_arc`, `external_optical`, `bt_soundbar`, `headphone`, or `tv_external_speaker`, and `mode` is `standard`, `ai_sound`, `ai_sound_plus`, `movie`, `news`, `sports`, `music`, or `game`. A value the TV adds later keeps its own name in snake case. `rootedtv_sound_input_info` labels the format of the sound being played, from an app or an input: `codec` is the TV's name for it, such as `pcm`, `opus`, `aac`, `ac3`, `eac3`, or `truehd`, and `immersive` is `dolby_atmos`, `dts_x`, or `none`. It has a sample only while something plays, and not at all on webOS 4, which does not report it. `rootedtv_volume_ratio` has a sample only while the TV sets the volume level: with an output whose volume it only steps, such as an ARC soundbar, or does not control, such as optical, it has no level to report.
 
-`nativetv_power_on_info` labels the reason the TV's power service gives for the TV last powering on, read at Rooted TV's start and after each power transition. `reason` is the service's own name in snake case, as in its `PowerOnReason` log lines, such as `remote_key`, `wake_on_wifi`, `always_on`, or `reboot_by_on_regular`, and the family has no sample on a TV that gives none. `nativetv_power_on_time_seconds` is when the TV last powered on, from the time on its power service reports, and has no sample in standby; the time it has been on is `time() - nativetv_power_on_time_seconds`.
+`rootedtv_power_on_info` labels the reason the TV's power service gives for the TV last powering on, read at Rooted TV's start and after each power transition. `reason` is the service's own name in snake case, as in its `PowerOnReason` log lines, such as `remote_key`, `wake_on_wifi`, `always_on`, or `reboot_by_on_regular`, and the family has no sample on a TV that gives none. `rootedtv_power_on_time_seconds` is when the TV last powered on, from the time on its power service reports, and has no sample in standby; the time it has been on is `time() - rootedtv_power_on_time_seconds`.
 
-The signal gauges describe the HDMI source on screen and have no sample otherwise. The refresh rate is the rate the source sends, not the content's frame rate. `nativetv_signal_frame_rate_hertz` is the rate the game is running at while VRR is in use, and the same as the refresh rate otherwise. Its `vrr_type` label is the kind of VRR, such as `gsync`, or `off`.
+The signal gauges describe the HDMI source on screen and have no sample otherwise. The refresh rate is the rate the source sends, not the content's frame rate. `rootedtv_signal_frame_rate_hertz` is the rate the game is running at while VRR is in use, and the same as the refresh rate otherwise. Its `vrr_type` label is the kind of VRR, such as `gsync`, or `off`.
 
-`nativetv_signal_format_info` and the HDR families describe the source on the TV's connected video sink and have no sample without one. `type` is the source's HDR type, such as `sdr` or `hdr10`, with player-led (low-latency) Dolby Vision as `dolby_vision_low_latency`; `eotf` is `sdr`, `hdr`, `pq`, or `hlg`, from the source's HDR static metadata, and empty without it; `colorimetry` is the colorimetry the source signals, such as `bt2020_rgb_or_ycbcr`; and `encoding` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`, named as the HDMI link's `chroma` is. A value the TV adds later keeps its own name in snake case. The HDR luminance gauges are in nits (cd/m²), from HDR10 static metadata, and the content and frame-average light levels have no sample while the source gives none.
+`rootedtv_signal_format_info` and the HDR families describe the source on the TV's connected video sink and have no sample without one. `type` is the source's HDR type, such as `sdr` or `hdr10`, with player-led (low-latency) Dolby Vision as `dolby_vision_low_latency`; `eotf` is `sdr`, `hdr`, `pq`, or `hlg`, from the source's HDR static metadata, and empty without it; `colorimetry` is the colorimetry the source signals, such as `bt2020_rgb_or_ycbcr`; and `encoding` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`, named as the HDMI link's `chroma` is. A value the TV adds later keeps its own name in snake case. The HDR luminance gauges are in nits (cd/m²), from HDR10 static metadata, and the content and frame-average light levels have no sample while the source gives none.
 
-`nativetv_signal_low_latency` is ALLM, the flag an HDMI source sets to ask for the TV's low-latency picture processing, in any format. Low-latency Dolby Vision is separate: the source does the Dolby Vision mapping and sends a BT.2020 signal, and `type` is `dolby_vision_low_latency`, where Dolby Vision the TV maps is `dolby_vision`. `dynamic_range` is `dolby_vision` in both, so only `type` tells them apart, and neither implies ALLM.
+`rootedtv_signal_low_latency` is ALLM, the flag an HDMI source sets to ask for the TV's low-latency picture processing, in any format. Low-latency Dolby Vision is separate: the source does the Dolby Vision mapping and sends a BT.2020 signal, and `type` is `dolby_vision_low_latency`, where Dolby Vision the TV maps is `dolby_vision`. `dynamic_range` is `dolby_vision` in both, so only `type` tells them apart, and neither implies ALLM.
 
-The HDMI link families describe every input with a source linked to it, whichever input is on screen, and have no sample for an input without one; `nativetv_hdmi_source_powered` has a sample for every input, linked or not. `input` is `hdmi1` to `hdmi4`, as the TV numbers its inputs. `phy_mode` is `frl_48`, `frl_40`, `frl_32`, `frl_24`, `frl_18`, `frl_9`, `tmds_6g`, or `tmds_3g`, and `other` for a mode outside these, which has no rate; `chroma` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`; and `hdcp` is `2_3`, `2_2`, `1_4`, or `none`. A chroma format or HDCP version outside these keeps its own name in snake case.
+The HDMI link families describe every input with a source linked to it, whichever input is on screen, and have no sample for an input without one; `rootedtv_hdmi_source_powered` has a sample for every input, linked or not. `input` is `hdmi1` to `hdmi4`, as the TV numbers its inputs. `phy_mode` is `frl_48`, `frl_40`, `frl_32`, `frl_24`, `frl_18`, `frl_9`, `tmds_6g`, or `tmds_3g`, and `other` for a mode outside these, which has no rate; `chroma` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`; and `hdcp` is `2_3`, `2_2`, `1_4`, or `none`. A chroma format or HDCP version outside these keeps its own name in snake case.
 
-`nativetv_foreground_app_info` has a sample while an app is in the foreground, including with the screen off, and none in standby: `app_id` is the app's id, such as `com.webos.app.hdmi4` or `netflix`, and `app_name` is the name given an input in the TV's settings, an app's title, or the short id. `nativetv_hdmi_input_info` has a sample for every HDMI input, labelled with `input`, its `app_id`, and the `name` given it in the TV's settings, so the foreground app joins it on `app_id` and the input then joins the HDMI link families on `input`.
+`rootedtv_foreground_app_info` has a sample while an app is in the foreground, including with the screen off, and none in standby: `app_id` is the app's id, such as `com.webos.app.hdmi4` or `netflix`, and `app_name` is the name given an input in the TV's settings, an app's title, or the short id. `rootedtv_hdmi_input_info` has a sample for every HDMI input, labelled with `input`, its `app_id`, and the `name` given it in the TV's settings, so the foreground app joins it on `app_id` and the input then joins the HDMI link families on `input`.
 
-The syslog counters count since the server started and have samples only while [syslog forwarding](../development/implementation.md#forwarding-the-logs-to-syslog) is on. `source` is `system`, `nativetv`, or `kernel`, one for each source forwarded. Compared with what the receiver counts per `source` as MSGID, they show lines lost on the way.
+The syslog counters count since the server started and have samples only while [syslog forwarding](../development/implementation.md#forwarding-the-logs-to-syslog) is on. `source` is `system`, `rootedtv`, or `kernel`, one for each source forwarded. Compared with what the receiver counts per `source` as MSGID, they show lines lost on the way.
 
-The NTP families have samples only while [setting the clock from NTP](../development/implementation.md#setting-the-clock-from-ntp) is on, and the offset, round trip, stratum, and last answer only once the server has answered. The counters count since the server started. The offset is the server's time less the TV's at that answer, before the clock was set from it. How long since the last answer is `time() - nativetv_ntp_last_answer_timestamp_seconds`.
+The NTP families have samples only while [setting the clock from NTP](../development/implementation.md#setting-the-clock-from-ntp) is on, and the offset, round trip, stratum, and last answer only once the server has answered. The counters count since the server started. The offset is the server's time less the TV's at that answer, before the clock was set from it. How long since the last answer is `time() - rootedtv_ntp_last_answer_timestamp_seconds`.
 
-`nativetv_watch_seconds_total` has samples only while [watch time](../dashboard/metrics.md#watch-time) is on, one for each `app` the history has: the app's id, the input's, such as `hdmi2`, `screen_off` for the TV on with its panel off, or `screen_saver` for LG's screen saver showing. Clearing the history resets it.
+`rootedtv_watch_seconds_total` has samples only while [watch time](../dashboard/metrics.md#watch-time) is on, one for each `app` the history has: the app's id, the input's, such as `hdmi2`, `screen_off` for the TV on with its panel off, or `screen_saver` for LG's screen saver showing. Clearing the history resets it.
 
-`version` is the Rooted TV version. A label the TV does not report is present with an empty value. The panel usage since the last compensation cycle is `nativetv_oled_panel_usage_seconds_total - nativetv_oled_last_compensation_usage_seconds`, the uptime is `time() - nativetv_boot_time_seconds`, and the processor's busy share is `1 - avg without (cpu, mode) (rate(nativetv_cpu_seconds_total{mode="idle"}[5m]))`.
+`version` is the Rooted TV version. A label the TV does not report is present with an empty value. The panel usage since the last compensation cycle is `rootedtv_oled_panel_usage_seconds_total - rootedtv_oled_last_compensation_usage_seconds`, the uptime is `time() - rootedtv_boot_time_seconds`, and the processor's busy share is `1 - avg without (cpu, mode) (rate(rootedtv_cpu_seconds_total{mode="idle"}[5m]))`.
 
 | Metric                                            | Type    | Labels                                  | Value                                                       |
 | :------------------------------------------------ | :------ | :-------------------------------------- | :---------------------------------------------------------- |
-| `nativetv_info`                                 | gauge   | `model`, `firmware`, `webos`, `version` | 1                                                           |
-| `nativetv_boot_time_seconds`                    | gauge   |                                         | When the TV last booted, as a Unix time; later than the real boot on a TV that suspends in standby |
-| `nativetv_system_on`                            | gauge   |                                         | 1 when on, including with the screen off                    |
-| `nativetv_screen_on`                            | gauge   |                                         | 1 when the screen is on, including a screen saver           |
-| `nativetv_power_on_info`                        | gauge   | `reason`                                | 1                                                           |
-| `nativetv_power_on_time_seconds`                | gauge   |                                         | When the TV last powered on, as a Unix time; none in standby |
-| `nativetv_soc_temperature_celsius`              | gauge   |                                         | SoC temperature                                             |
-| `nativetv_cpu_seconds_total`                    | counter | `cpu`, `mode`                           | Time each online core has spent in each mode                |
-| `nativetv_cpu_frequency_hertz`                  | gauge   |                                         | Processor clock                                             |
-| `nativetv_gpu_frequency_hertz`                  | gauge   |                                         | GPU clock                                                   |
-| `nativetv_memory_total_bytes`                   | gauge   |                                         | `MemTotal`                                                  |
-| `nativetv_memory_available_bytes`               | gauge   |                                         | `MemAvailable`                                              |
-| `nativetv_swap_total_bytes`                     | gauge   |                                         | `SwapTotal`                                                 |
-| `nativetv_swap_free_bytes`                      | gauge   |                                         | `SwapFree`                                                  |
-| `nativetv_network_receive_bytes_total`          | counter | `interface`                             | Bytes received on the interface in use                      |
-| `nativetv_network_transmit_bytes_total`         | counter | `interface`                             | Bytes sent on the interface in use                          |
-| `nativetv_wifi_signal_dbm`                      | gauge   |                                         | Wi-Fi signal level                                          |
-| `nativetv_wifi_link_quality`                    | gauge   |                                         | Wi-Fi link quality, on the driver's own scale               |
-| `nativetv_emmc_pre_eol_state`                   | gauge   | `state`                                 | 1 for the current eMMC state: `normal`, `warning`, `urgent` |
-| `nativetv_emmc_life_used_ratio`                 | gauge   | `type`                                  | eMMC estimated life used, in steps of 0.1                   |
-| `nativetv_app_storage_size_bytes`               | gauge   |                                         | Size of the app storage filesystem                          |
-| `nativetv_app_storage_available_bytes`          | gauge   |                                         | Space available there for new apps                          |
-| `nativetv_remote_battery_ratio`                 | gauge   |                                         | Magic Remote battery, read over Bluetooth on webOS 9 and 10 and from LG's remote service on webOS 4   |
-| `nativetv_adblock_enabled`                      | gauge   |                                         | 1 when ad blocking is in place                              |
-| `nativetv_oled_panel_usage_seconds_total`       | counter |                                         | Time the panel has been in use                              |
-| `nativetv_oled_last_compensation_usage_seconds` | gauge   |                                         | Panel usage at the last short compensation cycle            |
-| `nativetv_oled_compensation_interval_seconds`   | gauge   |                                         | Panel usage between short compensation cycles               |
-| `nativetv_oled_compensation_running`            | gauge   |                                         | 1 while a short compensation cycle runs                     |
-| `nativetv_oled_compensation_runs_total`         | counter |                                         | Short compensation cycles completed                         |
-| `nativetv_oled_last_refresher_usage_seconds`    | gauge   |                                         | Panel usage at the last Pixel Refresher run                 |
-| `nativetv_oled_refresher_interval_seconds`      | gauge   |                                         | Panel usage between automatic Pixel Refresher runs          |
-| `nativetv_oled_refresher_runs_total`            | counter |                                         | Pixel Refresher runs completed                              |
-| `nativetv_oled_refresher_running`               | gauge   |                                         | 1 while a Pixel Refresher run is in progress                |
-| `nativetv_oled_refresher_scheduled`             | gauge   |                                         | 1 while a Pixel Refresher run waits for the next standby    |
-| `nativetv_oled_failure_alerts_total`            | counter |                                         | Panel maintenance failure alerts recorded                   |
-| `nativetv_oled_gsr_stress_events_total`         | counter |                                         | Stress events Global Stress Reduction has counted           |
-| `nativetv_oled_protection_enabled`              | gauge   | `protection`                            | 1 when the protection is on: `asbl`, `gsr`                  |
-| `nativetv_picture_backlight_ratio`              | gauge   |                                         | Backlight of the picture mode in use, OLED light on an OLED |
-| `nativetv_sound_info`                           | gauge   | `output`, `mode`                        | 1                                                           |
-| `nativetv_sound_input_info`                     | gauge   | `codec`, `immersive`                    | 1 while something plays                                     |
-| `nativetv_volume_ratio`                         | gauge   |                                         | Volume, while the TV sets the level                         |
-| `nativetv_muted`                                | gauge   |                                         | 1 while the sound is muted                                  |
-| `nativetv_foreground_app_info`                  | gauge   | `app_id`, `app_name`                    | 1                                                           |
-| `nativetv_signal_info`                          | gauge   | `dynamic_range`, `picture_mode`         | 1                                                           |
-| `nativetv_signal_low_latency`                   | gauge   |                                         | 1 while the picture is in low-latency mode (ALLM)           |
-| `nativetv_signal_vrr`                           | gauge   |                                         | 1 while the HDMI source uses VRR                            |
-| `nativetv_signal_width_pixels`                  | gauge   |                                         | Width of the HDMI source's picture                          |
-| `nativetv_signal_height_pixels`                 | gauge   |                                         | Height of the HDMI source's picture                         |
-| `nativetv_signal_refresh_hertz`                 | gauge   |                                         | Refresh rate of the HDMI signal                             |
-| `nativetv_signal_frame_rate_hertz`              | gauge   | `vrr_type`                              | Frame rate the HDMI source presents                         |
-| `nativetv_signal_format_info`                   | gauge   | `type`, `eotf`, `colorimetry`, `encoding` | 1                                                         |
-| `nativetv_signal_hdr_mastering_luminance_max_nits` | gauge | | Peak luminance of the mastering display |
-| `nativetv_signal_hdr_mastering_luminance_min_nits` | gauge | | Black level of the mastering display |
-| `nativetv_signal_hdr_content_light_level_max_nits` | gauge | | Brightest pixel in the content (MaxCLL) |
-| `nativetv_signal_hdr_frame_average_light_level_max_nits` | gauge | | Brightest frame average in the content (MaxFALL) |
-| `nativetv_signal_game_mode`                     | gauge   |                                         | 1 while the source is in game mode                          |
-| `nativetv_hdmi_input_info`                      | gauge   | `input`, `app_id`, `name`               | 1                                                           |
-| `nativetv_hdmi_link_info`                       | gauge   | `input`, `phy_mode`, `chroma`, `hdcp`   | 1                                                           |
-| `nativetv_hdmi_link_bits_per_second`            | gauge   | `input`                                 | Rate of the input's link                                    |
-| `nativetv_hdmi_qms`                             | gauge   | `input`                                 | 1 while Quick Media Switching is active on the link         |
-| `nativetv_hdmi_source_powered`                  | gauge   | `input`                                 | 1 while a powered source is on the input's cable            |
-| `nativetv_syslog_messages_total`                | counter | `source`                                | Log lines sent to the syslog server                         |
-| `nativetv_syslog_errors_total`                  | counter |                                         | Log lines that could not be sent, and were dropped          |
-| `nativetv_ntp_clock_sets_total`                 | counter |                                         | Times the clock was set from the NTP server                 |
-| `nativetv_ntp_errors_total`                     | counter |                                         | NTP syncs that set no clock                                 |
-| `nativetv_ntp_offset_seconds`                   | gauge   |                                         | The server's time less the TV's at the last answer          |
-| `nativetv_ntp_round_trip_seconds`               | gauge   |                                         | Round trip to the server for the last answer                |
-| `nativetv_ntp_stratum`                          | gauge   |                                         | The server's stratum in the last answer                     |
-| `nativetv_ntp_last_answer_timestamp_seconds`    | gauge   |                                         | When the last answer came, as a Unix time                   |
-| `nativetv_watch_seconds_total`                  | counter | `app`                                   | Time the TV was on with the app or input in front           |
+| `rootedtv_info`                                 | gauge   | `model`, `firmware`, `webos`, `version` | 1                                                           |
+| `rootedtv_boot_time_seconds`                    | gauge   |                                         | When the TV last booted, as a Unix time; later than the real boot on a TV that suspends in standby |
+| `rootedtv_system_on`                            | gauge   |                                         | 1 when on, including with the screen off                    |
+| `rootedtv_screen_on`                            | gauge   |                                         | 1 when the screen is on, including a screen saver           |
+| `rootedtv_power_on_info`                        | gauge   | `reason`                                | 1                                                           |
+| `rootedtv_power_on_time_seconds`                | gauge   |                                         | When the TV last powered on, as a Unix time; none in standby |
+| `rootedtv_soc_temperature_celsius`              | gauge   |                                         | SoC temperature                                             |
+| `rootedtv_cpu_seconds_total`                    | counter | `cpu`, `mode`                           | Time each online core has spent in each mode                |
+| `rootedtv_cpu_frequency_hertz`                  | gauge   |                                         | Processor clock                                             |
+| `rootedtv_gpu_frequency_hertz`                  | gauge   |                                         | GPU clock                                                   |
+| `rootedtv_memory_total_bytes`                   | gauge   |                                         | `MemTotal`                                                  |
+| `rootedtv_memory_available_bytes`               | gauge   |                                         | `MemAvailable`                                              |
+| `rootedtv_swap_total_bytes`                     | gauge   |                                         | `SwapTotal`                                                 |
+| `rootedtv_swap_free_bytes`                      | gauge   |                                         | `SwapFree`                                                  |
+| `rootedtv_network_receive_bytes_total`          | counter | `interface`                             | Bytes received on the interface in use                      |
+| `rootedtv_network_transmit_bytes_total`         | counter | `interface`                             | Bytes sent on the interface in use                          |
+| `rootedtv_wifi_signal_dbm`                      | gauge   |                                         | Wi-Fi signal level                                          |
+| `rootedtv_wifi_link_quality`                    | gauge   |                                         | Wi-Fi link quality, on the driver's own scale               |
+| `rootedtv_emmc_pre_eol_state`                   | gauge   | `state`                                 | 1 for the current eMMC state: `normal`, `warning`, `urgent` |
+| `rootedtv_emmc_life_used_ratio`                 | gauge   | `type`                                  | eMMC estimated life used, in steps of 0.1                   |
+| `rootedtv_app_storage_size_bytes`               | gauge   |                                         | Size of the app storage filesystem                          |
+| `rootedtv_app_storage_available_bytes`          | gauge   |                                         | Space available there for new apps                          |
+| `rootedtv_remote_battery_ratio`                 | gauge   |                                         | Magic Remote battery, read over Bluetooth on webOS 9 and 10 and from LG's remote service on webOS 4   |
+| `rootedtv_adblock_enabled`                      | gauge   |                                         | 1 when ad blocking is in place                              |
+| `rootedtv_oled_panel_usage_seconds_total`       | counter |                                         | Time the panel has been in use                              |
+| `rootedtv_oled_last_compensation_usage_seconds` | gauge   |                                         | Panel usage at the last short compensation cycle            |
+| `rootedtv_oled_compensation_interval_seconds`   | gauge   |                                         | Panel usage between short compensation cycles               |
+| `rootedtv_oled_compensation_running`            | gauge   |                                         | 1 while a short compensation cycle runs                     |
+| `rootedtv_oled_compensation_runs_total`         | counter |                                         | Short compensation cycles completed                         |
+| `rootedtv_oled_last_refresher_usage_seconds`    | gauge   |                                         | Panel usage at the last Pixel Refresher run                 |
+| `rootedtv_oled_refresher_interval_seconds`      | gauge   |                                         | Panel usage between automatic Pixel Refresher runs          |
+| `rootedtv_oled_refresher_runs_total`            | counter |                                         | Pixel Refresher runs completed                              |
+| `rootedtv_oled_refresher_running`               | gauge   |                                         | 1 while a Pixel Refresher run is in progress                |
+| `rootedtv_oled_refresher_scheduled`             | gauge   |                                         | 1 while a Pixel Refresher run waits for the next standby    |
+| `rootedtv_oled_failure_alerts_total`            | counter |                                         | Panel maintenance failure alerts recorded                   |
+| `rootedtv_oled_gsr_stress_events_total`         | counter |                                         | Stress events Global Stress Reduction has counted           |
+| `rootedtv_oled_protection_enabled`              | gauge   | `protection`                            | 1 when the protection is on: `asbl`, `gsr`                  |
+| `rootedtv_picture_backlight_ratio`              | gauge   |                                         | Backlight of the picture mode in use, OLED light on an OLED |
+| `rootedtv_sound_info`                           | gauge   | `output`, `mode`                        | 1                                                           |
+| `rootedtv_sound_input_info`                     | gauge   | `codec`, `immersive`                    | 1 while something plays                                     |
+| `rootedtv_volume_ratio`                         | gauge   |                                         | Volume, while the TV sets the level                         |
+| `rootedtv_muted`                                | gauge   |                                         | 1 while the sound is muted                                  |
+| `rootedtv_foreground_app_info`                  | gauge   | `app_id`, `app_name`                    | 1                                                           |
+| `rootedtv_signal_info`                          | gauge   | `dynamic_range`, `picture_mode`         | 1                                                           |
+| `rootedtv_signal_low_latency`                   | gauge   |                                         | 1 while the picture is in low-latency mode (ALLM)           |
+| `rootedtv_signal_vrr`                           | gauge   |                                         | 1 while the HDMI source uses VRR                            |
+| `rootedtv_signal_width_pixels`                  | gauge   |                                         | Width of the HDMI source's picture                          |
+| `rootedtv_signal_height_pixels`                 | gauge   |                                         | Height of the HDMI source's picture                         |
+| `rootedtv_signal_refresh_hertz`                 | gauge   |                                         | Refresh rate of the HDMI signal                             |
+| `rootedtv_signal_frame_rate_hertz`              | gauge   | `vrr_type`                              | Frame rate the HDMI source presents                         |
+| `rootedtv_signal_format_info`                   | gauge   | `type`, `eotf`, `colorimetry`, `encoding` | 1                                                         |
+| `rootedtv_signal_hdr_mastering_luminance_max_nits` | gauge | | Peak luminance of the mastering display |
+| `rootedtv_signal_hdr_mastering_luminance_min_nits` | gauge | | Black level of the mastering display |
+| `rootedtv_signal_hdr_content_light_level_max_nits` | gauge | | Brightest pixel in the content (MaxCLL) |
+| `rootedtv_signal_hdr_frame_average_light_level_max_nits` | gauge | | Brightest frame average in the content (MaxFALL) |
+| `rootedtv_signal_game_mode`                     | gauge   |                                         | 1 while the source is in game mode                          |
+| `rootedtv_hdmi_input_info`                      | gauge   | `input`, `app_id`, `name`               | 1                                                           |
+| `rootedtv_hdmi_link_info`                       | gauge   | `input`, `phy_mode`, `chroma`, `hdcp`   | 1                                                           |
+| `rootedtv_hdmi_link_bits_per_second`            | gauge   | `input`                                 | Rate of the input's link                                    |
+| `rootedtv_hdmi_qms`                             | gauge   | `input`                                 | 1 while Quick Media Switching is active on the link         |
+| `rootedtv_hdmi_source_powered`                  | gauge   | `input`                                 | 1 while a powered source is on the input's cable            |
+| `rootedtv_syslog_messages_total`                | counter | `source`                                | Log lines sent to the syslog server                         |
+| `rootedtv_syslog_errors_total`                  | counter |                                         | Log lines that could not be sent, and were dropped          |
+| `rootedtv_ntp_clock_sets_total`                 | counter |                                         | Times the clock was set from the NTP server                 |
+| `rootedtv_ntp_errors_total`                     | counter |                                         | NTP syncs that set no clock                                 |
+| `rootedtv_ntp_offset_seconds`                   | gauge   |                                         | The server's time less the TV's at the last answer          |
+| `rootedtv_ntp_round_trip_seconds`               | gauge   |                                         | Round trip to the server for the last answer                |
+| `rootedtv_ntp_stratum`                          | gauge   |                                         | The server's stratum in the last answer                     |
+| `rootedtv_ntp_last_answer_timestamp_seconds`    | gauge   |                                         | When the last answer came, as a Unix time                   |
+| `rootedtv_watch_seconds_total`                  | counter | `app`                                   | Time the TV was on with the app or input in front           |

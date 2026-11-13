@@ -1,6 +1,6 @@
 # Performance audit
 
-Where the TV client (`nativetv-tv`) and the server (`nativetv-daemon`) spend time and wakeups, as of 30 October 2026. The numbers behind it are in [the baseline](performance-baseline.md), what was changed in [the optimizations](performance-optimizations.md), and how to repeat the measurements in [the benchmarks](performance-benchmarks.md).
+Where the TV client (`rootedtv-tv`) and the server (`rootedtv-daemon`) spend time and wakeups, as of 30 October 2026. The numbers behind it are in [the baseline](performance-baseline.md), what was changed in [the optimizations](performance-optimizations.md), and how to repeat the measurements in [the benchmarks](performance-benchmarks.md).
 
 Each finding carries how it is known: **measured** (a number from a run), **read** (checked in the source by the author) or **audit** (reported by a read-only pass over the code and not run). Audit findings are leads, not results.
 

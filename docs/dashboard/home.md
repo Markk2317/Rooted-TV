@@ -216,7 +216,7 @@ After the TV starts from cold, Rooted TV Home takes LG's Home's place about 27 s
 
 With Quick Start+ off, until Rooted TV Home is in place the TV shows its last input, as LG's Home Auto Launch is off. Where it was on, Rooted TV Home opens once in place, after a power-on with the remote or the TV's own button, as LG's Home would have; it is not opened after a restart from the menu, where LG's would not be either, or where another input or app has been chosen since the TV started. Switched back on within a few seconds, before the TV has powered off, it opens a second or so after the last input. With Quick Start+ on, switching on from standby is not a cold start: Rooted TV Home is still in place, and the TV opens it at once.
 
-**Hide LG's Home while the TV starts**, on webOS 9 only and off unless chosen, gives LG's Home an empty layout while Rooted TV Home has its place, so that anything opening it in those first seconds shows a black screen instead. It asks for a second press to switch on, and takes effect at once. The layout is kept on the TV, not in Rooted TV: if Rooted TV stops running without switching Rooted TV Home off, for example after a firmware update removes root or `/var/lib/tvweb` is deleted, LG's Home stays black at every start. Over SSH, `tvwebctl restore-nativetv-home` puts LG's Home back while Rooted TV is installed. Where it is not:
+**Hide LG's Home while the TV starts**, on webOS 9 only and off unless chosen, gives LG's Home an empty layout while Rooted TV Home has its place, so that anything opening it in those first seconds shows a black screen instead. It asks for a second press to switch on, and takes effect at once. The layout is kept on the TV, not in Rooted TV: if Rooted TV stops running without switching Rooted TV Home off, for example after a firmware update removes root or `/var/lib/tvweb` is deleted, LG's Home stays black at every start. Over SSH, `tvwebctl restore-rootedtv-home` puts LG's Home back while Rooted TV is installed. Where it is not:
 
 ```sh
 rm -rf /mnt/lg/cmn_data/manifest /tmp/checkpoint/*com.webos.app.home* /mnt/lg/cmn_data/checkpoint/*com.webos.app.home* && reboot
@@ -226,7 +226,7 @@ LG's Home then starts on its default layout, without one set with [LG launcher l
 
 The Rooted TV server answers about ten seconds later; Rooted TV Home opened in between shows the Rooted TV mark on black with a slowly turning ring, and fades into the home screen once the server answers. After 30 seconds without an answer it says so under the mark. It does the same whenever the server is not running, as during an update. Should the server stop, or fail three times in ten minutes, LG's Home is given its place back until the server is running again.
 
-Over SSH, `tvwebctl restore-nativetv-home` does what **Use LG Home** does. Uninstalling Rooted TV from the Homebrew Channel switches Rooted TV Home off before deleting the server; a failed switch-off keeps the server for another attempt.
+Over SSH, `tvwebctl restore-rootedtv-home` does what **Use LG Home** does. Uninstalling Rooted TV from the Homebrew Channel switches Rooted TV Home off before deleting the server; a failed switch-off keeps the server for another attempt.
 
 Earlier builds installed a separate Rooted TV Home app and changed the TV's Home and start-up settings to it. The first start of a newer server puts back any of those settings that still name that app, gives the Home button back to LG's filters, and removes the app.
 

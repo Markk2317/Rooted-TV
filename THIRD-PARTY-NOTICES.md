@@ -8,27 +8,27 @@ the path given, or is the licence named by its SPDX id at the address given.
 
 | Component | Used for | Licence | Licence text |
 | :-------- | :------- | :------ | :----------- |
-| [Glasshouse](https://github.com/rorygallagher2024/glasshouse) (Rory Gallagher) | The Spanish in `native-tv/assets/i18n/es.json`, where the English it was made from is unchanged | MIT | The copyright notice in [LICENSE](LICENSE) |
-| [CivetWeb](https://github.com/civetweb/civetweb) 1.16 | The daemon's HTTP server, built in | MIT | [native-tv/third_party/civetweb/LICENSE.md](native-tv/third_party/civetweb/LICENSE.md); credits in `CREDITS.md` beside it; copied into runtime packages as `LICENSE-civetweb.txt` |
-| [NanoSVG](https://github.com/memononen/nanosvg) | Parsing and rasterising SVG icons in the TV client | zlib | [native-tv/third_party/nanosvg/LICENSE.txt](native-tv/third_party/nanosvg/LICENSE.txt) |
-| [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) (Project Nayuki) | The QR codes on the TV | MIT | Header of each file in [native-tv/third_party/qrcodegen/](native-tv/third_party/qrcodegen/) |
-| [StevenBlack/hosts](https://github.com/StevenBlack/hosts) | The advertising and measurement host entries of the on-TV blocker, reviewed against it | MIT | [native-tv/third_party/adblock-domains/SOURCE.md](native-tv/third_party/adblock-domains/SOURCE.md) |
-| [Roboto](https://github.com/googlefonts/roboto-3-classic) | Text of the dashboards and TV pages, cut to Latin as WOFF | Apache-2.0 | [native-tv/assets/fonts/LICENSE-Roboto.txt](native-tv/assets/fonts/LICENSE-Roboto.txt) |
-| [Google Sans Flex](https://github.com/googlefonts/googlesans-flex) | Text of the native TV client | OFL-1.1 | [native-tv/assets/fonts/LICENSE-GoogleSansFlex-OFL.txt](native-tv/assets/fonts/LICENSE-GoogleSansFlex-OFL.txt) |
-| [Material Design Icons](https://pictogrammers.com/library/mdi/) (`@mdi/js`) | The TV client's icons in `native-tv/assets/icons/material/` | Apache-2.0 | [native-tv/assets/icons/material/LICENSE-MaterialDesignIcons.txt](native-tv/assets/icons/material/LICENSE-MaterialDesignIcons.txt) |
-| [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) | The brand logos of the themed app icons in `native-tv/assets/app-icons/app-icons.pack` | Apache-2.0 | [native-tv/assets/app-icons/LICENSE-DashboardIcons.txt](native-tv/assets/app-icons/LICENSE-DashboardIcons.txt) |
-| [Android's UI sounds](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/data/sounds/) (The Android Open Source Project) | `Effect_Tick`, the TV client's system sound, in `native-tv/assets/sounds/` | Apache-2.0 | [native-tv/assets/sounds/LICENSE-AndroidSounds.txt](native-tv/assets/sounds/LICENSE-AndroidSounds.txt) |
-| [Material Symbols](https://fonts.google.com/icons) (Google), Rounded | The icon sprite in `native-tv/web/ui.html` | Apache-2.0 | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), the text in the Apache-2.0 files above |
+| [Glasshouse](https://github.com/rorygallagher2024/glasshouse) (Rory Gallagher) | The Spanish in `rooted-tv/assets/i18n/es.json`, where the English it was made from is unchanged | MIT | The copyright notice in [LICENSE](LICENSE) |
+| [CivetWeb](https://github.com/civetweb/civetweb) 1.16 | The daemon's HTTP server, built in | MIT | [rooted-tv/third_party/civetweb/LICENSE.md](rooted-tv/third_party/civetweb/LICENSE.md); credits in `CREDITS.md` beside it; copied into runtime packages as `LICENSE-civetweb.txt` |
+| [NanoSVG](https://github.com/memononen/nanosvg) | Parsing and rasterising SVG icons in the TV client | zlib | [rooted-tv/third_party/nanosvg/LICENSE.txt](rooted-tv/third_party/nanosvg/LICENSE.txt) |
+| [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) (Project Nayuki) | The QR codes on the TV | MIT | Header of each file in [rooted-tv/third_party/qrcodegen/](rooted-tv/third_party/qrcodegen/) |
+| [StevenBlack/hosts](https://github.com/StevenBlack/hosts) | The advertising and measurement host entries of the on-TV blocker, reviewed against it | MIT | [rooted-tv/third_party/adblock-domains/SOURCE.md](rooted-tv/third_party/adblock-domains/SOURCE.md) |
+| [Roboto](https://github.com/googlefonts/roboto-3-classic) | Text of the dashboards and TV pages, cut to Latin as WOFF | Apache-2.0 | [rooted-tv/assets/fonts/LICENSE-Roboto.txt](rooted-tv/assets/fonts/LICENSE-Roboto.txt) |
+| [Google Sans Flex](https://github.com/googlefonts/googlesans-flex) | Text of the native TV client | OFL-1.1 | [rooted-tv/assets/fonts/LICENSE-GoogleSansFlex-OFL.txt](rooted-tv/assets/fonts/LICENSE-GoogleSansFlex-OFL.txt) |
+| [Material Design Icons](https://pictogrammers.com/library/mdi/) (`@mdi/js`) | The TV client's icons in `rooted-tv/assets/icons/material/` | Apache-2.0 | [rooted-tv/assets/icons/material/LICENSE-MaterialDesignIcons.txt](rooted-tv/assets/icons/material/LICENSE-MaterialDesignIcons.txt) |
+| [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) | The brand logos of the themed app icons in `rooted-tv/assets/app-icons/app-icons.pack` | Apache-2.0 | [rooted-tv/assets/app-icons/LICENSE-DashboardIcons.txt](rooted-tv/assets/app-icons/LICENSE-DashboardIcons.txt) |
+| [Android's UI sounds](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/data/sounds/) (The Android Open Source Project) | `Effect_Tick`, the TV client's system sound, in `rooted-tv/assets/sounds/` | Apache-2.0 | [rooted-tv/assets/sounds/LICENSE-AndroidSounds.txt](rooted-tv/assets/sounds/LICENSE-AndroidSounds.txt) |
+| [Material Symbols](https://fonts.google.com/icons) (Google), Rounded | The icon sprite in `rooted-tv/web/ui.html` | Apache-2.0 | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), the text in the Apache-2.0 files above |
 
 ## Linked from the webOSbrew SDK
 
 The TV builds link these from the [webOSbrew native toolchain](https://github.com/webosbrew/native-toolchain)
-and ship the notice with the runtime package (`native-tv/tools/runtime_payload.py`;
-the sources of the notices are in [native-tv/third_party/sdk-runtime-notices/SOURCE.md](native-tv/third_party/sdk-runtime-notices/SOURCE.md)).
+and ship the notice with the runtime package (`rooted-tv/tools/runtime_payload.py`;
+the sources of the notices are in [rooted-tv/third_party/sdk-runtime-notices/SOURCE.md](rooted-tv/third_party/sdk-runtime-notices/SOURCE.md)).
 
 | Component | Used for | Licence |
 | :-------- | :------- | :------ |
-| [json-c](https://github.com/json-c/json-c) 0.16, linked statically | JSON | MIT; the notice is [native-tv/assets/LICENSE-json-c.txt](native-tv/assets/LICENSE-json-c.txt) |
+| [json-c](https://github.com/json-c/json-c) 0.16, linked statically | JSON | MIT; the notice is [rooted-tv/assets/LICENSE-json-c.txt](rooted-tv/assets/LICENSE-json-c.txt) |
 | [curl](https://curl.se/) 7.87.0 (`libcurl.so.4`) | MQTT over TLS, downloads | curl ([COPYING](https://raw.githubusercontent.com/curl/curl/curl-7_87_0/COPYING)) |
 | [OpenSSL](https://www.openssl.org/) 1.1.1q | TLS for libcurl | OpenSSL and SSLeay ([LICENSE](https://raw.githubusercontent.com/openssl/openssl/OpenSSL_1_1_1q/LICENSE)) |
 | GCC runtime (`libatomic`) 12.2.0 | Atomic operations on the TV's ARM CPU | GPL-3.0-or-later with the GCC Runtime Library Exception ([COPYING.RUNTIME](https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-12.2.0/COPYING.RUNTIME)) |
@@ -44,11 +44,11 @@ into a package. MkDocs, Material for MkDocs and the other tools in
 
 The TV pages and the TV client take their sizes, colours and type scale from
 Google's TV Design Kit. No file of the kit is included; the values were
-re-created in `native-tv/design/` and `native-tv/assets/google-tv/`. Google,
+re-created in `rooted-tv/design/` and `rooted-tv/assets/google-tv/`. Google,
 Android TV, Google TV and Material Design are trademarks of Google LLC. LG and
 webOS are trademarks of LG Electronics. Rooted TV is not affiliated with either.
 The brand logos in the app icon set and the streaming services' wordmarks in
-`native-tv/assets/icons/wordmark-*.svg` (from Wikimedia Commons) belong to their
+`rooted-tv/assets/icons/wordmark-*.svg` (from Wikimedia Commons) belong to their
 owners, who do not endorse Rooted TV; they are shown only to name the app or the
 service that has a title.
 

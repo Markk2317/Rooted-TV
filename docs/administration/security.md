@@ -166,7 +166,7 @@ it before exposing it more widely.
 
 The Server tab's **Check for updates** button, and **Check daily** once switched
 on (`"update": {"check": true}`, off by default), fetch the latest release's
-manifest from `github.com/ihtisham1211/native-tv` over HTTPS. GitHub sees the
+manifest from `github.com/Markk2317/Rooted-TV` over HTTPS. GitHub sees the
 TV's address and the `tvweb/<version>` the request names; no other identifier is
 sent. The answer is only shown: the version and the package's SHA-256 are read
 from it, and the links offered are built from that version, never taken from the
@@ -221,8 +221,8 @@ the next reboot, for a TV whose keys are lost; add a key again straight after.
 `deploy.sh` prefers SSH and falls back to telnet automatically, so it keeps
 working throughout. `--telnet` forces the old path if you need it. It uses the
 computer's own SSH keys and `known_hosts`; a key or `known_hosts` file of its own for the TV
-is set as `NATIVETV_SSH_KEY` and `NATIVETV_KNOWN_HOSTS`, in the environment or in
-`~/.config/nativetv/deploy.env`.
+is set as `ROOTEDTV_SSH_KEY` and `ROOTEDTV_KNOWN_HOSTS`, in the environment or in
+`~/.config/rootedtv/deploy.env`.
 
 ---
 

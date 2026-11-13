@@ -4,11 +4,11 @@ Text shown on the phone and computer dashboard is written in English where it is
 used, with a key next to it. The key names the string, so the same words are used
 wherever it appears, and `scripts/check-strings.py` catches the ones that drift
 apart. A translation is a file that maps the same keys to another language, in
-`native-tv/assets/i18n/<lang>.json`. English needs no file, so reading the markup
+`rooted-tv/assets/i18n/<lang>.json`. English needs no file, so reading the markup
 or the script shows the real words. The dashboard is in [Spanish](#spanish) too, and
 the native TV client in [Italian](#the-tv-app).
 
-The pages the TV's own browser shows (`native-tv/assets/google-tv/`) are English only.
+The pages the TV's own browser shows (`rooted-tv/assets/google-tv/`) are English only.
 So are Home Assistant entity names, MQTT topics and
 the logs, and the "Can't reach the TV" page of the dashboard's service worker
 (`assets/pwa/sw.js`), which has to work with no TV to fetch a dictionary from.
@@ -40,10 +40,10 @@ named placeholders:
 t('server.install', 'Install v{version}', { version: v })
 ```
 
-`t()` is in `native-tv/web/ui/i18n.js`. It returns the translation when the page
+`t()` is in `rooted-tv/web/ui/i18n.js`. It returns the translation when the page
 is in another language and the dictionary has one for this English, and the English
 otherwise, with the placeholders filled either way. The TV pages' `t()` is in
-`native-tv/assets/google-tv/shared/common.js` and only fills the English.
+`rooted-tv/assets/google-tv/shared/common.js` and only fills the English.
 
 A new string shows in English in every language until it is translated, which is
 not a fault: see [Keeping a translation current](#keeping-a-translation-current).
@@ -79,7 +79,7 @@ key.
 ## Messages from the server
 
 Text the server sends a page - an error, a screen saver's name, an agreement's
-description - is written with `say::msg()`, from `native-tv/src/domain/say.hpp`:
+description - is written with `say::msg()`, from `rooted-tv/src/domain/say.hpp`:
 
 ```cpp
 say::msg("srv.install.busy", "an install is already in progress")
@@ -95,12 +95,12 @@ The check reads those pairs too.
 
 `say::msg()` returns the English, so the server, Home Assistant, MQTT and the log
 all carry on in English. When a page is in another language it sends
-`X-Native-Tv-Lang: es` on its own requests, and `HttpExchange::respond()` swaps the
+`X-Rooted-Tv-Lang: es` on its own requests, and `HttpExchange::respond()` swaps the
 messages in the JSON it answers with for their translations, from the same file
 the page uses. The daemon reads `assets/i18n/` once, at start.
 
 Only fields a page shows are changed (`error`, `label`, `title` and the rest of
-`displayField()` in `native-tv/src/domain/say.cpp`), and only strings
+`displayField()` in `rooted-tv/src/domain/say.cpp`), and only strings
 `say::msg()` made, so a raw value that reads the same as a message, such as a TV
 state, is left alone. Anything that is not JSON, `/api/logs` and the answers to
 requests with no language header go out as they are. A name that is a value in
@@ -115,7 +115,7 @@ are given.
 ## The language
 
 The page follows `?lang=es`, then the choice stored by the **Language** list on the
-[Server tab](../dashboard/server.md#native-tv) (Auto, English or Español, in the
+[Server tab](../dashboard/server.md#rooted-tv) (Auto, English or Español, in the
 browser's `localStorage` as `lang`), then the browser's own language. A language with
 no file is English. Changing the list stores the choice, drops `?lang=` from the
 address and reloads, since `i18n.js` reads the dictionary once, before the page's
@@ -158,20 +158,20 @@ string that was removed is deleted.
 
 ## Adding a language
 
-1. `./scripts/check-strings.py --template > native-tv/assets/i18n/<lang>.json` writes
+1. `./scripts/check-strings.py --template > rooted-tv/assets/i18n/<lang>.json` writes
    every key with its English as `from` and an empty `text`. Entries left empty are
    rejected, so leave a key out to show its English.
 2. Fill in `text`, keeping each `{placeholder}` as it is.
 3. Add the two-letter code to `LANGS` and the language's name in its own words to
-   `NAMES` in `native-tv/web/ui/i18n.js`, and the file to `FILES` in
-   `native-tv/lifecycle/deploy.sh`. The Server tab's list is built from `LANGS`
+   `NAMES` in `rooted-tv/web/ui/i18n.js`, and the file to `FILES` in
+   `rooted-tv/lifecycle/deploy.sh`. The Server tab's list is built from `LANGS`
    and `NAMES`.
 4. Check the page in that language with `?lang=<code>` for text that does not fit
    and for English that was missed.
 
 ## Spanish
 
-`native-tv/assets/i18n/es.json` covers every string the check finds. About four in five
+`rooted-tv/assets/i18n/es.json` covers every string the check finds. About four in five
 are [Glasshouse's](https://github.com/rorygallagher2024/glasshouse) Spanish (MIT), used where
 the English is unchanged. The rest, for English that Rooted TV changed or added (its own name,
 the LG launcher, the Black screen saver, the newer privacy and Home messages), were
@@ -193,15 +193,15 @@ device's. The daemon reads webOS's `localeInfo` (`locales.UI`, such as `it-IT`) 
 start and again at most once a minute as the client asks for `/api/caps`, keeps it
 in `locale` beside the server and names its language there (`"language": "it"`).
 The client then fetches `/assets/i18n/it.json`, from which `say::msg()` in the
-client returns the translations (`say::showIn()`), and sends `X-Native-Tv-Lang: it`
+client returns the translations (`say::showIn()`), and sends `X-Rooted-Tv-Lang: it`
 on its requests, so the server's messages it shows, such as a row's title, come
 back translated as a dashboard's do. TMDB is asked for titles, overviews and genres
 in the same language. With no file for the TV's language, or English, the client
 shows English.
 
 The client's strings are keyed like the server's: `msg("tv.home.topPicks",
-"Top picks for you")` in `native-tv/src/ui/` and the models it shares in
-`native-tv/src/domain/`, and `check-strings.py` reads them there. A language the TV
+"Top picks for you")` in `rooted-tv/src/ui/` and the models it shares in
+`rooted-tv/src/domain/`, and `check-strings.py` reads them there. A language the TV
 client alone speaks is listed in `TV_ONLY` in that script rather than in the
 dashboard's `LANGS`, so its file can hold the client's words without offering a
 half-translated dashboard.

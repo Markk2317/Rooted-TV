@@ -1,0 +1,101 @@
+#pragma once
+#include "core/json.hpp"
+#include "core/operations.hpp"
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace rootedtv {
+struct Command {
+    Operation operation = Operation::None;
+    std::string route;
+    Json body;
+    bool confirm = false;
+    bool empty() const {
+        return operation == Operation::None && route.empty();
+    }
+};
+Command post(Operation operation, const Json &body, bool confirm = false);
+Command control(const std::string &action, const Json &value = Json(), bool confirm = false);
+Command navigate(const std::string &route);
+Json fields(std::initializer_list<std::pair<std::string, Json>> values);
+struct MenuRow {
+    std::string label, value, hint, image;
+    Command command;
+    bool heading = false;
+    // What OK does, in a few words, where "Turn off" or "Change" would not say it.
+    std::string action = std::string();
+    // 1 or 0 for a switch whose value is not On or Off (a timer, a tile), -1 for anything else.
+    int state = -1;
+    // A row that steps through values: each value it can read, with the command that sets it, in
+    // the order OK steps through them. Empty for a row that is not a stepper.
+    std::vector<std::pair<std::string, Command>> choices =
+        std::vector<std::pair<std::string, Command>>();
+    // A switch's way back: the command that sets the other state, where it is not `command` with
+    // its flag turned over (which is what the Settings screen uses when this is empty).
+    Command reverse = Command();
+    // On a heading with no label: the title of the subsection that starts here, for the Settings
+    // screen's tabs. Rows keep their order, so a model with no subsections is one list.
+    std::string page = std::string();
+};
+struct Card {
+    std::string id, kind, title, subtitle, image, backdrop;
+    Json data;
+    Command command;
+    bool hidden = false; // an app hidden from Home, listed (dimmed, last) only while Home's apps are edited
+    bool titled = false; // the art has the title on it (the studio's key art), so the card prints none
+    std::string logo;    // the title's logo (TMDB's, on a transparent ground), for the banner
+};
+struct CardRow {
+    std::string key, title;
+    std::string group; // the kind of the apps in an "app" row, while the apps are sorted by kind
+    bool posters = false;
+    std::vector<Card> cards;
+};
+struct Tab {
+    std::string key, title;
+    Operation operation = Operation::None;
+};
+// TMDB's size for the hero's art: a 1920x1080 picture, the screen's own size.
+constexpr const char *kHeroArtSize = "w1920_and_h1080_bestv2";
+// Home, Google TV's Films and Shows once the feed has their rows, Live, Apps and Inputs.
+std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover = Json());
+// A tab of titles with Google TV's featured cards on top: Films or Shows.
+bool titlesTab(const std::string &tab);
+std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
+                              const Json &guide);
+// The ids hidden from a list of the layout: "app" (Home's apps), "dev", "ch", or "appsTab" (the Apps
+// tab's own apps; a catalogue from before it had a list hides there what Home hides).
+Json hiddenIds(const Json &catalogue, const std::string &list);
+// The banner's own titles, the feed's "featured" row, as cards: Google TV's carousel, apart from
+// Top picks for you.
+std::vector<Card> featuredCards(const Json &discover);
+// The apps as one row, in the kinds' order when they are sorted by kind: Home's "Your apps" (`list`
+// "app", the apps hidden on Home) or the Apps tab's (`list` "appsTab", its own hidden apps). With
+// `withHidden` the apps hidden from that list follow, flagged, so that editing can show them again.
+CardRow appsRow(const Json &catalogue, const Json &guide, bool withHidden,
+                const std::string &list = "app");
+// The kind an app card is grouped under (LG Home is "tv").
+std::string kindOf(const Card &card);
+// The order to save for the apps after the visible cards were moved: `shown` is the ids on screen
+// in their new order; ids the row does not show (hidden ones) keep their places in `order`.
+std::vector<std::string> orderAfterMove(const Json &order, const std::vector<std::string> &shown);
+std::string artwork(const Json &item, bool hero = false);
+std::string titleFacts(const Json &item, bool withKind = true);
+// The line under a Continue watching card, after its title: "Netflix  •  1 h 12 min left", or for
+// a play in a service's app without a title, how long it played.
+std::string continueLine(const Card &card);
+// The line under a card of the Films and Shows tabs' focused row, as Google TV's says where a
+// title plays: its service where a Popular on row lists it, then its year and rating.
+// A genre of Search's grid (names::searchGenres) and an app kind ("video") by their names in the
+// TV's language; an unknown kind is `fallback`.
+std::string genreName(const std::string &key);
+std::string appKindName(const std::string &key, const std::string &fallback);
+std::string titleCaption(const Card &card);
+std::string pictureLabel(const Json &picture);
+std::vector<Tab> dashboardTabs();
+std::vector<MenuRow> dashboardRows(const std::string &tab, const Json &data, const Json &caps,
+                                   const std::string &sub = "");
+std::vector<MenuRow> setupRows(const std::string &step, const Json &state);
+std::string setupTitle(const std::string &step);
+} // namespace rootedtv

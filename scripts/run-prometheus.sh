@@ -10,7 +10,7 @@
 #   ./scripts/run-prometheus.sh 192.168.1.50 192.168.1.51
 #
 # If prometheus is not installed, it downloads the standalone binary into
-# ~/.cache/nativetv-prometheus/ (no root or brew required).
+# ~/.cache/rootedtv-prometheus/ (no root or brew required).
 
 set -e
 
@@ -29,7 +29,7 @@ PROM_BIN=""
 if command -v prometheus >/dev/null 2>&1; then
   PROM_BIN="prometheus"
 else
-  CACHE_DIR="${HOME}/.cache/nativetv-prometheus"
+  CACHE_DIR="${HOME}/.cache/rootedtv-prometheus"
   mkdir -p "$CACHE_DIR"
   PROM_BIN="${CACHE_DIR}/prometheus"
 
@@ -50,7 +50,7 @@ else
   fi
 fi
 
-RUN_DIR=$(mktemp -d /tmp/nativetv-prom-XXXXXX)
+RUN_DIR=$(mktemp -d /tmp/rootedtv-prom-XXXXXX)
 trap 'rm -rf "$RUN_DIR"' EXIT INT TERM
 
 CONFIG="${RUN_DIR}/prometheus.yml"
@@ -62,7 +62,7 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: nativetv
+  - job_name: rootedtv
     metrics_path: /api/prometheus/metrics
     static_configs:
 EOF

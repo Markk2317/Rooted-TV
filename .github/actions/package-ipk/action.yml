@@ -16,7 +16,7 @@ runs:
 
     - name: build the ARM runtime and the TV client
       shell: bash
-      run: python3 native-tv/build.py --sdk "$RUNNER_TEMP/arm-webos-linux-gnueabi_sdk-buildroot"
+      run: python3 rooted-tv/build.py --sdk "$RUNNER_TEMP/arm-webos-linux-gnueabi_sdk-buildroot"
 
     # LG's packager: the store's checks reject packages without the control
     # fields it writes. Pinned, so a new release of it cannot change a build.

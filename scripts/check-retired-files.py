@@ -17,8 +17,8 @@ import pathlib, re, sys
 
 root = pathlib.Path(__file__).resolve().parent.parent
 RELEASED = root / 'scripts' / 'last-node-release-files.txt'
-DEPLOY = root / 'native-tv' / 'lifecycle' / 'deploy.sh'
-RETIRED = root / 'native-tv' / 'src' / 'daemon' / 'retired_files.cpp'
+DEPLOY = root / 'rooted-tv' / 'lifecycle' / 'deploy.sh'
+RETIRED = root / 'rooted-tv' / 'src' / 'daemon' / 'retired_files.cpp'
 
 old = {l.strip() for l in RELEASED.read_text(encoding='utf-8').splitlines()
        if l.strip() and not l.startswith('#')}

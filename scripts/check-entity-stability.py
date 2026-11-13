@@ -7,7 +7,7 @@ Home Assistant keys an entity on its unique id and domain. One that goes, is
 renamed or changes domain leaves the old entity unavailable, and any
 automation, dashboard or script that used it stops working, with nothing to
 say why. This reads every entity the daemon publishes from its discovery golden
-(native-tv/tests/fixtures/ha-golden.json, held equal to what the daemon
+(rooted-tv/tests/fixtures/ha-golden.json, held equal to what the daemon
 publishes by the native-ha-golden test) and fails on any that the last release
 had (scripts/released-entities.txt) and the code no longer does, unless it is
 in scripts/retired-entities.txt. Entities added are listed and allowed.
@@ -22,7 +22,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-GOLDEN = ROOT / 'native-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
+GOLDEN = ROOT / 'rooted-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
 RELEASED = ROOT / 'scripts' / 'released-entities.txt'
 RETIRED = ROOT / 'scripts' / 'retired-entities.txt'
 

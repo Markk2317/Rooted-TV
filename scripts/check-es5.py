@@ -8,9 +8,9 @@ repo catches that - a laptop's browser parses all of it happily.
 
     ./scripts/check-es5.py [files...]
 
-Defaults to the TV pages under native-tv/assets (google-tv/, the dashboard app
+Defaults to the TV pages under rooted-tv/assets (google-tv/, the dashboard app
 and the Home app), whose inline scripts are checked in place.
-native-tv/web/ui.html and the scripts it loads from native-tv/web/ui/ run in a
+rooted-tv/web/ui.html and the scripts it loads from rooted-tv/web/ui/ run in a
 phone or computer's browser and are not restricted.
 
 Strings, template literals, regex literals and comments are blanked before the
@@ -246,7 +246,7 @@ if len(sys.argv) > 1:
     targets = [pathlib.Path(a) for a in sys.argv[1:]]
 else:
     root = pathlib.Path(__file__).resolve().parent.parent
-    assets = root / 'native-tv' / 'assets'
+    assets = root / 'rooted-tv' / 'assets'
     targets = [assets / 'home-app' / 'index.html']
     # The TV pages, on the design system, and its reference page.
     targets += sorted((assets / 'google-tv').glob('**/*.html'))

@@ -10,7 +10,7 @@ labels: tv-report
 
 **webOS version**: as the dashboard shows it, and the firmware version
 
-**Rooted TV version**: from the Server tab, or `native-tv/VERSION`
+**Rooted TV version**: from the Server tab, or `rooted-tv/VERSION`
 
 **Install**: Homebrew Channel or `deploy.sh`, SSH or telnet
 

@@ -5,19 +5,19 @@ here is needed to use the project - see [Installing](../getting-started/install.
 
 ---
 
-The C++ TV client under [`native-tv/`](https://github.com/ihtisham1211/native-tv/blob/main/native-tv/README.md) draws its TV
+The C++ TV client under [`rooted-tv/`](https://github.com/Markk2317/Rooted-TV/blob/main/rooted-tv/README.md) draws its TV
 screens with OpenGL ES 2 and SDL2. Its domain/presentation modules use semantic
 operations through an asynchronous service interface; a transitional HTTP
 adapter maps those operations to this server's HTTP API. The
-[native architecture](https://github.com/ihtisham1211/native-tv/blob/main/native-tv/ARCHITECTURE.md) defines the module
-boundaries. The server itself is the C++ `nativetv-daemon`; no Node runs on the TV.
+[native architecture](https://github.com/Markk2317/Rooted-TV/blob/main/rooted-tv/ARCHITECTURE.md) defines the module
+boundaries. The server itself is the C++ `rootedtv-daemon`; no Node runs on the TV.
 
 ## Architecture
 
 ```
                   ┌─────────────────────────────────────────┐
                   │          LG webOS TV (Rooted)           │
-                  │           (nativetv-daemon)           │
+                  │           (rootedtv-daemon)           │
                   │  ┌───────────────────┐ ┌─────────────┐  │
                   │  │ HTTP Dashboard UI │ │  MiniMQTT   │  │
                   │  │ (Port 8080)       │ │  Client     │  │
@@ -110,7 +110,7 @@ instead:
 **Do not read `/proc/lg/pm/ts_enable`** — it segfaults the reading process.
 
 The receiver's PHY mode, chroma, and HDCP version are named in
-`native-tv/src/domain/names.cpp`, which gives both the display string in `hdmi_diag` and
+`rooted-tv/src/domain/names.cpp`, which gives both the display string in `hdmi_diag` and
 the Prometheus label from the one raw value. The module holds the server's
 other tables of raw values and their names as well: the power states and
 whether each has the system and the screen on, the inputs, the picture modes,
@@ -143,7 +143,7 @@ The dashboard's badge beside the resolution shows the HDR type, with "Low
 latency" after it on that suffix, and falls back to the picture settings'
 dynamic range while the TV reports no format, as in standby.
 The names of the dynamic range, the HDR type, the EOTF, the colorimetry, and
-the pixel encoding come from `native-tv/src/domain/names.cpp`.
+the pixel encoding come from `rooted-tv/src/domain/names.cpp`.
 
 The audio output in the stats is named from the `soundOutput` of
 `com.webos.service.audio/master/getVolume`, which uses the sound settings'
@@ -249,7 +249,7 @@ measurement.
 Two things bite when moving off telnet, both because an inline `ssh` command
 becomes the remote shell's own `argv`:
 
-- **`pkill -f nativetv-daemon` kills the shell running it.** Its command line contains
+- **`pkill -f rootedtv-daemon` kills the shell running it.** Its command line contains
   that path, so it matches itself. The bracket trick does not save you either,
   since the path appears again in the start command. Hence `tvwebctl`: inside a
   script file the shell's argv is just the script.
@@ -262,7 +262,7 @@ becomes the remote shell's own `argv`:
 
 ## Server release deployment
 
-The dashboard no longer checks for or installs Rooted TV server releases. Deploy a release from a checkout with `native-tv/lifecycle/deploy.sh`, or install the Homebrew Channel package. A TV that still has an updater from an older release can use it to install the first release without that feature. Current releases do not ship a Rooted TV self-updater. See [Updating](../getting-started/managing.md#updating).
+The dashboard no longer checks for or installs Rooted TV server releases. Deploy a release from a checkout with `rooted-tv/lifecycle/deploy.sh`, or install the Homebrew Channel package. A TV that still has an updater from an older release can use it to install the first release without that feature. Current releases do not ship a Rooted TV self-updater. See [Updating](../getting-started/managing.md#updating).
 
 ## Fonts
 
@@ -271,7 +271,7 @@ is the browser dashboard's first font too, so it reads as Google TV's home does;
 Roboto, cut to Latin as WOFF (Regular and Medium, about 17 KB each, Apache
 License 2.0), stands behind it there and is the TV pages' font. Both are served
 by the TV, so the pages need no internet access; the licence texts ship
-alongside them in `native-tv/assets/fonts/`.
+alongside them in `rooted-tv/assets/fonts/`.
 
 ## App icons
 
@@ -282,8 +282,8 @@ letters and digits, `+` as `plus`), and serves the app's own icon only when the
 pack has neither. Every route that serves an icon goes through it: the
 dashboard, Rooted TV Home and the shared `/icons/<appId>.png` addresses.
 
-The pack is built by `native-tv/tools/gen_app_icons.py` from
-`native-tv/design/app-icons.json`. The icons are Google TV's circles (its 2025
+The pack is built by `rooted-tv/tools/gen_app_icons.py` from
+`rooted-tv/design/app-icons.json`. The icons are Google TV's circles (its 2025
 home), 512 px squares the screens round: a brand's logo large on the brand's own
 background (`background` in `brands`, one colour or a top-to-bottom pair, the
 dark tile where none is given), as Netflix's red wordmark on white, YouTube's
@@ -300,7 +300,7 @@ A logo drawn on a tile of its own takes a `mask` (`light` keeps its white marks,
 the brand's reversed logo), and a wordmark a larger `fill`, so it stays readable
 at 44 px. To cover another app, add its id or normalised title to `logos` (and
 its brand to `brands`, if new) or `glyphs`, run
-`uv run native-tv/tools/gen_app_icons.py` and commit the pack. Title keys catch
+`uv run rooted-tv/tools/gen_app_icons.py` and commit the pack. Title keys catch
 store apps whose ids differ between regions; an id key is exact. The pack is
 about 480 KB and installs with the other assets (`deploy.sh` lists it).
 
@@ -324,7 +324,7 @@ select and deselect (Watchlist, watched, thumbs) and Home's return to its start,
 `Configuration__enable_gtv_sound_effects`, a server flag that is false unless Google sets it;
 while it is false the launcher plays the tick in their place, so the client plays only the tick.
 The file is AOSP's (`frameworks/base/data/sounds/effects/ogg/`, Apache-2.0), kept as 16-bit
-44.1 kHz WAV in `native-tv/assets/sounds/`.
+44.1 kHz WAV in `rooted-tv/assets/sounds/`.
 
 `Application::key` compares `snapshot()` before and after the key: a direction key ticks when
 it changed, OK when it changed, a registered screen used the key, or a command went out; Back
@@ -381,7 +381,7 @@ The pages follow Google's TV Design Kit; `shared/common.css` holds the tokens
 and component states.
 
 Each TV page owns its markup, styles and behaviour under
-`native-tv/assets/google-tv/pages/`:
+`rooted-tv/assets/google-tv/pages/`:
 
 ```text
 google-tv/
@@ -440,7 +440,7 @@ beside the markup; reusable rules belong in `shared/common.css`. Runtime values
 such as transforms, progress widths and app colours are still set by JavaScript
 because the oldest supported TV engines lack CSS variables. Add new assets to
 `deploy.sh`'s `FILES`; the package builder reads that same list. The main phone
-dashboard under `native-tv/web/ui/` and the packaged launchers keep their
+dashboard under `rooted-tv/web/ui/` and the packaged launchers keep their
 existing structure. Deployment stages the phone sources into the legacy server
 asset layout while HTTP hosting migrates. The one-time setup-phone form belongs
 to the setup flow and is also assembled into one response, with no font or
@@ -720,7 +720,7 @@ logged as `NL_GAMEDASHBOARD_ENTERED` with `"entered_by":"HotKey"`) on every
 write. So the filter, `remotekeys-filter.js` in `/var/lib/tvweb/`, is the same
 file whatever is mapped, and it is put first in the chain once, when the first
 key is set. The mappings go in a configd value of Rooted TV's own,
-`nativetv.remoteKeys` (`{ "keys": { "blue": "com.webos.app.hdmi2" } }`, an
+`rootedtv.remoteKeys` (`{ "keys": { "blue": "com.webos.app.hdmi2" } }`, an
 empty string for nothing), which the filter subscribes to in `init()` with
 `lunaCall.subscribe`, as LG's filters do; a change reaches it within a second,
 with no reload. configd keeps the value across reboots, so the mappings work
@@ -755,7 +755,7 @@ launches apps, as it has no media controls either.
 LG's files are never written. configd has no way to
 delete a value, so **As LG has it** on every key leaves the filter in the
 chain, passing every key on, and `tvwebctl restore-keys` takes it out, deletes
-the file and leaves `nativetv.remoteKeys` as an empty map.
+the file and leaves `rootedtv.remoteKeys` as an empty map.
 
 Only keys this TV's own filter files name are offered, found by searching them
 for the symbol (`WebOS.Key_webOS_Disneyplus` is in a C5's `appLaunch.js` and
@@ -1091,13 +1091,13 @@ Rooted TV's next start:
   "server": "logs.lan",
   "port": 514,
   "hostname": "",
-  "sources": ["system", "nativetv"],
+  "sources": ["system", "rootedtv"],
   "redact": true
 }
 ```
 
 `hostname` is the name the TV sends as; left empty, it is the device name.
-`sources` takes `system` (`/var/log/messages`), `nativetv` (`tvweb.log`) and
+`sources` takes `system` (`/var/log/messages`), `rootedtv` (`tvweb.log`) and
 `kernel`. The kernel's is not on by default, since following it means running
 `dmesg` every 30 seconds.
 
@@ -1138,7 +1138,7 @@ structured data and no BOM:
 | TIMESTAMP | the line's own time. A line dated before 2026, written before the clock synced, is dated by boot time plus its uptime instead. A Rooted TV line without a time of its own takes the time of the line before it, or the time it was read when it is the first of a read. Kernel lines are always dated by their uptime. |
 | HOSTNAME | `hostname` from the config, or else the device name the server logs as `device detected`, with spaces as `-`. The system's hostname is not used. |
 | APP-NAME | the process the Tools tab shows for the line; `kernel` for every kernel line |
-| MSGID | the source: `system`, `nativetv` or `kernel` |
+| MSGID | the source: `system`, `rootedtv` or `kernel` |
 
 A datagram is at most 2048 bytes and a longer line is cut.
 
@@ -1151,8 +1151,8 @@ The syslog server's address is looked up at start and again after a send
 fails, never for each send, and the socket is `udp4` or `udp6` to match the
 address the lookup gives. A failed send is dropped and counted, not queued, as
 UDP syslog is everywhere. Rooted TV logs one line when forwarding starts and
-one at each change of error state. `nativetv_syslog_messages_total` and
-`nativetv_syslog_errors_total` on the [Prometheus endpoint](../integrations/prometheus.md)
+one at each change of error state. `rootedtv_syslog_messages_total` and
+`rootedtv_syslog_errors_total` on the [Prometheus endpoint](../integrations/prometheus.md)
 count what was sent and what was dropped.
 
 ---
@@ -1332,7 +1332,7 @@ TV-RESEARCH.md has how this was found.
 ## Checking for a newer release
 
 `service/release_check` fetches
-`github.com/ihtisham1211/native-tv/releases/latest/download/<id>.manifest.json`,
+`github.com/Markk2317/Rooted-TV/releases/latest/download/<id>.manifest.json`,
 the file `scripts/build-ipk.py` writes and the Homebrew Channel workflow attaches
 to each release's draft, before it is published (a pre-release is never "latest"). The manifest has to
 name Rooted TV's app id, an `x.y.z` version and a 64-digit SHA-256; the release
@@ -1382,7 +1382,7 @@ could edit decides nothing installed or given root on its own.
 
 `scripts/` holds the static checks. Most need nothing but the repository and
 run in CI alongside `shellcheck`; `check-entities.py` reads a captured
-`/api/stats`, one per fixture TV in `native-tv/tests/fixtures/tv/`.
+`/api/stats`, one per fixture TV in `rooted-tv/tests/fixtures/tv/`.
 
 | Check | What it catches |
 | :--- | :--- |
@@ -1397,7 +1397,7 @@ run in CI alongside `shellcheck`; `check-entities.py` reads a captured
 
 ## Versioning and server deployment
 
-The daemon formats the server version with matching `build.json` metadata (`displayVersion`). TV server releases are installed by `native-tv/lifecycle/deploy.sh` or by installing the Homebrew Channel package; the current server does not check, install or roll back its own releases. See [Updating](../getting-started/managing.md#updating) for the supported deployment paths.
+The daemon formats the server version with matching `build.json` metadata (`displayVersion`). TV server releases are installed by `rooted-tv/lifecycle/deploy.sh` or by installing the Homebrew Channel package; the current server does not check, install or roll back its own releases. See [Updating](../getting-started/managing.md#updating) for the supported deployment paths.
 
 ---
 
@@ -1423,7 +1423,7 @@ A reinstall rewrites the `luna-service2-dev` files that elevation changed, so ro
 
 ### Staging and space
 
-The package is staged in `/media/developer/temp/nativetv-install/`, not `/tmp`, which is RAM-backed. Free space is read with `statvfs` on that directory. After the download, twice the package size must be free on top of the staged file, for the installer's unpacking and the installed copy. The check is skipped when `df` cannot be read. The size limit is 512 MB.
+The package is staged in `/media/developer/temp/rootedtv-install/`, not `/tmp`, which is RAM-backed. Free space is read with `statvfs` on that directory. After the download, twice the package size must be free on top of the staged file, for the installer's unpacking and the installed copy. The check is skipped when `df` cannot be read. The size limit is 512 MB.
 
 ### Reading the package
 
@@ -1495,7 +1495,7 @@ file survives a restart and a power cut; deleting it puts LG's layout back.
 
 **webOS 10** (experimental). The Flutter home app
 reads `home.xml` from its assets folder on the read-only system and nowhere
-else, so an overlay mount lays a changed `home.xml` from `/tmp/nativetv-home`
+else, so an overlay mount lays a changed `home.xml` from `/tmp/rootedtv-home`
 over that folder, leaving every other file LG's. The parts are the side buttons
 (`globalline`, shrunk to 0 by 0 after the banner: taking it out left the screen
 black), the Quick Cards (`qcardList`) and the recommended shelf
@@ -1519,14 +1519,14 @@ feature off, or `tvwebctl restore-home` before uninstalling, deletes the webOS
 
 `home_orchestrator` and the `home_*_manager` modules run a home screen of Rooted TV's own in place of LG's, opt-in
 from the dashboard's Home tab (webOS 9; webOS 10 and 11 with `allowExperimentalHome`). The screens are the native client's
-(`nativetv-tv`, run as the Rooted TV tile's app `com.tvweb.dashboard`, the one native app sam is told of, which opens the dashboard unless a screen is named). LG's Home's place is held by a small web app with no screen, whose files are
+(`rootedtv-tv`, run as the Rooted TV tile's app `com.tvweb.dashboard`, the one native app sam is told of, which opens the dashboard unless a screen is named). LG's Home's place is held by a small web app with no screen, whose files are
 `assets/home-app/index.html` and its icons: it asks sam to open the client at its Home screen, and is black until the client is in
 front. There is no web page for Home; the client's Home screen is all of it.
 
 Where Rooted TV Home cannot start, the server starts without it and
 logs why, rather than not starting at all (on a G5 a missing Home module had
 kept the dashboard and MQTT down, #865). The daemon then runs
-`nativetv-daemon --release-home`, as the boot hook does when sam refuses the
+`rootedtv-daemon --release-home`, as the boot hook does when sam refuses the
 takeover, since the boot hook may already have put Rooted TV Home in LG's
 Home's place with no server to serve it. The Home routes are not served, and uninstalling from the Homebrew Channel
 keeps the server, since it cannot tell whether Rooted TV Home holds LG's
@@ -1541,7 +1541,7 @@ as LG's has it), bind-mounts the directory over
 of the one app on webOS 10, which ignores the nudge. On webOS 10 the Home
 button opens the default app of the `home` category, which sam takes from that
 `appCategory`; without it the button does nothing
-([research](tv-research.md#native-tv-home-on-webos-10-g5-webos-1031)).
+([research](tv-research.md#rooted-tv-home-on-webos-10-g5-webos-1031)).
 A server finding it mounted with a manifest sam has not read, as after an
 upgrade or an interrupted reread, checks sam's copy and has it read again. If sam
 does not report the home category, LG's Home is put back and the switch fails.
@@ -1600,7 +1600,7 @@ off, a layout that cannot be put back stays kept aside and the place is still
 taken. The Home key itself is answered
 earlier still, by the remote key filter (`remote_keys_reconciler`), which the
 compositor loads from configd before any startup hook: while
-`nativetv.remoteKeys` carries `starting`, a Home press is kept from LG's
+`rootedtv.remoteKeys` carries `starting`, a Home press is kept from LG's
 filters, press and release, and the filter asks sam for LG's Home's type; while
 it is not yet `web` it shows `starting` as a toast, and once it is, it opens
 Home and leaves later presses to LG's filters for the rest of the boot. A
@@ -1620,7 +1620,7 @@ the live state's `application` group, which Rooted TV Home starts itself
 while it is on, as the MQTT bridge starts the groups only with a broker. The stub waits on
 black; being LG's Home's app, it cannot open LG's Home itself, so the server does, when the client has failed.
 `tvwebctl stop`, and the watchdog after a third restart in ten minutes, run
-`nativetv-daemon --release-home`, which unmounts without switching Rooted TV
+`rootedtv-daemon --release-home`, which unmounts without switching Rooted TV
 Home off, so the server takes the place again when it runs.
 A failed layout restore retains its backup and reports failure for a later retry.
 
@@ -1632,7 +1632,7 @@ for a client that cannot run, and LG's Home comes back for one that cannot stay 
   "Luna service rejected the command"). The owner can take the tile off the home screen, so
   `homeClientRegistration` asks sam (`getAppInfo`, which answers an unknown id with "Invalid appId") at every switch-on
   and start, ahead of any kept probe verdict. `com.tvweb.native` is deleted at start.
-- *The probe.* `nativetv-tv --probe` (platform/probe.hpp) opens the client's window and context, draws one frame and reads a
+- *The probe.* `rootedtv-tv --probe` (platform/probe.hpp) opens the client's window and context, draws one frame and reads a
   pixel back. `home_probe_gate` runs it, through `jailer` as `deploy.py` starts the client where there is one, with a
   15 s limit, and exit 10 and 11 tried again (the display may still be coming up). The orchestrator's `supported` is the webOS
   version, the app and the probe; the switch-on route probes afresh, the server's start and the boot hook's `--takeover-home` use a
@@ -1674,7 +1674,7 @@ snapshot values for an earlier Home or idle app are restored too. Switching
 off repeats this cleanup, including from the SSH recovery command.
 
 The layout lives in `home.json`, set by the dashboards' Home sections, and is re-read when the file changes, so `tvwebctl
-restore-nativetv-home` over SSH is seen by a running server.
+restore-rootedtv-home` over SSH is seen by a running server.
 
 Profiles keep one layout each. The layout at the top of `home.json` is the one of the profile in use (`profile`), so
 everything that reads or saves the layout is unchanged; `profiles` holds each profile's `id`, `name`, `color` and, for those not

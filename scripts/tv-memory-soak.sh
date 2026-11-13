@@ -5,7 +5,7 @@
 # follows the last sample, and `--summary FILE` prints one for a file that is still being
 # written (a run of 24 hours can be read at any point).
 #
-#   NATIVETV_SSH_KEY=~/.ssh/lg_tv_root NATIVETV_KNOWN_HOSTS=~/.ssh/lg_tv_known_hosts \
+#   ROOTEDTV_SSH_KEY=~/.ssh/lg_tv_root ROOTEDTV_KNOWN_HOSTS=~/.ssh/lg_tv_known_hosts \
 #     ./scripts/tv-memory-soak.sh <tv-ip> [--hours 24] [--interval 60] [--out FILE]
 #   ./scripts/tv-memory-soak.sh --summary FILE
 #
@@ -54,13 +54,13 @@ case "$HOURS$INTERVAL" in ''|*[!0-9]*) echo "--hours and --interval take whole n
 [ -n "$OUT" ] || OUT="tv-memory-soak-$(date +%Y%m%d-%H%M%S).log"
 
 SSH_OPTS=(-o ConnectTimeout=6 -o BatchMode=yes)
-[ -n "${NATIVETV_SSH_KEY:-}" ] && SSH_OPTS+=(-i "$NATIVETV_SSH_KEY" -o IdentitiesOnly=yes)
-[ -n "${NATIVETV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$NATIVETV_KNOWN_HOSTS")
+[ -n "${ROOTEDTV_SSH_KEY:-}" ] && SSH_OPTS+=(-i "$ROOTEDTV_SSH_KEY" -o IdentitiesOnly=yes)
+[ -n "${ROOTEDTV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$ROOTEDTV_KNOWN_HOSTS")
 
 # Runs on the TV: busybox ash.
 sample() {
   ssh "${SSH_OPTS[@]}" "root@$TV" 'sh -s' <<'EOF' 2>/dev/null
-pid=$(cat /var/run/tvweb.pid 2>/dev/null); [ -d /proc/$pid ] || pid=$(ps -eo pid,args | grep 'nativetv-daemon --config' | grep -v grep | awk '{print $1; exit}')
+pid=$(cat /var/run/tvweb.pid 2>/dev/null); [ -d /proc/$pid ] || pid=$(ps -eo pid,args | grep 'rootedtv-daemon --config' | grep -v grep | awk '{print $1; exit}')
 [ -d /proc/$pid ] || { echo "no server"; exit 0; }
 kids=0; for st in /proc/[0-9]*/stat; do read -r c _ _ pp _ < $st 2>/dev/null || continue; [ "$pp" = "$pid" ] && kids=$((kids+1)); done
 echo "pid=$pid rss_kB=$(awk '/^VmRSS/{print $2}' /proc/$pid/status) hwm_kB=$(awk '/^VmHWM/{print $2}' /proc/$pid/status) threads=$(ls /proc/$pid/task | wc -l) fds=$(ls /proc/$pid/fd | wc -l) children=$kids load=$(cut -d' ' -f1 /proc/loadavg)"

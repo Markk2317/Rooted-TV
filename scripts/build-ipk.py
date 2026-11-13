@@ -15,7 +15,7 @@ one list. Nothing else goes in - in particular no config.json,
 which can hold a broker password.
 The ARM daemon runtime and the native OpenGL client (the dashboard tile and the
 splash) are required; --native-build selects their shared build directory
-(native-tv/build-webos by default).
+(rooted-tv/build-webos by default).
 
     scripts/build-ipk.py            -> dist/<id>_<version>_all.ipk
                                        dist/<id>.manifest.json
@@ -34,18 +34,18 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-NATIVE = os.path.join(ROOT, 'native-tv')
+NATIVE = os.path.join(ROOT, 'rooted-tv')
 LIFECYCLE = os.path.join(NATIVE, 'lifecycle')
 WEB = os.path.join(NATIVE, 'web')
 HBC = os.path.join(ROOT, 'hbc')
 DIST = os.path.join(ROOT, 'dist')
 
-APP_ID = 'io.github.ihtisham1211.nativetv'
+APP_ID = 'io.github.markk2317.rootedtv'
 TITLE = 'Rooted TV'
 DESCRIPTION = 'Your TV, your rules. Dashboard, privacy controls and Home Assistant bridge for rooted LG TVs'
-REPO = 'https://github.com/ihtisham1211/native-tv'
+REPO = 'https://github.com/Markk2317/Rooted-TV'
 ICON_URI = (REPO.replace('github.com', 'raw.githubusercontent.com') +
-            '/main/native-tv/assets/dashboard-app/assets/icon130.png')
+            '/main/rooted-tv/assets/dashboard-app/assets/icon130.png')
 
 EXECUTABLE = re.compile(r'(\.sh$|/tvwebctl$|^tvwebctl$)')
 
@@ -60,7 +60,7 @@ def deploy_files():
         src = source.read()
     m = re.search(r'^FILES="(.*?)"', src, re.M | re.S)
     if not m:
-        sys.exit('no FILES list in native-tv/lifecycle/deploy.sh')
+        sys.exit('no FILES list in rooted-tv/lifecycle/deploy.sh')
     return m.group(1).replace('\\\n', ' ').split()
 
 
@@ -100,11 +100,11 @@ def inline_ui_scripts(html):
 
 def stage(app, ver, native_build=None):
     """Lay out the app directory ares-package is given."""
-    native_build = native_build or os.path.join(ROOT, 'native-tv/build-webos')
-    if not os.path.isfile(os.path.join(native_build, 'nativetv-tv')):
-        raise ValueError('Build the native webOS client first with native-tv/build.py --sdk SDK '
+    native_build = native_build or os.path.join(ROOT, 'rooted-tv/build-webos')
+    if not os.path.isfile(os.path.join(native_build, 'rootedtv-tv')):
+        raise ValueError('Build the native webOS client first with rooted-tv/build.py --sdk SDK '
                          '(without --service-only)')
-    spec = importlib.util.spec_from_file_location('runtime_payload', os.path.join(ROOT, 'native-tv/tools/runtime_payload.py'))
+    spec = importlib.util.spec_from_file_location('runtime_payload', os.path.join(ROOT, 'rooted-tv/tools/runtime_payload.py'))
     runtime = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(runtime)
     runtime.stage(native_build, os.path.join(app, 'payload/tvweb/native'))
@@ -151,8 +151,8 @@ def stage(app, ver, native_build=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--native-build', default=os.path.join(ROOT, 'native-tv/build-webos'),
-                        help='Required ARM daemon/client build directory (default: native-tv/build-webos)')
+    parser.add_argument('--native-build', default=os.path.join(ROOT, 'rooted-tv/build-webos'),
+                        help='Required ARM daemon/client build directory (default: rooted-tv/build-webos)')
     args = parser.parse_args()
     ver = version()
     ares = os.environ.get('ARES_PACKAGE') or shutil.which('ares-package')

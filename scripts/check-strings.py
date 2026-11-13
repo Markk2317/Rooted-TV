@@ -7,7 +7,7 @@ Every string shown is written in English where it is used, with a key:
     <div data-t="server.status">Server status</div>
     t('server.install', 'Install v{version}', { version: v })
 
-and every message the daemon sends a page, in native-tv/src:
+and every message the daemon sends a page, in rooted-tv/src:
 
     say::msg("srv.install.busy", "an install is already running")
 
@@ -23,7 +23,7 @@ Fails on:
     of a page already converted (CONVERTED below)
   * a local variable named t in a page that uses t(), which would hide it
   * a page that uses keys but loads no script that defines t()
-  * a dictionary (native-tv/assets/i18n/<lang>.json) that does not parse, holds a key
+  * a dictionary (rooted-tv/assets/i18n/<lang>.json) that does not parse, holds a key
     nothing uses, an entry without "text" and "from", a translation whose
     {placeholders} or markup differ from the English it was made from, a language
     the loader (web/ui/i18n.js) does not list (unless the TV client alone speaks it,
@@ -40,11 +40,11 @@ translation), and keys a language has no entry for.
 import html.parser, json, pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ASSETS = ROOT / 'native-tv' / 'web'
+ASSETS = ROOT / 'rooted-tv' / 'web'
 # The browser dashboard. The TV pages (google-tv/pages/) are English only.
 PAGES = ['ui.html']
 # The dictionaries the loader fetches, and the loader that lists them.
-LANG_DIR = ROOT / 'native-tv' / 'assets' / 'i18n'
+LANG_DIR = ROOT / 'rooted-tv' / 'assets' / 'i18n'
 LOADER = ASSETS / 'ui' / 'i18n.js'
 # Languages only the TV client speaks, in the TV's language: the client and the daemon read their
 # files, and the dashboard does not offer them until its own strings are translated.
@@ -338,7 +338,7 @@ def cpp_literals(src, i):
 
 
 # The daemon's messages, and the TV client's own words (src/ui and the models it shares).
-SERVER = sorted((ROOT / 'native-tv' / 'src').rglob('*.cpp'))
+SERVER = sorted((ROOT / 'rooted-tv' / 'src').rglob('*.cpp'))
 for path in SERVER:
     src = path.read_text(encoding='utf-8')
     if 'msg(' not in src and '"srv.' not in src:

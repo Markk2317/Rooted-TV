@@ -3,7 +3,7 @@
   "title": "YouTube",
   "type": "web",
   "main": "../start.html",
-  "icon": "../../../native-tv/assets/dashboard-app/assets/icon130.png",
+  "icon": "../../../rooted-tv/assets/dashboard-app/assets/icon130.png",
   "version": "1.0.0",
   "vendor": "Rooted TV"
 }

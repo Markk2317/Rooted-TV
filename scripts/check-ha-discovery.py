@@ -8,7 +8,7 @@ it, logging the reason only on its own side. Since 0.78.0 it rejected Volume,
 Mute, Volume Up and Volume Down (#437), which carried an availability list
 and the flat availability_topic together, and no check here asked it. This
 runs each config in the daemon's discovery golden
-(native-tv/tests/fixtures/ha-golden.json, held equal to what the daemon
+(rooted-tv/tests/fixtures/ha-golden.json, held equal to what the daemon
 publishes by the native-ha-golden test) through Home Assistant's own MQTT
 discovery schemas, then renders the volume entities' availability
 templates in each case of telemetry's volume_control, and every template that
@@ -39,8 +39,8 @@ except ImportError:
     sys.exit('needs the homeassistant package: pip install homeassistant')
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-GOLDEN = ROOT / 'native-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
-FIXTURES = ROOT / 'native-tv' / 'tests' / 'fixtures' / 'tv'
+GOLDEN = ROOT / 'rooted-tv' / 'tests' / 'fixtures' / 'ha-golden.json'
+FIXTURES = ROOT / 'rooted-tv' / 'tests' / 'fixtures' / 'tv'
 
 # What each volume entity's own availability says, by volume_control. None
 # is telemetry from a server too old to send it.

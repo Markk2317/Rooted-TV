@@ -59,10 +59,10 @@ For setting up multiple TVs from one computer or keeping settings under version 
 From the repository root:
 
 ```bash
-cp config.example.json native-tv/lifecycle/config.json
+cp config.example.json rooted-tv/lifecycle/config.json
 ```
 
-Set the broker details under `mqtt` and set `enabled` to `true`, then run `native-tv/lifecycle/deploy.sh <tv-ip>`. Leaving `device.name` and `device.model` empty lets the TV report its own model and firmware at runtime.
+Set the broker details under `mqtt` and set `enabled` to `true`, then run `rooted-tv/lifecycle/deploy.sh <tv-ip>`. Leaving `device.name` and `device.model` empty lets the TV report its own model and firmware at runtime.
 
 `deploy.sh` only installs this file if the TV does not already have one, preventing settings saved from the dashboard from being overwritten. To replace an existing configuration, edit it through the dashboard or remove `/var/lib/tvweb/config.json` first.
 
@@ -70,7 +70,7 @@ Set the broker details under `mqtt` and set `enabled` to `true`, then run `nativ
 
 Each TV on the same broker needs a unique `topicPrefix` and `device.id`, otherwise they overwrite each other's state and disconnect each other. Both are editable from each TV's own dashboard.
 
-For config-file deployments, `deploy.sh` checks for `native-tv/lifecycle/config.<tv-ip>.json` before falling back to `native-tv/lifecycle/config.json`, keeping per-TV settings from being overwritten by a shared file.
+For config-file deployments, `deploy.sh` checks for `rooted-tv/lifecycle/config.<tv-ip>.json` before falling back to `rooted-tv/lifecycle/config.json`, keeping per-TV settings from being overwritten by a shared file.
 
 ### Which settings live where?
 

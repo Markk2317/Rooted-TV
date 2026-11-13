@@ -43,7 +43,7 @@
     "server": "",
     "port": 514,
     "hostname": "",
-    "sources": ["system", "nativetv"],
+    "sources": ["system", "rootedtv"],
     "redact": true
   },
   "device": {

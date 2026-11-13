@@ -1,9 +1,9 @@
 #!/bin/bash
 # Which threads of the server wake the CPU while the TV sits idle: context switches a second
-# per thread of nativetv-daemon, and the total. A thread near 20 a second is a 50 ms poll loop.
+# per thread of rootedtv-daemon, and the total. A thread near 20 a second is a 50 ms poll loop.
 # Reads /proc over SSH; nothing on the TV is changed.
 #
-#   NATIVETV_SSH_KEY=~/.ssh/lg_tv_root NATIVETV_KNOWN_HOSTS=~/.ssh/lg_tv_known_hosts \
+#   ROOTEDTV_SSH_KEY=~/.ssh/lg_tv_root ROOTEDTV_KNOWN_HOSTS=~/.ssh/lg_tv_known_hosts \
 #     ./scripts/tv-wakeups.sh <tv-ip> [--seconds 20]
 
 set -u
@@ -21,14 +21,14 @@ done
 case "$SECS" in ''|*[!0-9]*) echo "--seconds takes a whole number" >&2; exit 2 ;; esac
 
 SSH_OPTS=(-o ConnectTimeout=6 -o BatchMode=yes)
-[ -n "${NATIVETV_SSH_KEY:-}" ] && SSH_OPTS+=(-i "$NATIVETV_SSH_KEY" -o IdentitiesOnly=yes)
-[ -n "${NATIVETV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$NATIVETV_KNOWN_HOSTS")
+[ -n "${ROOTEDTV_SSH_KEY:-}" ] && SSH_OPTS+=(-i "$ROOTEDTV_SSH_KEY" -o IdentitiesOnly=yes)
+[ -n "${ROOTEDTV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$ROOTEDTV_KNOWN_HOSTS")
 
 # Runs on the TV: busybox ash, so arithmetic goes through awk.
 ssh "${SSH_OPTS[@]}" "root@$TV" "SECS=$SECS sh -s" <<'EOF'
 pid=$(cat /var/run/tvweb.pid 2>/dev/null)
 [ -n "$pid" ] && [ -d "/proc/$pid" ] ||
-  pid=$(ps -eo pid,args | grep 'nativetv-daemon --config' | grep -v grep | awk '{print $1; exit}')
+  pid=$(ps -eo pid,args | grep 'rootedtv-daemon --config' | grep -v grep | awk '{print $1; exit}')
 [ -n "$pid" ] || { echo "the server is not running"; exit 1; }
 snap() {
   for t in /proc/$pid/task/*; do

@@ -21,7 +21,7 @@ Log forwarding is set up in `/var/lib/tvweb/config.json` on the TV, followed by 
   "server": "logs.lan",
   "port": 514,
   "hostname": "",
-  "sources": ["system", "nativetv"],
+  "sources": ["system", "rootedtv"],
   "redact": true
 }
 ```
@@ -29,7 +29,7 @@ Log forwarding is set up in `/var/lib/tvweb/config.json` on the TV, followed by 
 * **server**: the log server's name or address. Empty turns forwarding off.
 * **port**: where it listens, 514 unless it says otherwise.
 * **hostname**: the name the TV's lines arrive under. Empty uses the TV's device name.
-* **sources**: which logs to send. `system` is the TV's own log, `nativetv` is Rooted TV's, and `kernel` is the TV's kernel log, which means reading it every 30 seconds, so it is off unless listed.
+* **sources**: which logs to send. `system` is the TV's own log, `rootedtv` is Rooted TV's, and `kernel` is the TV's kernel log, which means reading it every 30 seconds, so it is off unless listed.
 * **redact**: removes addresses, credentials and postcodes, as the Tools tab's copy and export do. The TV's own logs include the owner's postcode, so this stays on unless there is a reason to turn it off.
 
 Lines go as standard syslog (RFC 5424) over UDP, one line each. With Alloy, `loki.source.syslog` with `syslog_format = "rfc5424"` takes them.

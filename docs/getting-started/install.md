@@ -7,26 +7,34 @@ description: "Install Rooted TV on a rooted LG webOS TV: install the release pac
 
 ## Install a release (no build)
 
-Each [release](https://github.com/ihtisham1211/native-tv/releases) carries the Homebrew Channel package, an `.ipk` of about 12 MB. Installing it needs no SDK, compiler or Git.
+Each [release](https://github.com/Markk2317/Rooted-TV/releases) carries `rooted-tv-<version>.tar.gz`: the ARM server and the TV app already built, with `deploy.sh` to send them. Installing it needs no SDK, compiler, Python or Git, only a computer on the TV's network with Bash, SSH and `tar`.
 
 1. Root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel).
-2. Download `io.github.ihtisham1211.nativetv_<version>_all.ipk` from the [latest release](https://github.com/ihtisham1211/native-tv/releases/latest).
-3. Install it on the TV with [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) or `ares-install`.
-4. Open the Rooted TV app on the TV. It puts the server in place, starts it and opens the dashboard; the first run starts the [setup wizard](#option-1-on-screen-setup-in-the-tv-app).
+2. Download `rooted-tv-<version>.tar.gz` from the [latest release](https://github.com/Markk2317/Rooted-TV/releases/latest) and unpack it:
 
-[Managing](managing.md) covers updating a package install. The rest of this page, from the quick start on, builds the server from a clone and installs it over SSH instead.
+   ```bash
+   tar -xzf rooted-tv-<version>.tar.gz && cd rooted-tv-<version>
+   ```
+
+3. Send it to the TV, with the TV's root SSH key in `ROOTEDTV_SSH_KEY` when it is not one of the computer's own keys:
+
+   ```bash
+   ROOTEDTV_SSH_KEY=~/.ssh/lgtv_root bash deploy.sh <tv-ip> --bundle=bundle.tar
+   ```
+
+4. Open the Rooted TV tile on the TV. It starts the server and the first run starts the [setup wizard](#option-1-on-screen-setup-in-the-tv-app).
+
+The same command updates a TV that has Rooted TV, keeping its settings. The rest of this page, from the quick start on, builds the server from a clone instead.
 
 ## Quick start
 
 1. Root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel).
 2. Clone this repository on a computer on the same network as the TV.
 3. Build the ARM server and TV app with the webOSbrew SDK, as described below.
-4. Run `native-tv/lifecycle/deploy.sh <tv-ip>` from the repository root.
+4. Run `rooted-tv/lifecycle/deploy.sh <tv-ip>` from the repository root.
 5. Open `http://<tv-ip>:8080/` in a browser.
 
 That's it. The dashboard is ready to use.
-
-An AI coding assistant can run these steps: the [README](https://github.com/ihtisham1211/native-tv#install-with-an-ai-assistant) has a prompt to give it and the rules it follows.
 
 ## Requirements
 
@@ -47,13 +55,13 @@ The models confirmed so far are listed under [Tested TVs](tested-tvs.md). LG nam
 Download the project onto a computer on the same network as the TV.
 
 ```bash
-git clone https://github.com/ihtisham1211/native-tv.git
-cd native-tv
+git clone https://github.com/Markk2317/Rooted-TV.git
+cd Rooted-TV
 ```
 
 ### 2. Install the dashboard
 
-Find the TV's address under Settings → Network on the TV, or in the router's list of devices. The installer uses SSH when key-based login to `root@<tv-ip>` works (the computer's own keys, or the key named by `NATIVETV_SSH_KEY` in `~/.config/nativetv/deploy.env`), and otherwise falls back to the Homebrew Channel's telnet. It never asks for an SSH password.
+Find the TV's address under Settings → Network on the TV, or in the router's list of devices. The installer uses SSH when key-based login to `root@<tv-ip>` works (the computer's own keys, or the key named by `ROOTEDTV_SSH_KEY` in `~/.config/rootedtv/deploy.env`), and otherwise falls back to the Homebrew Channel's telnet. It never asks for an SSH password.
 
 > [!CAUTION]
 > Rooting an LG TV will often open an unauthenticated telnet server by default, leaving a root shell open on the local network. It is good practice to turn telnet off and turn SSH on, for more secure access — [moving from telnet to SSH](../administration/security.md#moving-from-telnet-to-ssh) takes about five minutes and is strongly recommended.
@@ -80,17 +88,17 @@ other computer the SDK does not run, and the server cannot be built there.
 Build the server and the TV app from the repository root:
 
 ```bash
-python3 native-tv/build.py --sdk ~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot
+python3 rooted-tv/build.py --sdk ~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot
 ```
 
 If the computer lacks a tool, or the SDK is not relocated, `build.py` says so, and what to
 install, before it starts; `--check` does only that check. Do not add `--service-only`: it
 leaves out the TV app, which `deploy.sh` packages too, so the deploy would stop.
 
-The default output is `native-tv/build-webos`. A different build directory can
+The default output is `rooted-tv/build-webos`. A different build directory can
 be selected with `--native-build=DIR` during deployment. Missing or invalid ARM
 builds fail locally before connecting to the TV. The server is the native
-`nativetv-daemon`; no Node runs on the TV. webOS 3.4 is the oldest supported
+`rootedtv-daemon`; no Node runs on the TV. webOS 3.4 is the oldest supported
 version (webOS 2.2 and older webOS 3 releases are untried). Hardware acceptance currently
 covers a B3 on webOS 10.3.2 and a 2016 C6 on webOS 3.4.3. webOS 3.4 runs no root hook at
 boot, so there the server starts once the Rooted TV tile or the Homebrew Channel is opened after
@@ -104,13 +112,13 @@ the server as the TV is next switched on
 Then, from the repository root in a terminal:
 
 ```bash
-native-tv/lifecycle/deploy.sh <tv-ip>
+rooted-tv/lifecycle/deploy.sh <tv-ip>
 ```
 
 For example:
 
 ```bash
-native-tv/lifecycle/deploy.sh 192.168.1.50
+rooted-tv/lifecycle/deploy.sh 192.168.1.50
 ```
 
 The script takes about ten seconds to copy the server files and verify that the service is running. Once complete:
@@ -156,7 +164,7 @@ Any choice made during setup can be changed at any time from the TV app's **Sett
 
 For headless installs, multi-TV households, or users who prefer configuring files directly, Rooted TV reads its settings from `/var/lib/tvweb/config.json` on the TV.
 
-To pre-configure a TV before installation, create a `native-tv/lifecycle/config.json` file (or `native-tv/lifecycle/config.<tv-ip>.json` if deploying to multiple TVs) in your cloned repository before running `deploy.sh`. The installer automatically seeds the TV with that configuration on first deploy, and a first deploy also shows the setup screens on the TV the first time its app is opened.
+To pre-configure a TV before installation, create a `rooted-tv/lifecycle/config.json` file (or `rooted-tv/lifecycle/config.<tv-ip>.json` if deploying to multiple TVs) in your cloned repository before running `deploy.sh`. The installer automatically seeds the TV with that configuration on first deploy, and a first deploy also shows the setup screens on the TV the first time its app is opened.
 
 #### Core settings
 
@@ -211,15 +219,15 @@ Advanced settings can be adjusted in `config.json` or through the dashboard's Se
 
 #### Command-line flags
 
-**Installer flags (`native-tv/lifecycle/deploy.sh <tv-ip> [flags]`)**:
+**Installer flags (`rooted-tv/lifecycle/deploy.sh <tv-ip> [flags]`)**:
 
 * `--app`: Ensure the Rooted TV app tile is installed on the TV home screen.
 * `--no-app`: Omit installing the TV app tile (runs the background server only).
 * `--telnet`: Force connection over telnet even if SSH is available.
 * `--no-persist`: Run the server only until the next TV reboot (skips the boot persistence hook).
-* `--native-build=DIR`: Select the required ARM service build; defaults to `native-tv/build-webos` relative to the repository root.
+* `--native-build=DIR`: Select the required ARM service build; defaults to `rooted-tv/build-webos` relative to the repository root.
 
-**Daemon flags (`nativetv-daemon [flags]`)**:
+**Daemon flags (`rootedtv-daemon [flags]`)**:
 
 Used when running the server directly in testing or custom scripts; on the TV `tvwebctl` starts it:
 
@@ -234,6 +242,6 @@ Logging verbosity is the `logging.level` setting (`quiet`, `info` or `debug`); t
 
 ## Troubleshooting
 
-* **Connection refused during install.** The installer tries key-based SSH first, then telnet, and never prompts for an SSH password. If SSH has no key for the TV, make sure telnet is toggled **ON** in the TV's Homebrew Channel app settings, or run `native-tv/lifecycle/deploy.sh <tv-ip> --telnet` to connect directly over telnet.
+* **Connection refused during install.** The installer tries key-based SSH first, then telnet, and never prompts for an SSH password. If SSH has no key for the TV, make sure telnet is toggled **ON** in the TV's Homebrew Channel app settings, or run `rooted-tv/lifecycle/deploy.sh <tv-ip> --telnet` to connect directly over telnet.
 * **Nothing on port 8080.** On the TV, `/var/lib/tvweb/tvwebctl status` says whether the server is running and `/var/lib/tvweb/tvweb.log` says why it is not.
-* **Panel hours and OLED Care missing on an OLED TV**, or showing on an LCD one. Panel detection went the wrong way: set `"panel": "oled"` or `"panel": "lcd"` in `native-tv/lifecycle/config.json` before a first deploy, or in `/var/lib/tvweb/config.json` on a TV that already has one.
+* **Panel hours and OLED Care missing on an OLED TV**, or showing on an LCD one. Panel detection went the wrong way: set `"panel": "oled"` or `"panel": "lcd"` in `rooted-tv/lifecycle/config.json` before a first deploy, or in `/var/lib/tvweb/config.json` on a TV that already has one.

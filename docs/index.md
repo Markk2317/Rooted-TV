@@ -2,7 +2,7 @@
 description: "Open-source dashboard, privacy controls and Home Assistant MQTT bridge for rooted LG webOS TVs. Turn off ACR and ads, debloat apps, protect OLED panels, remap the remote."
 ---
 
-<p align="center"><img src="logo/nativetv-512.png" width="112" alt="Rooted TV logo: an n whose arch is a screen corner, with a green pixel"></p>
+<p align="center"><img src="logo/rootedtv-512.png" width="112" alt="Rooted TV logo: an n whose arch is a screen corner, with a green pixel"></p>
 
 # Rooted TV
 
@@ -63,7 +63,7 @@ Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv).
 * **Panels**: OLED (panel wear telemetry and burn-in controls) and LCD (the OLED Care tab hides itself).
 * **Access**: rooted with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel), over SSH or telnet. The TV needs no internet access.
 
-Rooted TV running on a model that is not listed? A [TV report](https://github.com/ihtisham1211/native-tv/issues/new?template=tv_report.md) with the model and webOS version adds it to the table.
+Rooted TV running on a model that is not listed? A [TV report](https://github.com/Markk2317/Rooted-TV/issues/new?template=tv_report.md) with the model and webOS version adds it to the table.
 
 ## Disclaimer
 
@@ -72,15 +72,15 @@ Rooted TV running on a model that is not listed? A [TV report](https://github.co
 * **Root access and hardware.** This runs custom software with `root` privileges on an embedded TV OS. It is designed to be lightweight and to leave the read-only rootfs untouched, but the author accepts **no responsibility** for damage, bootloops, bricked devices, voided warranties, data loss or panel issues.
 * **Power and control commands.** Reboot, power off, screen blanking and Pixel Refresher scheduling issue low-level `luna-send` calls. Understand what each does before using it.
 * **Trademarks.** An independent, unofficial community project, not affiliated with or endorsed by LG Electronics. webOS is a trademark of LG Electronics.
-* **Third-party components.** Fonts, icons and libraries keep their own licences, listed in [THIRD-PARTY-NOTICES.md](https://github.com/ihtisham1211/native-tv/blob/main/THIRD-PARTY-NOTICES.md).
+* **Third-party components.** Fonts, icons and libraries keep their own licences, listed in [THIRD-PARTY-NOTICES.md](https://github.com/Markk2317/Rooted-TV/blob/main/THIRD-PARTY-NOTICES.md).
 
 ## License
 
-MIT. See [LICENSE](https://github.com/ihtisham1211/native-tv/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/Markk2317/Rooted-TV/blob/main/LICENSE).
 
 ## Credits
 
-Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv); the original copyright notices are kept in [LICENSE](https://github.com/Markk2317/-/blob/main/LICENSE). The dashboard's Spanish reuses [Glasshouse](https://github.com/rorygallagher2024/glasshouse)'s translations, which are MIT. Bundled third-party work, with its licence ([THIRD-PARTY-NOTICES.md](https://github.com/Markk2317/-/blob/main/THIRD-PARTY-NOTICES.md) has the texts):
+Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv); the original copyright notices are kept in [LICENSE](https://github.com/Markk2317/Rooted-TV/blob/main/LICENSE). The dashboard's Spanish reuses [Glasshouse](https://github.com/rorygallagher2024/glasshouse)'s translations, which are MIT. Bundled third-party work, with its licence ([THIRD-PARTY-NOTICES.md](https://github.com/Markk2317/Rooted-TV/blob/main/THIRD-PARTY-NOTICES.md) has the texts):
 
 * [CivetWeb](https://github.com/civetweb/civetweb): the HTTP server (MIT)
 * [json-c](https://github.com/json-c/json-c): JSON, from the webOSbrew SDK (MIT)

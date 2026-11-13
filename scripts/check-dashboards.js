@@ -7,13 +7,13 @@
  * that is gone, or an element it reaches for that has moved, shows only when
  * that tab opens in a browser. The daemon runs as on a TV with no Node
  * (TVWEB_NODE_FREE=1), with LG's luna-send answered by the native-fake-luna-send
- * the build makes beside it, and the system snapshot of native-tv/tests/fixtures.
+ * the build makes beside it, and the system snapshot of rooted-tv/tests/fixtures.
  *
  * Needs Playwright and its Chromium, which CI installs for this job alone:
  *
  *   npm install --no-save playwright && npx playwright install chromium
- *   node scripts/check-dashboards.js     (after python3 native-tv/build.py --service-only;
- *                                         NATIVETV_DAEMON names another build)
+ *   node scripts/check-dashboards.js     (after python3 rooted-tv/build.py --service-only;
+ *                                         ROOTEDTV_DAEMON names another build)
  *
  * BROWSER_CHANNEL=chrome uses an installed Chrome instead, with playwright-core
  * alone, as CI does: its runners have Chrome, which saves the download.
@@ -35,14 +35,14 @@ try { chromium = require('playwright').chromium; } catch (e) {
 }
 
 const ROOT = path.join(__dirname, '..');
-const ASSETS = path.join(ROOT, 'native-tv', 'assets');
-const WEB = path.join(ROOT, 'native-tv', 'web');
+const ASSETS = path.join(ROOT, 'rooted-tv', 'assets');
+const WEB = path.join(ROOT, 'rooted-tv', 'web');
 
 // The TV pages, on the design system.
 const PAGES = { dashboard: '/assets/google-tv/pages/dashboard/index.html' };
 function option(name) { const i = process.argv.indexOf(name); return i === -1 ? null : process.argv[i + 1]; }
 async function review(page, name) {
-  const dir = option('--review-dir') || process.env.NATIVETV_REVIEW_DIR;
+  const dir = option('--review-dir') || process.env.ROOTEDTV_REVIEW_DIR;
   if (!dir) return;
   fs.mkdirSync(dir, { recursive: true });
   await page.screenshot({ path: path.join(dir, name + '.png') });
@@ -75,12 +75,12 @@ function answers(port) {
 }
 
 async function startServer() {
-  const daemon = process.env.NATIVETV_DAEMON || path.join(ROOT, 'native-tv', 'build-host-ninja', 'nativetv-daemon');
+  const daemon = process.env.ROOTEDTV_DAEMON || path.join(ROOT, 'rooted-tv', 'build-host-ninja', 'rootedtv-daemon');
   const fake = path.join(path.dirname(daemon), 'native-fake-luna-send');
   if (!fs.existsSync(daemon) || !fs.existsSync(fake)) {
-    throw new Error('build the daemon first: python3 native-tv/build.py --service-only (or set NATIVETV_DAEMON)');
+    throw new Error('build the daemon first: python3 rooted-tv/build.py --service-only (or set ROOTEDTV_DAEMON)');
   }
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nativetv-dashboards-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rootedtv-dashboards-'));
   // The assets as deploy.sh lays them out on the TV: the TV pages and apps, and
   // the phone dashboard beside them.
   const assets = path.join(root, 'assets');
@@ -91,7 +91,7 @@ async function startServer() {
   fs.writeFileSync(path.join(root, 'system/var/luna/preferences/paneltype_oled'), '');
   fs.writeFileSync(path.join(root, 'system/etc/issue'), 'webOS 4.4.3\n');   // the B8 the fixtures are from
   // The same system snapshot every run, in place of a procfs read.
-  const system = JSON.parse(fs.readFileSync(path.join(ROOT, 'native-tv', 'tests', 'fixtures', 'system-metrics.json'), 'utf8')).expected;
+  const system = JSON.parse(fs.readFileSync(path.join(ROOT, 'rooted-tv', 'tests', 'fixtures', 'system-metrics.json'), 'utf8')).expected;
   fs.writeFileSync(path.join(root, 'native-system.json'), JSON.stringify(system));
   const port = await freePort();
   const cfg = path.join(root, 'config.json');
@@ -174,7 +174,7 @@ async function setHidden(page, hidden) {
 async function visitTVPolling(browser, base, problems) {
   const page = await browser.newPage();
   page.on('pageerror', e => problems.push('TV polling: ' + e.message));
-  const stats = JSON.parse(fs.readFileSync(path.join(ROOT, 'native-tv/tests/fixtures/tv/stats-b8-webos4.json'), 'utf8'));
+  const stats = JSON.parse(fs.readFileSync(path.join(ROOT, 'rooted-tv/tests/fixtures/tv/stats-b8-webos4.json'), 'utf8'));
   let reads = 0, hold = false, pending = null;
   await page.route('**/api/stats*', route => {
     reads++;
@@ -390,7 +390,7 @@ async function visitTVRendering(browser, base, problems) {
 async function visitTVFastStats(browser, base, problems) {
   const page = await browser.newPage();
   page.on('pageerror', e => problems.push('TV fast stats: ' + e.message));
-  const full = JSON.parse(fs.readFileSync(path.join(ROOT, 'native-tv/tests/fixtures/tv/stats-b8-webos4.json'), 'utf8'));
+  const full = JSON.parse(fs.readFileSync(path.join(ROOT, 'rooted-tv/tests/fixtures/tv/stats-b8-webos4.json'), 'utf8'));
   const urls = [];
   await page.route('**/api/stats*', route => {
     urls.push(route.request().url());
@@ -726,4 +726,4 @@ let serverOutput = () => '';
   console.log((filter ? 'Selected checks' : (web.length + tv.length) + ' tabs opened (' + web.length + ' web, ' + tv.length + ' TV app)') + ', ' +
               checked + ' regression groups checked, ' + problems.length + ' problem' + (problems.length === 1 ? '' : 's'));
   process.exit(problems.length ? 1 : 0);
-})().catch(e => { console.error(e.stack || e.message); const log = path.join(os.tmpdir(), 'nativetv-dashboards-daemon.log'); fs.writeFileSync(log, serverOutput()); console.error('--- daemon output: last lines below, all of it in ' + log + ' ---\n' + serverOutput().slice(-3000)); process.exit(1); });
+})().catch(e => { console.error(e.stack || e.message); const log = path.join(os.tmpdir(), 'rootedtv-dashboards-daemon.log'); fs.writeFileSync(log, serverOutput()); console.error('--- daemon output: last lines below, all of it in ' + log + ' ---\n' + serverOutput().slice(-3000)); process.exit(1); });
