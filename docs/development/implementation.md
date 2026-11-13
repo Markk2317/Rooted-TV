@@ -334,8 +334,9 @@ bar), and the Home button likewise. A screen that stepped a value calls
 ticks. `PulseSounds` (`platform/pulse_sounds`) opens `libpulse-simple.so.0` with `dlopen` and
 writes to the default sink, the TV's sound output
 ([research](tv-research.md#sound-from-a-native-app-c6-webos-343)): samples 6 dB down (Android's
-`config_soundEffectVolumeDb`), up to four at once, 40 ms ahead, and the stream closed after ten
-seconds without a tick so the output can go idle. Runs bounded by `--time` or `--duration-ms`
+`config_soundEffectVolumeDb`), up to four at once, 40 ms ahead, playing from the first 10 ms
+written, and the stream closed after ten seconds without a tick so the output can go idle. The
+banner's own position is in the snapshot, so Left and Right there tick as a focus move. Runs bounded by `--time` or `--duration-ms`
 play nothing. `systemSounds` in `config.json` (true unless set false) reaches the client in
 `/api/caps` and in `/api/stats?with=settings`, the System page that switches it with the
 `/api/control` action `systemSounds`.

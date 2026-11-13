@@ -1925,3 +1925,9 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   `peffects`, which it sets to 46 %. What `pcm_output` plays comes out at the TV's volume, beside
   the input's or app's own sound.
 - The TV's SDL 2 has the `pulseaudio` and `dummy` audio drivers.
+- `pcm_output` has a fixed latency (configured 92.9 ms: 16384-byte buffer, 4096-byte fragments),
+  so a stream asking for 40 ms gets a target length of about 113 ms, and PulseAudio's default
+  start level (`prebuf` left at -1) is about 103 ms. A 94 ms sound written alone then waits
+  in the buffer until the next one arrives, and the two play back to back; with `prebuf` at
+  10 ms each one plays at once (a recording of `pcm_output.monitor` with `parec` showed one tick
+  per key).

@@ -599,11 +599,19 @@ int main() {
                       banner.shows("A first film. And more.") && banner.shows("Watch now"),
                   "The focused banner moves its lines down, drops the rows by bannerDrop and adds "
                   "its logline and a Watch now button");
+            struct CountingSounds final : SystemSounds {
+                int ticks = 0;
+                void tick() override {
+                    ++ticks;
+                }
+            } bannerSounds;
+            banner.systemSounds(&bannerSounds);
             banner.key(Key::Right);
             at = run(banner, at, 1500);
             check(banner.snapshot()["heroFocus"].boolean() &&
-                      banner.snapshot()["heroTitle"].string() == "Banner Two",
-                  "Right on the banner shows its next title");
+                      banner.snapshot()["heroTitle"].string() == "Banner Two" && bannerSounds.ticks == 1,
+                  "Right on the banner shows its next title, with the tick of a focus move");
+            banner.systemSounds(nullptr);
             check(banner.shows("More info") && !banner.shows("Watch now"),
                   "A banner title on no known service offers More info");
             banner.key(Key::Down);

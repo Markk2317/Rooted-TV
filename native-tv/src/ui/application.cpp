@@ -496,6 +496,7 @@ Json Application::snapshot() const {
         value.set("rowKey", Json::text(home.row < home.rows.size() ? home.rows[home.row].key : ""));
         value.set("heroTitle", Json::text(home.art.text.title));
         value.set("slides", Json::numeric(home.spotlight.size()));
+        value.set("slide", Json::numeric(home.spotIndex));
         value.set("idle", Json::flag(flow_.idle));
         value.set("silent", Json::flag(state_.serverSilent));
         value.set("wallpaper", Json::text(

@@ -65,7 +65,11 @@ pa_simple *openStream(const Pulse &api) {
     const PaSampleSpec spec = {kSampleS16le, kRate, 2};
     // 40 ms ahead: short enough that a tick follows its key at once.
     const uint32_t ahead = static_cast<uint32_t>(kRate * 4 / 25);
-    const PaBufferAttr buffer = {static_cast<uint32_t>(-1), ahead, static_cast<uint32_t>(-1),
+    // Playback starts once one chunk is in. The C6's pcm_output has a fixed 93 ms latency, so the
+    // server stretches the 40 ms to about 113 ms, and the default start level (about 103 ms) is
+    // more than one 94 ms tick: each tick waited for the next and the two played together.
+    const uint32_t start = static_cast<uint32_t>(kChunkFrames * 2 * sizeof(int16_t));
+    const PaBufferAttr buffer = {static_cast<uint32_t>(-1), ahead, start,
                                  static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
     int error = 0;
     // The default server first, then webOS's system-wide one: an app's environment names none.
