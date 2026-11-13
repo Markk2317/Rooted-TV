@@ -1,6 +1,6 @@
 ---
-title: Security of a rooted LG webOS TV running Native Tv
-description: "How Native Tv protects itself on a rooted LG TV: the access token, closing the port, MQTT and moving from telnet to SSH."
+title: Security of a rooted LG webOS TV running Rooted TV
+description: "How Rooted TV protects itself on a rooted LG TV: the access token, closing the port, MQTT and moving from telnet to SSH."
 ---
 
 # Security
@@ -45,7 +45,7 @@ it before exposing it more widely.
   While the PIN is still the default 0000 the sign-in is refused: anyone on
   the network could type it, which would turn the token into nothing. The link
   or QR code on the TV keeps working either way.
-- **The Tools tab shows the TV's logs** - its system log, Native Tv's own and,
+- **The Tools tab shows the TV's logs** - its system log, Rooted TV's own and,
   if asked, the kernel's - to whoever can reach the dashboard, as `/api/logs`.
   They name the apps in use, the network and the broker the TV talks to. A
   token gates them with the rest of the API.
@@ -170,7 +170,7 @@ manifest from `github.com/ihtisham1211/native-tv` over HTTPS. GitHub sees the
 TV's address and the `tvweb/<version>` the request names; no other identifier is
 sent. The answer is only shown: the version and the package's SHA-256 are read
 from it, and the links offered are built from that version, never taken from the
-manifest. The installer still refuses Native Tv's own package, so a release
+manifest. The installer still refuses Rooted TV's own package, so a release
 cannot install itself; it is installed from the Homebrew Channel.
 
 ## Moving from telnet to SSH
@@ -288,7 +288,7 @@ single biggest improvement you can make.
 
 ## Home title details, search and Netflix links
 
-A configured TMDB key (set in the dashboard's Native Tv Home tab or as `tmdbKey` in `config.json`;
+A configured TMDB key (set in the dashboard's Rooted TV Home tab or as `tmdbKey` in `config.json`;
 the dashboard never shows it again) enables on-demand title details and search. The server
 sends the selected movie/series ID or the entered search query to
 `api.themoviedb.org`, with the owner's API key and the TV's menu language (`it-IT`,
@@ -309,7 +309,7 @@ details ask for its watch providers with the same code. A profile's watchlist an
 on the TV; liking a title asks TMDB for nothing new, since its similar titles come from the
 details already read.
 
-A configured YouTube key (set in the dashboard's Native Tv Home tab or as `youtubeKey` in
+A configured YouTube key (set in the dashboard's Rooted TV Home tab or as `youtubeKey` in
 `config.json`; the dashboard never shows it again) makes the same refresh ask
 `www.googleapis.com`, over HTTPS, for the most popular videos, with the key. The key is saved
 as 20 to 100 letters, digits, `-` and `_`, and nothing else is sent with it but the TV's

@@ -46,7 +46,7 @@ HomeOpenPlan planHomeServiceOpen(const std::string &service, const Json &apps);
 bool resolveHomeCatalogueOpen(HomeOpenPlan &plan, const Json &ids, const std::string &type);
 void resolveHomeServiceOpen(HomeOpenPlan &plan, const Json &lookup, const std::string &type = "");
 
-// An opened row is recorded only while Native Tv Home is on and the row sorts
+// An opened row is recorded only while Rooted TV Home is on and the row sorts
 // by Last opened.
 bool homeOpenStampWanted(const Json &document, const std::string &row);
 

@@ -48,7 +48,7 @@ struct NativeRemoteKeysWriteResult {
 };
 
 // True when the installed JavaScript compositor filters name a key supported
-// by Native Tv. False on webOS 11 native-filter firmware.
+// by Rooted TV. False on webOS 11 native-filter firmware.
 bool hasJavaScriptRemoteKeys(const std::string &systemRoot);
 
 // Installs the bundled compositor filter at the path referenced by configd.

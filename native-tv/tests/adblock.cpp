@@ -315,18 +315,18 @@ int main() {
     {
         const std::vector<std::string> names = {"ad.example.com", "gb.ad.example.com"};
         check(adBlockExport("hosts", names) ==
-                  "# Native Tv block list: 2 names\n0.0.0.0 ad.example.com\n"
+                  "# Rooted TV block list: 2 names\n0.0.0.0 ad.example.com\n"
                   "0.0.0.0 gb.ad.example.com\n",
               "the hosts export is 0.0.0.0 lines under a comment");
         check(adBlockExport("pihole", names) ==
-                  "# Native Tv block list: 2 names\nad.example.com\ngb.ad.example.com\n",
+                  "# Rooted TV block list: 2 names\nad.example.com\ngb.ad.example.com\n",
               "the Pi-hole export is one name per line");
         check(adBlockExport("adguard", names) ==
-                  "! Native Tv block list: 2 names\n||ad.example.com^\n||gb.ad.example.com^\n",
+                  "! Rooted TV block list: 2 names\n||ad.example.com^\n||gb.ad.example.com^\n",
               "the AdGuard export is ||name^ rules under a ! comment");
         check(adBlockExport("csv", names).empty() && adBlockExport("", names).empty(),
               "an unknown export format gives nothing");
-        check(adBlockExport("hosts", {}) == "# Native Tv block list: 0 names\n",
+        check(adBlockExport("hosts", {}) == "# Rooted TV block list: 0 names\n",
               "an empty list exports its header only");
         const std::vector<std::string> full = adBlockList("full", "gb", "", false, nullptr);
         check(parseAdBlockCustomHosts(adBlockExport("hosts", full)).names == full,

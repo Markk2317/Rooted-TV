@@ -1810,7 +1810,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                         process.communicate(timeout=3)
 
     def test_native_home_stays_over_the_device_the_tv_woke(self):
-        # webOS 3.4.3 (C6): switched on, the boot manager opens the last input and Native Tv Home
+        # webOS 3.4.3 (C6): switched on, the boot manager opens the last input and Rooted TV Home
         # comes over it; the Chromecast on it, woken over CEC, takes the screen back through
         # tv.externaldevice 3.5 s later, and Home is brought forward once more. A TV a device
         # switched on over CEC shows that device.
@@ -1877,7 +1877,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertIsNone(process.poll(), "daemon exited early")
                 time.sleep(0.5)
                 launched_by("com.webos.bootManager")
-                self.assertTrue(wait_for(1, 5), "the switch-on opens Native Tv Home")
+                self.assertTrue(wait_for(1, 5), "the switch-on opens Rooted TV Home")
                 self.assertEqual(launches()[0]["payload"].get("params"), {"screen": "home"})
                 time.sleep(1)
                 launched_by("com.webos.service.tv.externaldevice")
@@ -3909,7 +3909,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertTrue(any(
                     call["uri"] == "com.webos.applicationManager/closeByAppId" and
                     call["payload"].get("id") == "com.webos.app.screensaver"
-                    for call in calls), "native remote input did not close the Native Tv saver")
+                    for call in calls), "native remote input did not close the Rooted TV saver")
                 self.assertTrue(marker.is_file(),
                                 "the existing Node screen-saver lifecycle owns the marker")
             finally:
@@ -4054,7 +4054,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     call["uri"] == "com.webos.applicationManager/launch" and
                     call["payload"].get("id") == "com.webos.app.home"
                     for call in lunaCalls),
-                    "holding Home must not open LG Home while Native Tv Home is disabled")
+                    "holding Home must not open LG Home while Rooted TV Home is disabled")
                 with inputDevice.open("ab") as device:
                     device.write(struct.pack("<qqHHi", 0, 0, 1, 773, 0))
                 homeConfig.write_text(json.dumps({"enabled": True}))
@@ -5357,7 +5357,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, response = postBackup(b"null")
                 self.assertEqual(status, 400, response.decode("utf-8", "replace"))
                 self.assertEqual(json.loads(response.decode("utf-8")), {
-                    "ok": False, "error": "That file is not a Native Tv backup"})
+                    "ok": False, "error": "That file is not a Rooted TV backup"})
 
                 workingSnapshot = {
                     "jobId": "backup-busy-job", "state": "installing",
@@ -5947,7 +5947,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 while time.monotonic() < deadline and not restarted.exists():
                     time.sleep(0.05)
                 self.assertEqual(restarted.read_text().split(), ["restart"],
-                                 "changed Native Tv settings restart the server")
+                                 "changed Rooted TV settings restart the server")
 
                 # The same backup again changes nothing, so nothing restarts.
                 restarted.unlink()
@@ -5965,10 +5965,10 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(status, 400, body)
                 self.assertEqual(body, {
                     "ok": False,
-                    "error": "That backup is from a newer Native Tv: update this TV first"})
+                    "error": "That backup is from a newer Rooted TV: update this TV first"})
                 status, body = post([1])
                 self.assertEqual(status, 400, body)
-                self.assertEqual(body["error"], "That file is not a Native Tv backup")
+                self.assertEqual(body["error"], "That file is not a Rooted TV backup")
 
                 self.assertEqual(upstreamRequests, [],
                                  "a restore needs nothing from Node")
@@ -8523,7 +8523,7 @@ class DaemonRuntimeTests(unittest.TestCase):
             config = root / "config.json"
             config.write_text(json.dumps({"logging": {"level": "debug"}}))
             details = root / "luna-details.jsonl"
-            message = 'Press Home to open Native Tv: "Ready\\soon" — 中文'
+            message = 'Press Home to open Rooted TV: "Ready\\soon" — 中文'
             (dataRoot / "remotekeys.json").write_text(
                 json.dumps({"starting": message}, ensure_ascii=False))
             environment = os.environ.copy()
@@ -8831,7 +8831,7 @@ class DaemonRuntimeTests(unittest.TestCase):
         return process
 
     def test_native_home_probe_gate(self):
-        """The native client's probe decides whether Native Tv Home may take LG's Home's place."""
+        """The native client's probe decides whether Rooted TV Home may take LG's Home's place."""
         publicPort = unused_port_pair()
         with tempfile.TemporaryDirectory(prefix="nativetv-home-probe-") as folder:
             world = self._home_world(Path(folder), publicPort, "home-probe-token",
@@ -8960,7 +8960,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(len(world.mountLog.read_text().splitlines()), 1)
                 self.assertTrue(home()["nativeHome"]["watching"])
                 self.assertFalse(home()["nativeHome"]["halted"])
-                # The stub opens the Native Tv tile's app, the one sam is told of, and the watch follows that app.
+                # The stub opens the Rooted TV tile's app, the one sam is told of, and the watch follows that app.
                 stub = (world.data / "home-takeover/index.html").read_text()
                 self.assertIn("var APP_ID = 'com.tvweb.dashboard'", stub)
                 self.assertNotIn("com.tvweb.native", stub)
@@ -9034,7 +9034,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(status["cause"], "crashLoop")
             finally:
                 output = self._stop_daemon(process)
-            self.assertIn("home: Native Tv's Home screen stopped 3 times within 120 seconds.", output)
+            self.assertIn("home: Rooted TV's Home screen stopped 3 times within 120 seconds.", output)
 
             # A restart takes the place again: home.json still says Home is on.
             (world.data / "home.json").write_text(json.dumps({"enabled": True}))
@@ -9061,7 +9061,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self._stop_daemon(process)
 
     def test_native_home_client_registration(self):
-        """Home needs the Native Tv tile's app known to sam: refused at switch-on, and given up at once if it goes."""
+        """Home needs the Rooted TV tile's app known to sam: refused at switch-on, and given up at once if it goes."""
         publicPort = unused_port_pair()
         with tempfile.TemporaryDirectory(prefix="nativetv-home-registered-") as folder:
             world = self._home_world(Path(folder), publicPort, "home-registered-token",
@@ -9300,7 +9300,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(notice["keys"], {"guide": "com.example.guide"})
                 self.assertEqual(notice["home"], "com.webos.app.home")
                 self.assertEqual(notice["starting"],
-                                 "Native Tv Home is starting. It opens in a few seconds.")
+                                 "Rooted TV Home is starting. It opens in a few seconds.")
                 self.assertTrue(notice["splash"])
                 self.assertTrue(earlyHomeFlag.is_file())
                 self.assertTrue(earlyManifest.is_file())
@@ -9314,7 +9314,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "nativetv.remoteKeys"], {
                         "keys": {"guide": "com.example.guide"},
                         "home": "com.webos.app.home",
-                        "starting": "Native Tv Home is starting. It opens in a few seconds.",
+                        "starting": "Rooted TV Home is starting. It opens in a few seconds.",
                         "splash": True
                     })
                 filterPath = str(dataRoot / "remotekeys-filter.js")
@@ -9331,7 +9331,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 notice = json.loads(remoteKeys.read_text())
                 self.assertNotIn("splash", notice)
                 self.assertEqual(notice["starting"],
-                                 "Native Tv Home is starting. It opens in a few seconds.")
+                                 "Rooted TV Home is starting. It opens in a few seconds.")
                 self.assertTrue(earlyHomeFlag.is_file(),
                                 "the early Home hook stays enabled while Home is on")
                 calls = [json.loads(line) for line in details.read_text().splitlines()]
@@ -9341,7 +9341,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "nativetv.remoteKeys"], {
                         "keys": {"guide": "com.example.guide"},
                         "home": "com.webos.app.home",
-                        "starting": "Native Tv Home is starting. It opens in a few seconds."
+                        "starting": "Rooted TV Home is starting. It opens in a few seconds."
                     })
 
                 # A configd reset gives LG's chain back: ours goes in again, first.
@@ -11555,7 +11555,7 @@ class DaemonRuntimeTests(unittest.TestCase):
             (dataRoot / "hidden_apps").write_text("org.example.hidden\n")
             (dataRoot / "remotekeys.json").write_text(json.dumps({
                 "keys": {"hulu": "", "existing": "org.example.preserved"},
-                "home": "com.webos.app.home", "starting": "Starting Native Tv",
+                "home": "com.webos.app.home", "starting": "Starting Rooted TV",
                 "splash": True
             }))
             (dataRoot / "tile_hiding_enabled").write_text("1\n")
@@ -11765,7 +11765,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "netflix": "org.example.youtube"
                 })
                 self.assertEqual(remoteKeyMap["home"], "com.webos.app.home")
-                self.assertEqual(remoteKeyMap["starting"], "Starting Native Tv")
+                self.assertEqual(remoteKeyMap["starting"], "Starting Rooted TV")
                 self.assertTrue(remoteKeyMap["splash"])
                 installedFilter = dataRoot / "remotekeys-filter.js"
                 self.assertEqual(installedFilter.read_text(),
@@ -11776,7 +11776,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertGreaterEqual(len(configWrites), 3)
                 self.assertEqual(configWrites[-3]["nativetv.remoteKeys"], {
                     "keys": remoteKeyMap["keys"], "home": "com.webos.app.home",
-                    "starting": "Starting Native Tv", "splash": True
+                    "starting": "Starting Rooted TV", "splash": True
                 })
                 self.assertEqual(configWrites[-1][
                     "com.webos.surfacemanager.keyFilters"][0], {
@@ -11895,7 +11895,7 @@ class DaemonRuntimeTests(unittest.TestCase):
             remoteLog.write_text("boot\n")
             (dataRoot / "remotekeys.json").write_text(json.dumps({
                 "keys": {"existing": "org.example.preserved"},
-                "home": "com.webos.app.home", "starting": "Starting Native Tv",
+                "home": "com.webos.app.home", "starting": "Starting Rooted TV",
                 "splash": True
             }))
             config.write_text(json.dumps({
@@ -12020,7 +12020,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "netflix": "org.example.youtube"
                 })
                 self.assertEqual(savedMap["home"], "com.webos.app.home")
-                self.assertEqual(savedMap["starting"], "Starting Native Tv")
+                self.assertEqual(savedMap["starting"], "Starting Rooted TV")
                 self.assertTrue(savedMap["splash"])
                 lgRecord = json.loads((dataRoot / "remotekeys-lg.json").read_text())
                 self.assertEqual(lgRecord["mapping"]["netflix"]["app_id"], "netflix")
@@ -12162,7 +12162,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 alexaRow = next(row for row in apps["remoteKeys"]["keys"]
                                 if row["key"] == "alexa")
                 self.assertEqual(alexaRow["action"], "open",
-                                 "a Native Tv-owned block must keep Alexa restorable")
+                                 "a Rooted TV-owned block must keep Alexa restorable")
 
                 time.sleep(0.35)
                 # The AI key's press earlier launched the same app: count from here.
@@ -12302,7 +12302,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                                 "a rejected LG mapping restore must report failure")
             self.assertEqual(json.loads(
                 (dataRoot / "remotekeys.json").read_text())["keys"], {},
-                "failed restoration must keep Native Tv mappings disabled")
+                "failed restoration must keep Rooted TV mappings disabled")
             failedLgRecord = json.loads(
                 (dataRoot / "remotekeys-lg.json").read_text())
             self.assertEqual(failedLgRecord["mapping"]["netflix"]["app_id"],
@@ -15415,7 +15415,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 (layoutDir / "home_layoutShelfView.xml").write_text(takeover)
                 status, body = request({"action": "setPart", "id": "banner", "shown": True})
                 self.assertFalse(json.loads(body)["result"]["ok"])
-                self.assertIn("Native Tv Home", json.loads(body)["result"]["error"])
+                self.assertIn("Rooted TV Home", json.loads(body)["result"]["error"])
                 status, body = request({"action": "restore"})
                 self.assertTrue(json.loads(body)["result"]["ok"])
                 self.assertFalse((root / "data/home-inputs.json").exists())
@@ -16062,7 +16062,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                                  'attachment; filename="nativetv-blocklist-hosts.txt"')
                 lines = text.splitlines()
                 names = [line[len("0.0.0.0 "):] for line in lines[1:]]
-                self.assertEqual(lines[0], "# Native Tv block list: %d names" % len(names))
+                self.assertEqual(lines[0], "# Rooted TV block list: %d names" % len(names))
                 self.assertTrue(all(line.startswith("0.0.0.0 ") for line in lines[1:]), text[:300])
                 self.assertEqual(len(set(names)), len(names), "no name twice")
                 self.assertIn("ad.doubleclick.net", names)
@@ -16083,7 +16083,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(text.splitlines()[1:], names)
                 status, _, text = download("?format=adguard")
                 self.assertEqual(status, 200, text)
-                self.assertTrue(text.startswith("! Native Tv block list: "), text[:80])
+                self.assertTrue(text.startswith("! Rooted TV block list: "), text[:80])
                 self.assertEqual(text.splitlines()[1:], ["||%s^" % name for name in names])
 
                 for query in ("?format=csv", "?format=", "", "?tier=full"):

@@ -448,7 +448,7 @@ class CatalogScreen final : public ScreenView {
                                  say::msg("common.replaces", "Replaces ours"),
                                  say::msg("apps.install.screensaver.warn",
                                           "This app installs a custom screen saver, which will "
-                                          "replace Native Tv’s own screen savers.")));
+                                          "replace Rooted TV’s own screen savers.")));
         if (pv["freeBytes"].isNumber())
             items.push_back(item(
                 SettingItem::Kind::Info, "disk", say::msg("tv.apps.install.pv.space", "Free space"),

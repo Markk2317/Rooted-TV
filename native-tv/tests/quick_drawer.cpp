@@ -362,7 +362,7 @@ void settingsChecks() {
     check(world.app.shows("All settings"), "The gear says what it opens under it, as Google TV's");
     world.press(Key::Ok);
     world.settle(900);
-    check(world.screen() == "dashboard", "OK on it opens Native Tv's Settings");
+    check(world.screen() == "dashboard", "OK on it opens Rooted TV's Settings");
 }
 
 // ---- Actions ----------------------------------------------------------------------------------------

@@ -189,16 +189,16 @@ void HomeKeyWatcher::handle(const std::string &foregroundId, bool powerOn) {
     seq_.fetch_add(1);
     if (logger_)
         logger_->info(powerOn ? "power on: the TV opened " + foregroundId +
-                                    "; bringing Native Tv Home forward"
+                                    "; bringing Rooted TV Home forward"
                               : "home key: LG's Home opened over " +
                                     (foregroundId.empty() ? std::string("unknown") : foregroundId) +
-                                    "; bringing Native Tv Home forward");
+                                    "; bringing Rooted TV Home forward");
     if (opened_) opened_(foregroundId);
 }
 
 // A Chromecast on HDMI 3 woken over CEC with the TV (an OLED55C6V on webOS 3.4.3) announces itself
-// as the active source and tv.externaldevice relaunches its input 3.5 s after Native Tv Home came
-// forward. Once in the seconds after a switch-on, Native Tv Home is brought back over it.
+// as the active source and tv.externaldevice relaunches its input 3.5 s after Rooted TV Home came
+// forward. Once in the seconds after a switch-on, Rooted TV Home is brought back over it.
 void HomeKeyWatcher::deviceLaunched(const std::string &appId) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -210,7 +210,7 @@ void HomeKeyWatcher::deviceLaunched(const std::string &appId) {
     seq_.fetch_add(1);
     if (logger_)
         logger_->info("power on: the device on " + appId +
-                      " took the screen as it woke; bringing Native Tv Home forward again");
+                      " took the screen as it woke; bringing Rooted TV Home forward again");
     if (opened_) opened_(appId);
 }
 

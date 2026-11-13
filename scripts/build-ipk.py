@@ -41,7 +41,7 @@ HBC = os.path.join(ROOT, 'hbc')
 DIST = os.path.join(ROOT, 'dist')
 
 APP_ID = 'io.github.ihtisham1211.nativetv'
-TITLE = 'Native Tv'
+TITLE = 'Rooted TV'
 DESCRIPTION = 'Your TV, your rules. Dashboard, privacy controls and Home Assistant bridge for rooted LG TVs'
 REPO = 'https://github.com/ihtisham1211/native-tv'
 ICON_URI = (REPO.replace('github.com', 'raw.githubusercontent.com') +
@@ -113,7 +113,7 @@ def stage(app, ver, native_build=None):
         runtime.stage_client(native_build, os.path.join(app, 'payload/tvweb/assets', client_app))
     icons = os.path.join(NATIVE, 'assets', 'dashboard-app', 'assets')
     appinfo = {
-        'id': APP_ID, 'version': ver, 'vendor': 'Native Tv', 'type': 'web',
+        'id': APP_ID, 'version': ver, 'vendor': 'Rooted TV', 'type': 'web',
         'main': 'index.html', 'title': TITLE, 'appDescription': DESCRIPTION,
         'icon': 'icon80.png', 'largeIcon': 'icon130.png',
         'iconColor': '#000000', 'bgColor': '#000000', 'resolution': '1920x1080',

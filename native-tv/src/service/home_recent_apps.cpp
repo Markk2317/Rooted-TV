@@ -12,7 +12,7 @@
 namespace nativetv {
 namespace service {
 namespace {
-// The Native Tv tile's app is Home's own screens, so opening Home is not opening an app.
+// The Rooted TV tile's app is Home's own screens, so opening Home is not opening an app.
 const char *kLeftOut[] = {"com.webos.app.home", "com.tvweb.home", "com.tvweb.native",
                           "com.tvweb.dashboard", "com.tvweb.splash"};
 const size_t kMaximumImageBytes = 16 * 1024 * 1024;

@@ -26,7 +26,7 @@ the takeover, a reboot or to change a TV setting (`control`) are marked in `requ
 only with the matching --allow, and so are those that need a TV that has not done first-run setup
 (`fresh`: its first-run marker is present, which the runner never creates).
 
-The one exception is the flow cases (kind "flow", which all require takeover): they switch Native Tv
+The one exception is the flow cases (kind "flow", which all require takeover): they switch Rooted TV
 Home on and off and press the Home and Back keys through the server's own routes, from the TV
 itself (scripts/home-flow.js under the TV's Node, loopback needing no token), and watch which app
 is in front. Their steps are a closed vocabulary, checked by --check; a flow that fails leaves
@@ -51,7 +51,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKIP = 77
-# The Native Tv tile's app: the one native app sam is told of, which Native Tv Home opens too.
+# The Rooted TV tile's app: the one native app sam is told of, which Rooted TV Home opens too.
 APP_ID = "com.tvweb.dashboard"
 APP = "/media/developer/apps/usr/palm/applications/" + APP_ID
 SERVICE = "/var/lib/tvweb/native/nativetv-service"
@@ -64,7 +64,7 @@ KNOWN_REQUIRES = {"takeover", "reboot", "control", "fresh"}
 KNOWN_ALLOW = KNOWN_REQUIRES | {"stage"}
 ENV_NAMES = {"NATIVETV_PROBE_FAULT", "NATIVETV_AMBIENT"}
 # What a flow may ask of the TV: the server's Home routes and its remote, launch and close controls for
-# an input or the Native Tv app, nothing else.
+# an input or the Rooted TV app, nothing else.
 FLOW_API = {"GET /api/home", "POST /api/home/enable", "POST /api/home/disable"}
 FLOW_APP = re.compile(r"^(com\.webos\.app\.(hdmi[1-4]|livetv)|com\.tvweb\.dashboard)$")
 FLOW_KEYS = {"home", "back"}

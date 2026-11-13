@@ -1,7 +1,7 @@
-## Native Tv Home
-toggle  Native Tv Home = On [on] -> Turn off (confirms) <home>
+## Rooted TV Home
+toggle  Rooted TV Home = On [on] -> Turn off (confirms) <home>
 toggle  Hide LG’s Home while the TV starts = Off [off] -> Turn on (confirms) <home>
-toggle  Power-on screen = Native Tv Home [on] -> Turn off <power>
+toggle  Power-on screen = Rooted TV Home [on] -> Turn off <power>
 ## Appearance
 toggle  Show app names = On [on] -> Turn off <home>
 toggle  Show inputs = On [on] -> Turn off <hdmi>
@@ -13,7 +13,7 @@ link    Profile -> Open <access>
 action  Reset the layout -> Reset (confirms) <refresh>
 ## Apps
 choice  Order = Your order -> Change {3 values} <home>
-== On Native Tv Home
+== On Rooted TV Home
 toggle  Streamline = Shown [on] -> Turn off <home>
 toggle  Tunes = Shown [on] -> Turn off <home>
 toggle  Arcade = Shown [on] -> Turn off <home>

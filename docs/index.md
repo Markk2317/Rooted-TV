@@ -2,9 +2,9 @@
 description: "Open-source dashboard, privacy controls and Home Assistant MQTT bridge for rooted LG webOS TVs. Turn off ACR and ads, debloat apps, protect OLED panels, remap the remote."
 ---
 
-<p align="center"><img src="logo/nativetv-512.png" width="112" alt="Native Tv logo: an n whose arch is a screen corner, with a green pixel"></p>
+<p align="center"><img src="logo/nativetv-512.png" width="112" alt="Rooted TV logo: an n whose arch is a screen corner, with a green pixel"></p>
 
-# Native Tv
+# Rooted TV
 
 **Your TV, your rules.** An open-source dashboard, privacy toolkit and Home Assistant bridge for rooted LG webOS TVs.
 
@@ -12,25 +12,25 @@ description: "Open-source dashboard, privacy controls and Home Assistant MQTT br
 >
 > ## The TV belongs to its owner.
 >
-> Native Tv is for owners who do not want a network-connected appliance used as
+> Rooted TV is for owners who do not want a network-connected appliance used as
 > a platform for advertising, telemetry and vendor-controlled experiences. It
 > brings control, visibility and automation back to the device: ways to remove
 > ads, withdraw from agreements and services that monetise the owner's data,
 > and a simpler TV, with customisation and local smart-home integration.
 >
-> Native Tv itself is local and transparent, and needs no cloud service. It
+> Rooted TV itself is local and transparent, and needs no cloud service. It
 > collects no data, shows no ads and has no dark patterns.
 
-Native Tv is a server that runs directly on a rooted LG webOS TV, with a live dashboard for any phone or computer browser and a native app on the TV itself.
+Rooted TV is a server that runs directly on a rooted LG webOS TV, with a live dashboard for any phone or computer browser and a native app on the TV itself.
 
-Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshouse) by Rory Gallagher and is now its own project: the server is a C++ daemon with no Node on the TV, and the TV has a native app in Google TV's design. It supports webOS 3.4 and later; Glasshouse covers webOS 2 and the first webOS 3 releases.
+Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv). The server is a C++ daemon with no Node on the TV, and the TV has a native app in Google TV's design. It supports webOS 3.4 and later.
 
 [Install](getting-started/install.md){ .md-button .md-button--primary } [See the dashboard](dashboard/index.md){ .md-button }
 
 <p align="center">
-  <a href="screenshots/dashboard.png"><img src="screenshots/dashboard.png" alt="Native Tv dashboard in the dark theme: what the TV is showing, quick controls, processor, temperature, memory and network readings" width="440"></a>
+  <a href="screenshots/dashboard.png"><img src="screenshots/dashboard.png" alt="Rooted TV dashboard in the dark theme: what the TV is showing, quick controls, processor, temperature, memory and network readings" width="440"></a>
   &nbsp;
-  <a href="screenshots/privacy.png"><img src="screenshots/privacy.png" alt="Native Tv Privacy tab: what LG can collect, the ad and telemetry blocker and the advertising identifier" width="440"></a>
+  <a href="screenshots/privacy.png"><img src="screenshots/privacy.png" alt="Rooted TV Privacy tab: what LG can collect, the ad and telemetry blocker and the advertising identifier" width="440"></a>
 </p>
 
 ## What it does
@@ -54,8 +54,8 @@ Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshou
 * **[Read the TV's logs](dashboard/tools.md)** in one searchable timeline in the browser, with no SSH, and with private details hidden when copied or exported.
 * **[Connect it to Home Assistant](integrations/home-assistant.md).** An MQTT bridge with Discovery exposes the TV as one device; the remote's buttons can trigger automations. [Prometheus metrics](integrations/prometheus.md) and [log forwarding](integrations/syslog.md) are there for monitoring.
 * **[Open the service menu](dashboard/service-menu.md)** from a browser, with no service remote, and unlock it where newer firmware cuts it down.
-* **[Use it in English or Spanish](dashboard/server.md).** The dashboard follows the browser's language, with a Language setting on the Server tab, and shows the TV's own messages in it too. The TV app follows the TV's menu language, in [Italian](development/strings.md#the-tv-app) so far. The Spanish is [partly machine-translated](development/strings.md#spanish) and open to review by native speakers.
-* **[Use it on the TV itself](apps/tv-app.md).** A native app on the home screen, driven by the remote, [drawn at 60 frames a second](apps/tv-app.md#how-smooth-it-is) and making Google TV's system sound, with [Native Tv Home](dashboard/home.md), a home screen after Google TV's that plays titles in Prime Video and Disney+ straight from Home, keeps Continue watching and what has been watched, and installs apps from LG Content Store from its search.
+* **[Use it in English or Spanish](dashboard/server.md).** The dashboard follows the browser's language, with a Language setting on the Server tab, and shows the TV's own messages in it too. The TV app follows the TV's menu language where it has [a translation](development/strings.md#the-tv-app). The Spanish is [partly machine-translated](development/strings.md#spanish) and open to review by native speakers.
+* **[Use it on the TV itself](apps/tv-app.md).** A native app on the home screen, driven by the remote, [drawn at 60 frames a second](apps/tv-app.md#how-smooth-it-is) and making Google TV's system sound, with [Rooted TV Home](dashboard/home.md), a home screen after Google TV's that plays titles in Prime Video and Disney+ straight from Home, keeps Continue watching and what has been watched, and installs apps from LG Content Store from its search.
 
 ## Compatibility
 
@@ -63,7 +63,7 @@ Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshou
 * **Panels**: OLED (panel wear telemetry and burn-in controls) and LCD (the OLED Care tab hides itself).
 * **Access**: rooted with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel), over SSH or telnet. The TV needs no internet access.
 
-Native Tv running on a model that is not listed? A [TV report](https://github.com/ihtisham1211/native-tv/issues/new?template=tv_report.md) with the model and webOS version adds it to the table.
+Rooted TV running on a model that is not listed? A [TV report](https://github.com/ihtisham1211/native-tv/issues/new?template=tv_report.md) with the model and webOS version adds it to the table.
 
 ## Disclaimer
 
@@ -80,7 +80,7 @@ MIT. See [LICENSE](https://github.com/ihtisham1211/native-tv/blob/main/LICENSE).
 
 ## Credits
 
-Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshouse) by Rory Gallagher, released under the MIT licence; his copyright notice is kept in [LICENSE](https://github.com/ihtisham1211/native-tv/blob/main/LICENSE). The dashboard's Spanish reuses Glasshouse's translations, which are also MIT. Bundled third-party work, with its licence ([THIRD-PARTY-NOTICES.md](https://github.com/ihtisham1211/native-tv/blob/main/THIRD-PARTY-NOTICES.md) has the texts):
+Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv); the original copyright notices are kept in [LICENSE](https://github.com/Markk2317/-/blob/main/LICENSE). The dashboard's Spanish reuses [Glasshouse](https://github.com/rorygallagher2024/glasshouse)'s translations, which are MIT. Bundled third-party work, with its licence ([THIRD-PARTY-NOTICES.md](https://github.com/Markk2317/-/blob/main/THIRD-PARTY-NOTICES.md) has the texts):
 
 * [CivetWeb](https://github.com/civetweb/civetweb): the HTTP server (MIT)
 * [json-c](https://github.com/json-c/json-c): JSON, from the webOSbrew SDK (MIT)

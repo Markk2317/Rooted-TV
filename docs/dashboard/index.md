@@ -1,15 +1,15 @@
 ---
-description: "The Native Tv web dashboard for LG webOS TVs: five sections for control, apps, display, privacy and settings, in any phone or computer browser."
+description: "The Rooted TV web dashboard for LG webOS TVs: five sections for control, apps, display, privacy and settings, in any phone or computer browser."
 ---
 
 # The dashboard
 
-The dashboard has five sections, and tabs inside three of them. Each tab has a deep link, `/?tab=` and its name below, and the links of earlier releases (`control`, `metrics`, `system`) still open the right place. OLED care appears on OLED TVs only, and Game mode and Native Tv Home where the TV offers them.
+The dashboard has five sections, and tabs inside three of them. Each tab has a deep link, `/?tab=` and its name below, and the links of earlier releases (`control`, `metrics`, `system`) still open the right place. OLED care appears on OLED TVs only, and Game mode and Rooted TV Home where the TV offers them.
 
-The page is laid out as Google TV's home: across the top, the Native Tv avatar, a capsule holding search and the sections with a light pill on the one shown (it scrolls sideways on a phone), a capsule of round buttons (the theme and, wider than a phone, Help), and on a screen 900 pixels wide or more the clock and the Native Tv name. The tabs inside a section are pills too, and its cards, chips and buttons take Google TV's dark rounded shapes, in Google Sans Flex. The keys **1** to **5** open the sections. The **Remote** button, bottom right on every screen, opens the D-pad, the remote's keys and a box to type into the TV's text fields.
+The page is laid out as Google TV's home: across the top, the Rooted TV avatar, a capsule holding search and the sections with a light pill on the one shown (it scrolls sideways on a phone), a capsule of round buttons (the theme and, wider than a phone, Help), and on a screen 900 pixels wide or more the clock and the Rooted TV name. The tabs inside a section are pills too, and its cards, chips and buttons take Google TV's dark rounded shapes, in Google Sans Flex. The keys **1** to **5** open the sections. The **Remote** button, bottom right on every screen, opens the D-pad, the remote's keys and a box to type into the TV's text fields.
 
 * **Overview**: [Control](control.md) and [Metrics](metrics.md) together, as one screen: what the TV is showing, the volume and power, then the readings
-* **Apps**: [Installed](apps.md) (`apps`), [Catalogue](apps.md#install-homebrew-apps) (`catalogue`), [LG launcher](apps.md#lg-launcher-and-remote) (`homescreen`) and [Native Tv Home](home.md) (`home`)
+* **Apps**: [Installed](apps.md) (`apps`), [Catalogue](apps.md#install-homebrew-apps) (`catalogue`), [LG launcher](apps.md#lg-launcher-and-remote) (`homescreen`) and [Rooted TV Home](home.md) (`home`)
 * **Display**: [OLED care](oled-care.md) (`oledcare`), [Screen savers](screen-savers.md) (`screensaver`) and [Game mode](game.md) (`game`)
 * **Privacy**: [Privacy](privacy.md), screen recognition, ad tracking, data agreements and the blocker
 * **Settings**: [Home Assistant](../integrations/home-assistant.md) (`mqtt`), [Server and backup](server.md) (`server`), [Tools and logs](tools.md) (`tools`), [Advanced](advanced.md) and the [Service menu](service-menu.md) (`servicemenu`)
@@ -24,7 +24,7 @@ with the star beside a search result, keeping shortcuts to them as chips under t
 
 ## Install as an app
 
-The dashboard can be added to a phone's home screen or a computer's app list, where it opens in its own window with the Native Tv icon and no address bar: **Install app** in Chrome's menu, or **Share**, then **Add to Home Screen** in Safari on iOS. It opens `/`, so it signs in as the browser does: where the TV has a token and the app has none stored, it asks for the passcode.
+The dashboard can be added to a phone's home screen or a computer's app list, where it opens in its own window with the Rooted TV icon and no address bar: **Install app** in Chrome's menu, or **Share**, then **Add to Home Screen** in Safari on iOS. It opens `/`, so it signs in as the browser does: where the TV has a token and the app has none stored, it asks for the passcode.
 
 A browser offers no service worker on the TV's own address, `http://<tv>:8080`, which is not a secure origin, so there the page has only its manifest and icons, and the browser decides whether to install it or add a shortcut. Behind HTTPS (a reverse proxy in front of the TV) or on `localhost`, the service worker registers and Chrome offers the install. With the TV off or out of reach, the app then shows a "Can't reach the TV" page with a **Try again** button, in English only, in place of the browser's error page. The worker caches nothing: the page and every reading still come from the TV.
 

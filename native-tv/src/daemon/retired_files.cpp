@@ -35,7 +35,7 @@ const char *const kFiles[] = {
     "assets/google-tv/pages/home.html", "assets/google-tv/pages/setup.html",
     "assets/google-tv/pages/setup-phone.html", "assets/google-tv/pages/kit/index.html",
     "assets/google-tv/pages/kit/kit.css", "assets/google-tv/pages/kit/kit.js",
-    // The Home page and the keyboard it loaded: Native Tv Home is the native client's.
+    // The Home page and the keyboard it loaded: Rooted TV Home is the native client's.
     "assets/google-tv/pages/home/index.html", "assets/google-tv/pages/home/home.css",
     "assets/google-tv/pages/home/home.js", "assets/google-tv/pages/home/quick.js",
     "assets/google-tv/pages/home/content.js", "assets/google-tv/shared/keyboard.js",
@@ -67,7 +67,7 @@ const char *const kFolders[] = {"assets/google-tv/components", "assets/google-tv
                                 "assets/google-tv/pages/home", "lib"};
 
 // The developer client, com.tvweb.native, which only deploy.py ever put on the
-// TV and which sam was never told of. The Home stub opens the Native Tv tile's
+// TV and which sam was never told of. The Home stub opens the Rooted TV tile's
 // app (com.tvweb.dashboard) instead.
 const char *const kApps[] = {"com.tvweb.native"};
 

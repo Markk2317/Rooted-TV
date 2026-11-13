@@ -38,7 +38,7 @@ function tvReportText(d) {
     : home.supported && home.supported.ok === false ? 'not supported on this webOS'
     : home.nativeHome && home.nativeHome.halted ? 'stopped after repeated failures' : 'supported';
   const rows = [
-    ['Native Tv', stats.tvwebVersion || caps.version],
+    ['Rooted TV', stats.tvwebVersion || caps.version],
     ['Model', device.model],
     ['webOS', system.webos ? 'webOS ' + system.webos : ''],
     ['Firmware', system.firmware],
@@ -47,11 +47,11 @@ function tvReportText(d) {
     ['Installed from', caps.fromHomebrewChannel ? 'Homebrew Channel' : 'SSH or a script'],
     ['Controls', caps.allowControl ? 'allowed' : 'off in the config'],
     ['Power actions', caps.allowPower ? 'allowed' : 'off in the config'],
-    ['Native Tv Home', nativeHome],
+    ['Rooted TV Home', nativeHome],
     ['Power state', stats.powerState]
   ];
   return [
-    '**Native Tv TV report**',
+    '**Rooted TV TV report**',
     '',
     '| | |',
     '| --- | --- |'

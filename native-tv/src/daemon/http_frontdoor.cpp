@@ -1976,7 +1976,7 @@ HttpFrontDoor::~HttpFrontDoor() {
 }
 
 // Read again at most once a minute, as the TV app asks for /api/caps, so a language changed in the
-// TV's settings reaches Native Tv the next time it is opened.
+// TV's settings reaches Rooted TV the next time it is opened.
 void HttpFrontDoor::learnTvLocale() const {
     const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now().time_since_epoch())
@@ -2037,7 +2037,7 @@ void HttpFrontDoor::bringHomeForward(const std::string &foregroundId) const {
 
 void HttpFrontDoor::startHomeKeyWatcher() {
     if (homeKeyWatcher_) return;
-    // Where Native Tv Home can take LG's Home's place, the takeover does this job.
+    // Where Rooted TV Home can take LG's Home's place, the takeover does this job.
     if (service::homeStatusSupported(homeStatusWebosVersion(systemRoot_),
                                      config_.document["allowExperimentalHome"].boolean())["ok"].boolean())
         return;
@@ -2047,7 +2047,7 @@ void HttpFrontDoor::startHomeKeyWatcher() {
         [this]() { return currentConfigDocument()["homeButtonOpensNativeHome"].boolean(); },
         [this](const std::string &foregroundId) { bringHomeForward(foregroundId); },
         logger_, options));
-    // The TV switched on: the boot manager opens the last input, and Native Tv Home comes over it.
+    // The TV switched on: the boot manager opens the last input, and Rooted TV Home comes over it.
     watcher->setPowerOn([this]() { return currentConfigDocument()["homeOnPowerOn"].boolean(true); });
     // Switched on by a device over HDMI-CEC (a cast to a Chromecast), the TV shows that device, as
     // Google TV's own does: tvpower names the reason "hdmiCec" (others: "remoteKey", "localKey",
@@ -2106,7 +2106,7 @@ bool inputApp(const std::string &appId) {
 } // namespace
 
 // The server started within minutes of the TV being switched on (by the boot activity, or the
-// tile): the boot manager's opening of the last input was before the watcher, so Native Tv Home is
+// tile): the boot manager's opening of the last input was before the watcher, so Rooted TV Home is
 // opened here, if that input is still in front. The time is counted from the switch-on in the log:
 // after a night's restart in standby, /proc/uptime also counts the minutes the TV was awake then.
 void HttpFrontDoor::openHomeAfterBoot() {
@@ -2131,10 +2131,10 @@ void HttpFrontDoor::openHomeAfterBoot() {
     LunaReply launched;
     if (waitForLuna(luna_, "com.webos.applicationManager/launch", payload, launched) && logger_)
         logger_->info("power on: started " + std::to_string(static_cast<long>(since)) +
-                      " s after the TV was switched on; bringing Native Tv Home forward");
+                      " s after the TV was switched on; bringing Rooted TV Home forward");
 }
 
-// webOS 3.4 runs no root code at boot, so after a power cut or a reboot nothing of Native Tv runs
+// webOS 3.4 runs no root code at boot, so after a power cut or a reboot nothing of Rooted TV runs
 // until its tile is opened, and the C6 restarts itself in standby some nights. The TV's activity
 // manager keeps a persistent activity across reboots: this one calls the Homebrew Channel's
 // autostart when the boot manager signals instant-boot-complete, as the TV wakes from Quick Start's
@@ -2184,7 +2184,7 @@ bool HttpFrontDoor::setBootActivity(bool on) const {
         }
     }
     const Json payload = Json::parse(std::string("{\"activity\":{\"name\":\"") + kBootActivity +
-        "\",\"description\":\"Starts the Native Tv server after the TV boots\","
+        "\",\"description\":\"Starts the Rooted TV server after the TV boots\","
         "\"type\":{\"foreground\":true,\"persist\":true},"
         "\"trigger\":{\"method\":\"luna://com.palm.bus/signal/addmatch\","
         "\"params\":{\"category\":\"/com/webos/bootManager\",\"method\":\"boottime\"},"
@@ -2700,7 +2700,7 @@ std::string tvRegion(const std::string &dataRoot) {
         character = static_cast<char>(std::toupper(static_cast<unsigned char>(character)));
     return value;
 }
-// The id of the Native Tv Home profile in use, "main" until there are others.
+// The id of the Rooted TV Home profile in use, "main" until there are others.
 std::string activeHomeProfile(const std::string &dataRoot) {
     JsonFile homeFile(dataFilePath(dataRoot, "home.json"));
     return service::normalizeHomeDocument(homeFile.load().value)["profile"].string("main");
@@ -3142,7 +3142,7 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         return answer();
     }
     if (action == "setHomeTrailers") {
-        // The film trailers in Native Tv Home's banner; on unless switched off.
+        // The film trailers in Rooted TV Home's banner; on unless switched off.
         if (!value.isBoolean()) return fail("setHomeTrailers takes true or false");
         Json change = Json::object();
         change.set("homeTrailers", Json::flag(value.boolean()));
@@ -8463,7 +8463,7 @@ bool HttpFrontDoor::updateHomeStartingNotice(const Json &home) const {
     const bool enabled = home["enabled"].boolean();
     const std::string starting = enabled
         ? say::msg("srv.home.startingToast",
-                   "Native Tv Home is starting. It opens in a few seconds.")
+                   "Rooted TV Home is starting. It opens in a few seconds.")
         : std::string();
     const bool splash = !starting.empty() &&
         (home["openOnPowerOn"].boolean() ||
@@ -8739,7 +8739,7 @@ void HttpFrontDoor::handleHomeEnablePost(HttpExchange &exchange) const {
     if (previous["restorePending"].boolean()) {
         failure(say::msg(
                     "srv.home.restoreFirst",
-                    "LG's Home is not fully back yet; switch Native Tv Home off again first"),
+                    "LG's Home is not fully back yet; switch Rooted TV Home off again first"),
                 200);
         return;
     }
@@ -8753,7 +8753,7 @@ void HttpFrontDoor::handleHomeEnablePost(HttpExchange &exchange) const {
         blankStartLayout, policyContext);
     if (!takeover["ok"].boolean()) {
         std::string message = say::msg(
-            "srv.home.setFailed", "the TV would not make Native Tv Home its Home");
+            "srv.home.setFailed", "the TV would not make Rooted TV Home its Home");
         if (takeover["error"].isString())
             message += " (" + takeover["error"].string() + ")";
         failure(message, 200);
@@ -8803,7 +8803,7 @@ void HttpFrontDoor::handleHomeEnablePost(HttpExchange &exchange) const {
     // The crash watch starts over: a Home given back after the client kept
     // failing is wanted again.
     if (HomeOrchestrator *orchestrator = homeOrchestrator()) orchestrator->rearm();
-    if (logger_) logger_->info("home: Native Tv Home switched on");
+    if (logger_) logger_->info("home: Rooted TV Home switched on");
     Json response = Json::object();
     response.set("ok", Json::flag(true));
     respond(200, response);
@@ -8914,7 +8914,7 @@ void HttpFrontDoor::handleHomeDisablePost(HttpExchange &exchange) const {
                                        : ": " + earlyServiceError));
 
     if (HomeOrchestrator *orchestrator = homeOrchestrator()) orchestrator->rearm();
-    if (logger_) logger_->info("home: Native Tv Home switched off");
+    if (logger_) logger_->info("home: Rooted TV Home switched off");
     Json response = Json::object();
     response.set("ok", Json::flag(true));
     respond(200, response);
@@ -11013,7 +11013,7 @@ void HttpFrontDoor::setRemoteKey(HttpExchange &exchange) const {
 
         // The AI button is consumed before evdev. Own voiceconductor's
         // disabled-list entry and service state alongside its app mapping,
-        // restoring it only when this record says Native Tv switched it off.
+        // restoring it only when this record says Rooted TV switched it off.
         const std::string voiceService = "voiceconductor";
         Json serviceOwners = writes.lgRecord["services"];
         if (!serviceOwners.isObject()) serviceOwners = Json::object();
@@ -11124,8 +11124,8 @@ void HttpFrontDoor::setRemoteKey(HttpExchange &exchange) const {
         }
 
         // Alexa is opened by a system adapter rather than the native key map.
-        // Keep the adapter blocked while Native Tv owns that key, and restore
-        // it only when this daemon's LG record says Native Tv blocked it.
+        // Keep the adapter blocked while Rooted TV owns that key, and restore
+        // it only when this daemon's LG record says Rooted TV blocked it.
         const std::string alexaApp = "amazon.alexa.view";
         Json blockRecord = writes.lgRecord["blocks"];
         if (!blockRecord.isObject()) blockRecord = Json::object();
@@ -15536,7 +15536,7 @@ void HttpFrontDoor::setNativeBackupConfig(HttpExchange &exchange) const {
     if (!ConfigStore(configPath_).patchBackupSettings(patch, &error, &changed)) {
         if (logger_)
             logger_->warning("backup config: " + error);
-        sendSetupError(exchange, 500, "could not save Native Tv settings");
+        sendSetupError(exchange, 500, "could not save Rooted TV settings");
         return;
     }
     Json result = Json::object();
@@ -17399,7 +17399,7 @@ void HttpFrontDoor::startStaticDimming() {
     if (staticDimming_ || systemRoot_ != "/") return;
     StaticDimmingRunner::Deps deps;
     deps.level = [this]() { return logoDimmingInSoftware() ? staticDimmingLevel() : "off"; };
-    // Another app's picture: not Native Tv's own screens, which dim themselves when idle, and
+    // Another app's picture: not Rooted TV's own screens, which dim themselves when idle, and
     // nothing with the screen off.
     deps.watching = [this]() {
         std::string app;
@@ -17490,7 +17490,7 @@ void HttpFrontDoor::startStaticDimming() {
 
 namespace {
 // The apps the TV app gives its memory to: every app but LG's own (inputs, Live TV, settings and
-// the overlays, which open over the TV app and go back to it) and Native Tv's, and LG's browser.
+// the overlays, which open over the TV app and go back to it) and Rooted TV's, and LG's browser.
 bool needsClientMemory(const std::string &appId) {
     if (appId.empty() || appId.compare(0, 10, "com.tvweb.") == 0) return false;
     if (appId == "com.webos.app.browser") return true;
@@ -17996,7 +17996,7 @@ void HttpFrontDoor::handleAssistant(HttpExchange &exchange) const {
     const Json document = currentConfigDocument();
     const std::string key = document["geminiKey"].string();
     if (key.empty()) {
-        failure(400, say::msg("srv.assistant.noKey", "Save a Gemini API key on the Native Tv Home tab first."));
+        failure(400, say::msg("srv.assistant.noKey", "Save a Gemini API key on the Rooted TV Home tab first."));
         return;
     }
     const std::string tmdbKey = document["tmdbKey"].string();
@@ -18788,7 +18788,7 @@ Json HttpFrontDoor::returnNativeTvHomeFromRemoteInput() const {
         home["hideLgHomeAtStart"].boolean(), controlPolicyContext(config_));
     if (!takeover["ok"].boolean())
         return failed(takeover["error"].string(
-            "could not take Native Tv Home's place again"));
+            "could not take Rooted TV Home's place again"));
 
     std::string bridgeError;
     const bool nodeSynchronized =
@@ -18859,7 +18859,7 @@ Json HttpFrontDoor::returnNativeTvHomeAfterForegroundChange(
     if (!takeover["ok"].boolean()) {
         homeEscapeActive_->store(true, std::memory_order_release);
         return failed(takeover["error"].string(
-            "could not take Native Tv Home's place after leaving LG Home"));
+            "could not take Rooted TV Home's place after leaving LG Home"));
     }
 
     std::string bridgeError;
@@ -19110,7 +19110,7 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
                                  homeNowMilliseconds());
     }
 
-    // Recorded only for a row set to Last opened, and only while Native Tv
+    // Recorded only for a row set to Last opened, and only while Rooted TV
     // Home is on.
     JsonFile homeFile(dataFilePath(dataRoot_, "home.json"));
     const Json document =

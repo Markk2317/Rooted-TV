@@ -95,14 +95,14 @@ assert.ok(/^Answered: .*Network/m.test(hostile), 'a network that answered is cou
 console.log('  ok - a payload full of private fields still gives a clean report');
 
 var empty = report({});
-assert.ok(/\| Model \| — \|/.test(empty) && /^Answered: —$/m.test(empty) && /^Native Tv Home \|/m.test(empty) === false);
-assert.ok(empty.indexOf('| Native Tv Home | — |') !== -1, 'Home is not called supported when its status could not be read');
+assert.ok(/\| Model \| — \|/.test(empty) && /^Answered: —$/m.test(empty) && /^Rooted TV Home \|/m.test(empty) === false);
+assert.ok(empty.indexOf('| Rooted TV Home | — |') !== -1, 'Home is not called supported when its status could not be read');
 console.log('  ok - with nothing answered the report is dashes, and says nothing it does not know');
 
 var notSupported = report({ stats: {}, caps: caps, home: { ok: true, supported: { ok: false }, nativeHome: {} } });
-assert.ok(notSupported.indexOf('| Native Tv Home | not supported on this webOS |') !== -1);
+assert.ok(notSupported.indexOf('| Rooted TV Home | not supported on this webOS |') !== -1);
 var halted = report({ stats: {}, caps: caps, home: { ok: true, supported: { ok: true }, nativeHome: { halted: true } } });
-assert.ok(halted.indexOf('| Native Tv Home | stopped after repeated failures |') !== -1);
+assert.ok(halted.indexOf('| Rooted TV Home | stopped after repeated failures |') !== -1);
 var off = report({ stats: {}, caps: { allowControl: false, allowPower: false, fromHomebrewChannel: true }, home: home });
 assert.ok(off.indexOf('| Controls | off in the config |') !== -1 && off.indexOf('| Installed from | Homebrew Channel |') !== -1);
 console.log('  ok - Home, controls and how it was installed are reported as they are');
@@ -113,8 +113,8 @@ var page = load({ '/api/stats': JSON.parse(fs.readFileSync(path.join(fixtureDir,
 pending.push(vm.runInContext('createTvReport()', page.context).then(function () {
   assert.strictEqual(page.el('report-text').hidden, false);
   assert.strictEqual(page.el('report-copy').hidden, false);
-  assert.ok(page.el('report-text').value.indexOf('**Native Tv TV report**') === 0);
-  assert.ok(page.el('report-text').value.indexOf('| Native Tv Home | — |') !== -1, 'a route that did not answer shows as unknown');
+  assert.ok(page.el('report-text').value.indexOf('**Rooted TV TV report**') === 0);
+  assert.ok(page.el('report-text').value.indexOf('| Rooted TV Home | — |') !== -1, 'a route that did not answer shows as unknown');
   console.log('  ok - Create fills the box even when a route does not answer');
 }));
 pending.push(vm.runInContext('copyTvReport()', page.context).then(function () {

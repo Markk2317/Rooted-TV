@@ -35,7 +35,7 @@ ReleaseFetch fetchOverCurl(const std::string &userAgent,
                            std::function<std::string()> ipPreference);
 
 // Asks GitHub whether a newer release exists. It only reports: installing
-// stays with the Homebrew Channel, since the installer refuses Native Tv's own
+// stays with the Homebrew Channel, since the installer refuses Rooted TV's own
 // package.
 class ReleaseChecker {
   public:

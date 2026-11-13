@@ -1,13 +1,13 @@
 ---
 title: Tested LG webOS TVs and webOS versions
-description: "LG OLED and LCD TVs Native Tv has run on, with webOS versions from 2.2 to 11, and what the native server supports."
+description: "LG OLED and LCD TVs Rooted TV has run on, with webOS versions from 2.2 to 11, and what the native server supports."
 ---
 
 # Tested TVs
 
 Reports from 48 TVs across 33 series, on webOS 2.2 through 11 (LG's webOS 26), come from the earlier Node release; the native server is verified on two TVs (below). Other rooted models running webOS 3.4 or later should work. The oldest, webOS 2 and 3, have fewer of LG's services, so some readings and controls did not appear there.
 
-On webOS 2 (tested on a 55UH600V and a 49LF632V), PicCap is withheld because its native service stalls webOS 2 and triggers a watchdog reboot (`cpuAbnormal`). Both TVs run Native Tv without trouble.
+On webOS 2 (tested on a 55UH600V and a 49LF632V), PicCap is withheld because its native service stalls webOS 2 and triggers a watchdog reboot (`cpuAbnormal`). Both TVs run Rooted TV without trouble.
 
 The reports from webOS 2.2 and 3.x in the table are of the earlier Node release. The native server, which is the only one now, supports webOS 3.4 and later and has been run on two TVs: an OLED65B3PUA on webOS 10.3.2 (firmware 33.31.75), where the dashboard, stats, Home Assistant publication, installs, backup restore and a reboot were checked; and an OLED55C6V (the 2016 C6) on webOS 3.4.3 (firmware 05.70.45), where the dashboard, stats, OLED Care readings, the privacy and screen controls, and the TV app opened from LG's launcher and driven by the remote were checked. Other models and webOS versions are untried with the native server. A [TV report](https://github.com/ihtisham1211/native-tv/issues/new?template=tv_report.md) with the model and webOS version adds a TV to the table.
 

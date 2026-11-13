@@ -358,10 +358,10 @@ void banner(kit::Paint paint, float amount) {
                 kit::focus::withAlpha(kit::alpha::scrimStrong, amount));
     scene.pushOpacity(amount);
     paint.glyphs.text(scene, {400, 430, 1120, kit::type::headline.line},
-                      say::msg("tv.home.silent", "Native Tv is not answering"),
+                      say::msg("tv.home.silent", "Rooted TV is not answering"),
                       kit::type::headline, kit::color::onSurface, Node::Align::Center);
     paint.glyphs.text(scene, {560, 500, 800, kit::type::body.line * 2},
-                      say::msg("tv.home.silentDesc", "Home comes back when Native Tv answers again."),
+                      say::msg("tv.home.silentDesc", "Home comes back when Rooted TV answers again."),
                       kit::type::body,
                       kit::color::onSurface2, Node::Align::Center, 2);
     scene.popOpacity();

@@ -1,5 +1,5 @@
 ---
-description: "Update, back up and uninstall Native Tv on a rooted LG webOS TV."
+description: "Update, back up and uninstall Rooted TV on a rooted LG webOS TV."
 ---
 
 # Updating and uninstalling
@@ -10,7 +10,7 @@ ssh root@<tv-ip> /var/lib/tvweb/tvwebctl status    # start | stop | restart | st
 
 ## Updating
 
-Native Tv does not install its own server releases. Its **Updates** card, on
+Rooted TV does not install its own server releases. Its **Updates** card, on
 the dashboard's [Server tab](../dashboard/server.md), tells when a newer one is
 out, when asked or once a day if switched on. Update a TV by deploying the
 server or installing the Homebrew Channel package.
@@ -44,7 +44,7 @@ version.
 
 The Homebrew Channel app catalog in the Apps tab still installs and updates
 third-party apps. The **Block TV software updates** switch controls LG firmware
-updates; it does not control Native Tv release deployment.
+updates; it does not control Rooted TV release deployment.
 
 ## Uninstalling
 
@@ -64,4 +64,4 @@ rm -f /var/lib/webosbrew/init.d/50-tvweb* /var/lib/webosbrew/init.d/20-tvweb-ser
 rm -f /var/lib/webosbrew/tvweb-boot.log*
 ```
 
-`restore-home` puts LG's Home screen layout back where [LG launcher layout](../dashboard/apps.md#lg-launcher-layout) changed it, `restore-keys` the remote's keys where [Remote keys](../dashboard/apps.md#remote-keys) did, `restore-nativetv-home` LG's Home where [Native Tv Home](../dashboard/home.md) replaced it, and `restore-boot` takes away the start-up activity and its bus grant that **Start after a reboot** (webOS 3.4) added. `stop` also gives LG's Home its place back while the server is stopped. The three `sh` lines remove the boot service the remote's key filter calls, the TV dashboard app and the startup splash. The ad-block and update-block table stays mounted over `/etc/hosts` after `stop`; deleted while mounted, it keeps blocking until a reboot, and a reinstall before then takes it for its own. Uninstalling Native Tv through the Homebrew Channel restores LG Home automatically. Nothing on the TV's read-only rootfs is ever modified. [What the dashboard changes on the TV](../administration/tv-changes.md) lists everything else, including the settings that uninstalling leaves as they are.
+`restore-home` puts LG's Home screen layout back where [LG launcher layout](../dashboard/apps.md#lg-launcher-layout) changed it, `restore-keys` the remote's keys where [Remote keys](../dashboard/apps.md#remote-keys) did, `restore-nativetv-home` LG's Home where [Rooted TV Home](../dashboard/home.md) replaced it, and `restore-boot` takes away the start-up activity and its bus grant that **Start after a reboot** (webOS 3.4) added. `stop` also gives LG's Home its place back while the server is stopped. The three `sh` lines remove the boot service the remote's key filter calls, the TV dashboard app and the startup splash. The ad-block and update-block table stays mounted over `/etc/hosts` after `stop`; deleted while mounted, it keeps blocking until a reboot, and a reinstall before then takes it for its own. Uninstalling Rooted TV through the Homebrew Channel restores LG Home automatically. Nothing on the TV's read-only rootfs is ever modified. [What the dashboard changes on the TV](../administration/tv-changes.md) lists everything else, including the settings that uninstalling leaves as they are.

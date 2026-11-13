@@ -35,10 +35,10 @@ struct HomeKeyWatcherOptions {
     unsigned pollIntervalMilliseconds = 200;
 };
 
-// webOS 3.4 has no Home app to put Native Tv Home in the place of: LG's Home is a ribbon the
+// webOS 3.4 has no Home app to put Rooted TV Home in the place of: LG's Home is a ribbon the
 // compositor draws over the card in front. The watcher follows the compositor's log for the ribbon
 // being shown and, while `enabled` says so, hands each one to `opened` with the card that was in
-// front, which brings Native Tv Home forward. A Home the server opens itself (the LG Home tile, the
+// front, which brings Rooted TV Home forward. A Home the server opens itself (the LG Home tile, the
 // dashboard's Home key) is passed over for the time given to suppressFor.
 class HomeKeyWatcher {
   public:

@@ -162,7 +162,7 @@ Json Assistant::ask(const std::string &key, const std::string &model, const std:
     Json instructions = Json::object();
     Json instructionParts = Json::array();
     instructionParts.add(text(
-        "You are the assistant on the home screen of a TV (Native Tv on an LG TV). " + context +
+        "You are the assistant on the home screen of a TV (Rooted TV on an LG TV). " + context +
         " Answer in the language of the question, in two or three short sentences: the answer is "
         "read on a TV across the room. Use search_titles to find films and series and show_titles "
         "to put the ones you name on screen. Open a title or control the TV only when asked to. "

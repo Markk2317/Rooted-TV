@@ -196,7 +196,7 @@ class ProfilesScreen final : public ScreenView {
         std::vector<Json> people = host.view().catalogue["profiles"].items();
         const size_t count = people.size();
         scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::color::chooser);
-        paint.glyphs.text(scene, {0, layout::chooserMarkY, kit::canvas::width, kit::type::chooserMark.line}, "Native Tv",
+        paint.glyphs.text(scene, {0, layout::chooserMarkY, kit::canvas::width, kit::type::chooserMark.line}, "Rooted TV",
                           kit::type::chooserMark, kit::color::chooserMark, Node::Align::Center);
         paint.glyphs.text(scene, {0, layout::chooserTitleY, kit::canvas::width, kit::type::chooserTitle.line},
                           msg("tv.profiles.title", "Choose a profile"), kit::type::chooserTitle,

@@ -1096,7 +1096,7 @@
     {
       "id": "E2E-080",
       "title": "Home takeover on",
-      "purpose": "Switching Native Tv Home on takes LG's Home's place: the switch is accepted (the client is on the home screen and passes its probe), nothing is halted, and the stub is mounted.",
+      "purpose": "Switching Rooted TV Home on takes LG's Home's place: the switch is accepted (the client is on the home screen and passes its probe), nothing is halted, and the stub is mounted.",
       "kind": "flow",
       "screen": "",
       "env": {},
@@ -1148,7 +1148,7 @@
     {
       "id": "E2E-081",
       "title": "Home key from an HDMI input",
-      "purpose": "With Home on and an HDMI input in front, the Home key does not strand the screen between the stub and the input: the Native Tv app is in front within 5 s and stays, and LG's Home has not been given back.",
+      "purpose": "With Home on and an HDMI input in front, the Home key does not strand the screen between the stub and the input: the Rooted TV app is in front within 5 s and stays, and LG's Home has not been given back.",
       "kind": "flow",
       "screen": "",
       "env": {},
@@ -1218,8 +1218,8 @@
     },
     {
       "id": "E2E-082",
-      "title": "Home and Back on Native Tv Home",
-      "purpose": "On the native Home screen Back does nothing and the Home key shows the stub and returns to the Native Tv app within 5 s; the app is in front throughout and LG's Home is not given back.",
+      "title": "Home and Back on Rooted TV Home",
+      "purpose": "On the native Home screen Back does nothing and the Home key shows the stub and returns to the Rooted TV app within 5 s; the app is in front throughout and LG's Home is not given back.",
       "kind": "flow",
       "screen": "",
       "env": {},
@@ -1314,7 +1314,7 @@
     {
       "id": "E2E-083",
       "title": "Home takeover off",
-      "purpose": "Switching Native Tv Home off gives LG's Home its place back: the switch is accepted, Home is off and the stub is unmounted, and the Home key no longer opens the Native Tv app The client Home started is closed, so the cases after it can run.",
+      "purpose": "Switching Rooted TV Home off gives LG's Home its place back: the switch is accepted, Home is off and the stub is unmounted, and the Home key no longer opens the Rooted TV app The client Home started is closed, so the cases after it can run.",
       "kind": "flow",
       "screen": "",
       "env": {},
@@ -1369,7 +1369,7 @@
         "Take the lock folder /tmp/nativetv-e2e.lock (mkdir).",
         "Read the server's port: /var/lib/tvweb/native/nativetv-service port --data-root /var/lib/tvweb (the access token is never read).",
         "Send scripts/home-flow.js with this case's flow to the TV's Node over ssh (node - PORT); it calls the server on the TV's loopback and reads the app in front from the app manager.",
-        "Run: POST /api/home/disable, wait 2 s, check enabled and active are false; send Home and check com.webos.app.home (LG's) is in front within 5 s and stays 3 s; close the Native Tv app Home had started, since a client left running refuses every case that starts one.",
+        "Run: POST /api/home/disable, wait 2 s, check enabled and active are false; send Home and check com.webos.app.home (LG's) is in front within 5 s and stays 3 s; close the Rooted TV app Home had started, since a client left running refuses every case that starts one.",
         "Judge each step; the first that fails ends the flow.",
         "Delete the lock folder."
       ],
@@ -4511,7 +4511,7 @@
     {
       "id": "E2E-116",
       "title": "A damaged backup file is refused and changes nothing",
-      "purpose": "Files that are not a Native Tv backup, are from a newer one, or are empty are refused with 400. Restoring a real backup is tried by hand, as it writes settings.",
+      "purpose": "Files that are not a Rooted TV backup, are from a newer one, or are empty are refused with 400. Restoring a real backup is tried by hand, as it writes settings.",
       "kind": "api",
       "flow": [
         {
@@ -4522,7 +4522,7 @@
           },
           "expect": {
             "ok": false,
-            "error": "That file is not a Native Tv backup"
+            "error": "That file is not a Rooted TV backup"
           },
           "status": 400
         },
@@ -4531,7 +4531,7 @@
           "body": {},
           "expect": {
             "ok": false,
-            "error": "That file is not a Native Tv backup"
+            "error": "That file is not a Rooted TV backup"
           },
           "status": 400
         },
@@ -4543,7 +4543,7 @@
           },
           "expect": {
             "ok": false,
-            "error": "That backup is from a newer Native Tv: update this TV first"
+            "error": "That backup is from a newer Rooted TV: update this TV first"
           },
           "status": 400
         }
@@ -5227,8 +5227,8 @@
     },
     {
       "id": "E2E-123",
-      "title": "Settings and Native Tv Home survive a reboot",
-      "purpose": "The TV is rebooted through the server (the one case that does), and once the server answers again and has had 40 s for its services, what was set before is read back: Native Tv Home is still on and not halted with no crash counted, the order of apps is the default, the TMDB key is still saved (through the dashboard, not config.json), and the privacy and screen saver values that the round-trip cases start from. The case needs --allow reboot, expects the test B3's own settings, and does nothing else: a TV that does not come back within 7 minutes is an error, left for the owner.",
+      "title": "Settings and Rooted TV Home survive a reboot",
+      "purpose": "The TV is rebooted through the server (the one case that does), and once the server answers again and has had 40 s for its services, what was set before is read back: Rooted TV Home is still on and not halted with no crash counted, the order of apps is the default, the TMDB key is still saved (through the dashboard, not config.json), and the privacy and screen saver values that the round-trip cases start from. The case needs --allow reboot, expects the test B3's own settings, and does nothing else: a TV that does not come back within 7 minutes is an error, left for the owner.",
       "kind": "reboot",
       "requires": [
         "reboot"
@@ -5271,7 +5271,7 @@
         "Read the server's port: /var/lib/tvweb/native/nativetv-service port --data-root /var/lib/tvweb (the access token is never read).",
         "Send scripts/home-flow.js with POST /api/control reboot to the TV's Node over ssh (node - PORT); the reply must be ok.",
         "Wait for ssh to stop answering (at most 120 s), then to answer again (at most 420 s), then for the server's port, then 40 s for the services.",
-        "Send scripts/home-flow.js with this case's flow, reads only: Native Tv Home on, active and not halted with no recent exit, the apps in their default order, the TMDB key saved, the ad-tracking limit on, the ad blocker off, the screen saver Harmonograph and Dim.",
+        "Send scripts/home-flow.js with this case's flow, reads only: Rooted TV Home on, active and not halted with no recent exit, the apps in their default order, the TMDB key saved, the ad-tracking limit on, the ad blocker off, the screen saver Harmonograph and Dim.",
         "Judge each step; the first that fails ends the flow.",
         "Delete the lock folder."
       ],
@@ -5579,7 +5579,7 @@
     {
       "id": "E2E-137",
       "title": "TV Settings Home rows change and come back (1 of 5)",
-      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Native Tv Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
+      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Rooted TV Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
       "kind": "run",
       "requires": [
         "control"
@@ -5606,7 +5606,7 @@
     {
       "id": "E2E-138",
       "title": "TV Settings Home rows change and come back (2 of 5)",
-      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Native Tv Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
+      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Rooted TV Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
       "kind": "run",
       "requires": [
         "control"
@@ -5633,7 +5633,7 @@
     {
       "id": "E2E-139",
       "title": "TV Settings Home rows change and come back (3 of 5)",
-      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Native Tv Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
+      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Rooted TV Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
       "kind": "run",
       "requires": [
         "control"
@@ -5660,7 +5660,7 @@
     {
       "id": "E2E-140",
       "title": "TV Settings Home rows change and come back (4 of 5)",
-      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Native Tv Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
+      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Rooted TV Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
       "kind": "run",
       "requires": [
         "control"
@@ -5687,7 +5687,7 @@
     {
       "id": "E2E-145",
       "title": "TV Settings Home rows change and come back (5 of 5)",
-      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Native Tv Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
+      "purpose": "Every switch and choice of the TV's Home Settings is pressed through the TV's own screen, as the owner would with the remote, and put back: each must change when OK is pressed, show the new value after the write and come back to the first value (a switch in two presses, a choice after one lap of its values). It is the TV-side counterpart of the API round trips; a row it cannot put back fails the case, and so does one that does not change. Rooted TV Home's own switch is left out: E2E-080 to 083 turn the takeover on and off.",
       "kind": "run",
       "requires": [
         "control"
@@ -6362,8 +6362,8 @@
     },
     {
       "id": "E2E-147",
-      "title": "TV Settings Home: the Native Tv Home switch takes the TV over",
-      "purpose": "OK twice (the second confirms, as the switch asks) on the first row of the Home settings, Native Tv Home, switches the takeover on from the TV itself (E2E-080 does it through the server): once the client has run, the server reports Home on and not halted, and the case then switches it off through the server. The client may be replaced by Native Tv Home itself, so only the server's answer is judged. It expects Native Tv Home off at the start. It then closes the Native Tv app, which the takeover launched and switching it off does not close, so the client cases that follow can run.",
+      "title": "TV Settings Home: the Rooted TV Home switch takes the TV over",
+      "purpose": "OK twice (the second confirms, as the switch asks) on the first row of the Home settings, Rooted TV Home, switches the takeover on from the TV itself (E2E-080 does it through the server): once the client has run, the server reports Home on and not halted, and the case then switches it off through the server. The client may be replaced by Rooted TV Home itself, so only the server's answer is judged. It expects Rooted TV Home off at the start. It then closes the Rooted TV app, which the takeover launched and switching it off does not close, so the client cases that follow can run.",
       "kind": "run",
       "requires": [
         "control",

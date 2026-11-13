@@ -345,7 +345,7 @@ int main(int argc, char **argv) {
         SDL_StartTextInput();
         installTerminationHandlers();
         const int width = gl.width(), height = gl.height();
-        std::fprintf(stderr, "Native Tv native: %dx%d, %s, %s%s\n", width, height,
+        std::fprintf(stderr, "Rooted TV native: %dx%d, %s, %s%s\n", width, height,
                      glGetString(GL_RENDERER), glGetString(GL_VERSION),
                      priorityRaised ? ", priority raised" : "");
         {
@@ -818,7 +818,7 @@ int main(int argc, char **argv) {
             }
         }
     } catch (const std::exception &error) {
-        std::fprintf(stderr, "Native Tv native: %s\n", error.what());
+        std::fprintf(stderr, "Rooted TV native: %s\n", error.what());
         result = 1;
     }
     IMG_Quit();

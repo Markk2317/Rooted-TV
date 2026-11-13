@@ -70,7 +70,7 @@ browser and may use modern JavaScript.
   starts), `state_subscriptions` (live state), `stats_collector`
   (`/api/stats`), `mqtt_*` and `ha_*` (the MQTT client, topics, Home Assistant
   discovery and telemetry), `install_jobs` (installing .ipk packages),
-  `backup_restore`, `home_orchestrator`, `home_crash_breaker`, `home_probe_gate` and `home_*_manager` (Native Tv Home
+  `backup_restore`, `home_orchestrator`, `home_crash_breaker`, `home_probe_gate` and `home_*_manager` (Rooted TV Home
   and LG's Home screen), `screensaver_*`, `sam_rescan_manager`,
   `remote_keys_reconciler` and `remote_button_log_watcher` (the remote's
   keys), `services_keeper`, `devtools_firewall`, `retired_files` (files earlier
@@ -174,7 +174,7 @@ one-line fix gets one line.
 
 A PR description must be readable at a glance by someone who has not seen
 the code. Open with a plain-language summary of what changes for the people
-using Native Tv: short sentences or a few bullets, no file names, function
+using Rooted TV: short sentences or a few bullets, no file names, function
 names or PR numbers. Put the technical detail - the code changes, related PRs,
 config keys, what was left out - under a `## Technical details` heading after
 it.

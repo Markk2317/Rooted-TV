@@ -109,7 +109,7 @@ int main() {
     check(removeRetiredApps(apps) == 1, "the developer client is counted once for its two folders");
     check(!exists(apps + "/applications/com.tvweb.native") && !exists(apps + "/packages/com.tvweb.native"),
           "with everything in them");
-    check(exists(apps + "/applications/com.tvweb.dashboard/nativetv-tv"), "the Native Tv tile's app stays");
+    check(exists(apps + "/applications/com.tvweb.dashboard/nativetv-tv"), "the Rooted TV tile's app stays");
     check(removeRetiredApps(apps) == 0, "a second start finds nothing");
     check(removeRetiredApps("/nonexistent/nativetv-apps") == 0, "a missing apps folder is not an error");
     unlink((apps + "/applications/com.tvweb.dashboard/nativetv-tv").c_str());

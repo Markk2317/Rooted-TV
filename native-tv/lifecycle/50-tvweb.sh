@@ -1,5 +1,5 @@
 #!/bin/sh
-# webosbrew boot hook: start the Native Tv daemon.
+# webosbrew boot hook: start the Rooted TV daemon.
 # Install to /var/lib/webosbrew/init.d/50-tvweb (chmod +x).
 # Note: BusyBox run-parts ignores filenames containing a dot (.),
 # so this hook must not have a .sh extension in init.d.
@@ -61,7 +61,7 @@ if grep -q "'com.tvweb.splash' is foreground" /var/log/bootd.log 2>/dev/null &&
   bootlog "banner-ready sent for the splash"
 fi
 
-# Until Native Tv Home opens, the screen shows the input the TV started on.
+# Until Rooted TV Home opens, the screen shows the input the TV started on.
 # The Home key's localized startup notice is saved in remotekeys.json by
 # the daemon. Let the native one-shot parse it and build the Luna JSON
 # payload.
@@ -182,11 +182,11 @@ webos_major=$(sed -n 's/.*webOS[^0-9]*\([0-9][0-9]*\)\..*/\1/p' /etc/issue 2>/de
 [ -n "$webos_major" ] ||
   webos_major=$(sed -n 's/.*release[^0-9]*\([0-9][0-9]*\)\..*/\1/p' /etc/starfish-release 2>/dev/null | head -n 1)
 
-# Native Tv Home in LG's Home's place (lib/home-takeover.js), first of the
+# Rooted TV Home in LG's Home's place (lib/home-takeover.js), first of the
 # mounts, as anything that opens Home before it opens LG's. LG's Home may have
 # started by now, in the background, on the empty layout the server left it on
 # webOS 9, so anything opening Home before now showed black; once sam
-# reads the mounted manifest it is stopped, and the TV opens Native Tv Home's
+# reads the mounted manifest it is stopped, and the TV opens Rooted TV Home's
 # page as Home from then on. Where sam does not take it, LG's files go back
 # under it, its own layout too, and it restarts on that. The server does the
 # same at its start, for a hook that did not run.
@@ -219,7 +219,7 @@ lg_home_pids() {
 # The server switches LG's Home auto launch off, so the TV starts on its last
 # input rather than on LG's Home, and keeps the owner's value as lgAutoLaunch in
 # home.json (lib/home.js). Where it was on, or openOnPowerOn was chosen,
-# Native Tv Home opens instead: after a power-on LG opens Home for, and only while the input
+# Rooted TV Home opens instead: after a power-on LG opens Home for, and only while the input
 # the TV started on is still in front, so an input or app chosen since stays.
 # bootd logs the app it put in front as "'<id>' is foreground" (a G5, webOS
 # 10.3.1); without that line nothing is opened.
@@ -236,7 +236,7 @@ home_open_at_boot_compat() {
   [ -n "$reasons" ] || reasons='["aiKey","lastPowerOn","localKey","remoteKey","seniorHelp"]'
   case "$reasons" in
     *"\"$reason\""*) ;;
-    *) bootlog "Native Tv Home not opened: power-on reason ${reason:-unknown}"; return 0 ;;
+    *) bootlog "Rooted TV Home not opened: power-on reason ${reason:-unknown}"; return 0 ;;
   esac
   # The first app bootd names, leaving out the splash the key filter opens before it.
   boot_app=$(sed -n "s/.*BootSequencer) '\([^']*\)' is foreground.*/\1/p" /var/log/bootd.log 2>/dev/null |
@@ -245,11 +245,11 @@ home_open_at_boot_compat() {
     sed -n 's/.*"appId": *"\([^"]*\)".*/\1/p')
   case "$boot_app" in
     com.webos.app.livetv|com.webos.app.hdmi[0-9]|com.webos.app.av[0-9]|com.webos.app.comp[0-9]) ;;
-    *) bootlog "Native Tv Home not opened: the TV started on ${boot_app:-nothing logged}"; return 0 ;;
+    *) bootlog "Rooted TV Home not opened: the TV started on ${boot_app:-nothing logged}"; return 0 ;;
   esac
   # The splash the key filter puts over the input (lib/remotekeys.js) is in front too.
   if [ "$front" != "$boot_app" ] && [ "$front" != "com.tvweb.splash" ]; then
-    bootlog "Native Tv Home not opened: ${front:-nothing} in front since the start on $boot_app"
+    bootlog "Rooted TV Home not opened: ${front:-nothing} in front since the start on $boot_app"
     return 0
   fi
   # In the background: sam answers once WebAppMgr has the app up, 17 s after
@@ -258,7 +258,7 @@ home_open_at_boot_compat() {
   # it on /dev/null. Its output is the hook's, the boot log, where bootlog writes.
   ( luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' 2>/dev/null |
       grep -q '"returnValue": *true' &&
-      bootlog "Native Tv Home opened over $boot_app (in front: $front)" ) &
+      bootlog "Rooted TV Home opened over $boot_app (in front: $front)" ) &
 }
 home_open_at_boot() {
   native_daemon="$DAEMON_BIN"
@@ -278,19 +278,19 @@ home_open_at_boot() {
 }
 legacy_home_takeover() {
   if ! grep -q '"enabled"[[:space:]]*:[[:space:]]*true' /var/lib/tvweb/home.json 2>/dev/null; then
-    bootlog "legacy Home takeover skipped: Native Tv Home is disabled"
+    bootlog "legacy Home takeover skipped: Rooted TV Home is disabled"
     return 0
   fi
   mount --bind "$homestage" "$homeapp" 2>/dev/null || true
-  bootlog "Native Tv Home: mounted"
+  bootlog "Rooted TV Home: mounted"
   if [ "$webos_major" = "9" ]; then
     home_reread() { sam_nudge; }
   else
     home_reread() { sam_reread_app com.webos.app.home; }
   fi
-  if home_reread && { bootlog "Native Tv Home: sam reread"; sam_reports com.webos.app.home '"type": *"web"'; }; then
+  if home_reread && { bootlog "Rooted TV Home: sam reread"; sam_reports com.webos.app.home '"type": *"web"'; }; then
     for pid in $(lg_home_pids); do kill "$pid" 2>/dev/null; done
-    bootlog "Native Tv Home is in LG's Home's place"
+    bootlog "Rooted TV Home is in LG's Home's place"
     home_open_at_boot
   else
     umount "$homeapp" 2>/dev/null
@@ -303,14 +303,14 @@ legacy_home_takeover() {
         bootlog "native Home release failed after dispatch; not replaying it through shell"
     fi
     for pid in $(lg_home_pids); do kill "$pid" 2>/dev/null; done
-    bootlog "sam did not take Native Tv Home - LG's Home kept"
+    bootlog "sam did not take Rooted TV Home - LG's Home kept"
   fi
 }
 
 native_home_takeover() {
   if native_boot_dispatch "Home lifecycle" --takeover-home \
     --config /var/lib/tvweb/config.json --assets-root /var/lib/tvweb/assets; then
-    bootlog "native lifecycle took Native Tv Home's place"
+    bootlog "native lifecycle took Rooted TV Home's place"
     home_open_at_boot
   else
     dispatch_status=$?
@@ -328,11 +328,11 @@ native_home_takeover() {
 home_takeover_boot() {
   if [ -f "$homestage/appinfo.json" ] || [ -f /var/lib/tvweb/assets/home-app/index.html ]; then
     if [ -x "$DAEMON_BIN" ]; then
-      bootlog "Native Tv Home: checking native lifecycle"
+      bootlog "Rooted TV Home: checking native lifecycle"
       native_home_takeover
     elif [ "$home_os" -eq 1 ] &&
          grep -q '"enabled"[[:space:]]*:[[:space:]]*true' /var/lib/tvweb/home.json 2>/dev/null; then
-      bootlog "Native Tv Home: taking LG's Home's place"
+      bootlog "Rooted TV Home: taking LG's Home's place"
       legacy_home_takeover
     fi
   fi
@@ -507,7 +507,7 @@ fi
 (
   # Started as soon as WebAppMgr is up (below): the sooner it is up, the
   # sooner Home Assistant has the TV's state after a power-on, and the sooner
-  # Native Tv Home's page, which shows the Native Tv mark until it answers,
+  # Rooted TV Home's page, which shows the Rooted TV mark until it answers,
   # can load. It used to wait 5 s for the
   # busiest part of boot to pass; the services hook's systemd reload, the
   # largest part of that, now waits for the server instead (lib/services.js).
@@ -525,7 +525,7 @@ fi
   # Started alongside WebAppMgr, the server's start held WebAppMgr back: on a B3
   # (webOS 10.3.2), three early-start boots each way, it was up at 35-39 s
   # with the server waiting for it and at 47-54 s without, the server
-  # listening 6 s later. Native Tv Home draws through WebAppMgr, which drew it
+  # listening 6 s later. Rooted TV Home draws through WebAppMgr, which drew it
   # 10 s after its start with the server held and 21 s after with it running.
   # Home in front ends the wait too: systemd has called WebAppMgr active both
   # 9.6 s after it drew Home and 12 s before. Held until Home was in front,

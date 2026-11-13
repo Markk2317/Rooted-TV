@@ -1,6 +1,6 @@
 ---
-title: Install Native Tv on a rooted LG webOS TV
-description: "Install Native Tv on a rooted LG webOS TV: install the release package, or build the ARM server with the webOSbrew SDK and run deploy.sh over SSH, then open the dashboard."
+title: Install Rooted TV on a rooted LG webOS TV
+description: "Install Rooted TV on a rooted LG webOS TV: install the release package, or build the ARM server with the webOSbrew SDK and run deploy.sh over SSH, then open the dashboard."
 ---
 
 # Installing
@@ -12,7 +12,7 @@ Each [release](https://github.com/ihtisham1211/native-tv/releases) carries the H
 1. Root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel).
 2. Download `io.github.ihtisham1211.nativetv_<version>_all.ipk` from the [latest release](https://github.com/ihtisham1211/native-tv/releases/latest).
 3. Install it on the TV with [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) or `ares-install`.
-4. Open the Native Tv app on the TV. It puts the server in place, starts it and opens the dashboard; the first run starts the [setup wizard](#option-1-on-screen-setup-in-the-tv-app).
+4. Open the Rooted TV app on the TV. It puts the server in place, starts it and opens the dashboard; the first run starts the [setup wizard](#option-1-on-screen-setup-in-the-tv-app).
 
 [Managing](managing.md) covers updating a package install. The rest of this page, from the quick start on, builds the server from a clone and installs it over SSH instead.
 
@@ -93,13 +93,13 @@ builds fail locally before connecting to the TV. The server is the native
 `nativetv-daemon`; no Node runs on the TV. webOS 3.4 is the oldest supported
 version (webOS 2.2 and older webOS 3 releases are untried). Hardware acceptance currently
 covers a B3 on webOS 10.3.2 and a 2016 C6 on webOS 3.4.3. webOS 3.4 runs no root hook at
-boot, so there the server starts once the Native Tv tile or the Homebrew Channel is opened after
+boot, so there the server starts once the Rooted TV tile or the Homebrew Channel is opened after
 a power-on: the tile asks the Homebrew Channel to run its startup script when no server answers.
 With Quick Start on, switching off and on keeps the server running, but the TV still restarts
 itself in standby some nights, and after that or a power cut the tile is needed; **Start after a
-reboot** on the Native Tv Home tab registers an activity with the TV's activity manager that starts
+reboot** on the Rooted TV Home tab registers an activity with the TV's activity manager that starts
 the server as the TV is next switched on
-([Native Tv Home](../dashboard/home.md)).
+([Rooted TV Home](../dashboard/home.md)).
 
 Then, from the repository root in a terminal:
 
@@ -116,17 +116,17 @@ native-tv/lifecycle/deploy.sh 192.168.1.50
 The script takes about ten seconds to copy the server files and verify that the service is running. Once complete:
 
 * **In your browser:** Open **`http://<tv-ip>:8080/`** on any phone, tablet, or computer on your home network.
-* **On the TV:** Open the new **Native Tv** tile on your TV's home screen using your remote (see [The TV app](../apps/tv-app.md)). Not every TV accepts the app, and without it the dashboard is still open from a phone or computer.
+* **On the TV:** Open the new **Rooted TV** tile on your TV's home screen using your remote (see [The TV app](../apps/tv-app.md)). Not every TV accepts the app, and without it the dashboard is still open from a phone or computer.
 
 > [!TIP]
 > **Static IP recommendation:** Reserving a fixed DHCP IP address for the TV in your home router settings ensures the dashboard address never changes.
 
 > [!NOTE]
-> **Private & local by default:** The server runs directly on the TV and talks only to your local network. No analytics or telemetry leave your home. The server reaches the internet only for features that need it: the Homebrew app catalogue and its downloads, and Native Tv Home's titles and posters.
+> **Private & local by default:** The server runs directly on the TV and talks only to your local network. No analytics or telemetry leave your home. The server reaches the internet only for features that need it: the Homebrew app catalogue and its downloads, and Rooted TV Home's titles and posters.
 
 ## Configuration options
 
-Native Tv can be configured in two ways:
+Rooted TV can be configured in two ways:
 
 1. **[On-screen setup in the TV app](#option-1-on-screen-setup-in-the-tv-app) (Recommended)**: An easy, remote-driven setup wizard right on the TV screen.
 2. **[Configuration file and flags](#option-2-configuration-file-and-flags) (Command line / Headless)**: A declarative `config.json` file and command-line options for headless setups, automation, or pre-configured installs.
@@ -135,9 +135,9 @@ Native Tv can be configured in two ways:
 
 ### Option 1: On-screen setup in the TV app
 
-When Native Tv is installed from the Homebrew Channel, or deployed with a `config.json` seed (see Option 2), opening the app on the TV for the first time starts an interactive setup wizard designed for the remote. A plain `deploy.sh` install without a seed keeps the defaults and shows no wizard.
+When Rooted TV is installed from the Homebrew Channel, or deployed with a `config.json` seed (see Option 2), opening the app on the TV for the first time starts an interactive setup wizard designed for the remote. A plain `deploy.sh` install without a seed keeps the defaults and shows no wizard.
 
-![Network access selection in the Native Tv TV app setup wizard](../screenshots/tv-app-setup-network.png)
+![Network access selection in the Rooted TV TV app setup wizard](../screenshots/tv-app-setup-network.png)
 
 *Choosing whether the web dashboard is open to devices on the home network or TV-local only.*
 
@@ -146,7 +146,7 @@ The wizard asks you to name the TV (it suggests its model's series, such as `B3`
 * **Admin PIN**: Four digits that the TV and the web dashboard ask for before the risky actions; the step is skipped when the TV already has a PIN. See [The TV app](../apps/tv-app.md#first-run-setup-wizard).
 * **Web dashboard access**: Choose between opening the web dashboard to phones and computers on your home network, or keeping it private to this TV only (`127.0.0.1`).
 * **Home Assistant integration**: Connect your TV to Home Assistant via MQTT. The TV displays a QR code to scan with your phone, allowing you to enter your MQTT broker credentials easily from your mobile browser without typing on the TV remote. An on-screen keyboard beside the code takes them from the remote instead.
-* **Active Standby (Always-on)**: On TVs that support Always Ready / Active Standby (such as the LG C2 or G2), choose whether Native Tv and Home Assistant remain connected with the screen off so the TV can be controlled and turned back on over the network.
+* **Active Standby (Always-on)**: On TVs that support Always Ready / Active Standby (such as the LG C2 or G2), choose whether Rooted TV and Home Assistant remain connected with the screen off so the TV can be controlled and turned back on over the network.
 
 Any choice made during setup can be changed at any time from the TV app's **Settings** tab or the web dashboard. For a full walkthrough with screenshots, see [The TV app setup wizard](../apps/tv-app.md#first-run-setup-wizard).
 
@@ -154,7 +154,7 @@ Any choice made during setup can be changed at any time from the TV app's **Sett
 
 ### Option 2: Configuration file and flags
 
-For headless installs, multi-TV households, or users who prefer configuring files directly, Native Tv reads its settings from `/var/lib/tvweb/config.json` on the TV.
+For headless installs, multi-TV households, or users who prefer configuring files directly, Rooted TV reads its settings from `/var/lib/tvweb/config.json` on the TV.
 
 To pre-configure a TV before installation, create a `native-tv/lifecycle/config.json` file (or `native-tv/lifecycle/config.<tv-ip>.json` if deploying to multiple TVs) in your cloned repository before running `deploy.sh`. The installer automatically seeds the TV with that configuration on first deploy, and a first deploy also shows the setup screens on the TV the first time its app is opened.
 
@@ -202,9 +202,9 @@ Advanced settings can be adjusted in `config.json` or through the dashboard's Se
 | `panel` | Auto | Overrides panel detection with `"oled"` or `"lcd"` if automatic detection does not detect your panel correctly. |
 | `logging.level` | `"info"` | Server logging verbosity: `"quiet"` (warnings/errors only), `"info"` (standard), or `"debug"` (verbose diagnostics). |
 | `ntp.server` | `""` | Hostname of an NTP server (e.g., `"pool.ntp.org"`) to synchronize the TV's clock on boot and hourly. |
-| `syslog.server` | `""` | Remote syslog server address to forward TV and Native Tv logs over RFC 5424 UDP (port `514`). |
+| `syslog.server` | `""` | Remote syslog server address to forward TV and Rooted TV logs over RFC 5424 UDP (port `514`). |
 | `allowTileHiding` | `false` | Experimental: allows hiding built-in LG system tiles and apps on the home screen. |
-| `allowExperimentalHome` | `false` | Experimental: offers [Native Tv Home](../dashboard/home.md) on webOS 11, where it is untried. |
+| `allowExperimentalHome` | `false` | Experimental: offers [Rooted TV Home](../dashboard/home.md) on webOS 11, where it is untried. |
 | `allowExperimentalScreensavers` | `false` | Experimental: allows custom QML screensavers on webOS 12 and newer, which are untried there. Named `allowOnWebos10` before 0.105; that name is still read, and renamed when the server starts. |
 | `allowNetworkDebugger` | `false` | Exposes the webOS app inspector on port `9998` over the local network for developers using `ares-inspect`. |
 | `iconServer` | `false` | Serves installed apps' icons, read-only and without a token, at `http://<tv-ip>:8082/icons/<appId>.png` (the dashboard's port plus two), for launchers on other devices. Home Assistant's Launch App select then lists each icon's address in `app_icons`. Also switched from the Home Assistant tab. |
@@ -213,7 +213,7 @@ Advanced settings can be adjusted in `config.json` or through the dashboard's Se
 
 **Installer flags (`native-tv/lifecycle/deploy.sh <tv-ip> [flags]`)**:
 
-* `--app`: Ensure the Native Tv app tile is installed on the TV home screen.
+* `--app`: Ensure the Rooted TV app tile is installed on the TV home screen.
 * `--no-app`: Omit installing the TV app tile (runs the background server only).
 * `--telnet`: Force connection over telnet even if SSH is available.
 * `--no-persist`: Run the server only until the next TV reboot (skips the boot persistence hook).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package the Native Tv tile's app (the native client) with LG's packager, independently of the server."""
+"""Package the Rooted TV tile's app (the native client) with LG's packager, independently of the server."""
 import argparse
 import json
 from pathlib import Path

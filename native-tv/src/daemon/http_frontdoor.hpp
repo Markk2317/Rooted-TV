@@ -148,7 +148,7 @@ class HttpFrontDoor {
     // sequence, the wake open, auto launch following the screen), or null unless
     // TVWEB_NATIVE_HOME_ORCH=1.
     HomeOrchestrator *homeOrchestrator() const;
-    // Whether Native Tv Home is offered here: the webOS version and the native
+    // Whether Rooted TV Home is offered here: the webOS version and the native
     // client's probe. `probe` false uses a verdict the probe already gave (or
     // runs it when there is none); true runs it again.
     Json homeSupported(bool probe) const;
@@ -173,14 +173,14 @@ class HttpFrontDoor {
     void setStatusProviders(std::function<Json()> ntp, std::function<Json()> syslog);
     void setTvAppManager(TvAppManager *manager) { tvAppManager_ = manager; }
     // Where LG's Home cannot be replaced (webOS 3.4), follows the compositor for LG's Home being
-    // opened and, with `homeButtonOpensNativeHome` set, brings Native Tv Home forward instead.
+    // opened and, with `homeButtonOpensNativeHome` set, brings Rooted TV Home forward instead.
     void startHomeKeyWatcher();
     // Reads webOS's UI language into the data directory's "locale" (see tvLocale).
     void learnTvLocale() const;
     // Where the panel is an OLED without LG's Logo Luminance (webOS 3.4), the server's own logo
     // dimming (service::StaticDimming), at the level `staticDimming` in config.json names.
     void startStaticDimming();
-    // A cold start's Native Tv Home, and the activity that starts the server after a reboot (webOS 3.4).
+    // A cold start's Rooted TV Home, and the activity that starts the server after a reboot (webOS 3.4).
     void openHomeAfterBoot();
     bool setBootActivity(bool on) const;
     // The app now in front ("" with the screen off), for Continue watching, and to close the TV app
@@ -382,7 +382,7 @@ class HttpFrontDoor {
     void handleHomeStartupPost(HttpExchange &exchange) const;
     bool updateHomeStartingNotice(const Json &home) const;
     HomeProbeGate *homeProbeGate() const;
-    // Native Tv Home gave LG's Home back (crash loop or probe) and stays out of it.
+    // Rooted TV Home gave LG's Home back (crash loop or probe) and stays out of it.
     bool homeHalted() const;
     bool syncHomeEarlyService(bool hasStartingNotice,
                               std::string *error = nullptr) const;
@@ -479,7 +479,7 @@ class HttpFrontDoor {
     mutable service::HomeContent homeContent_;
     mutable service::HomeDiscover homeDiscover_;
     mutable std::atomic<int64_t> localeAskedAt_{0}; // learnTvLocale's last question, steady ms
-    // Brings Native Tv Home forward as LG's Home button or a switch-on would (webOS 3.4).
+    // Brings Rooted TV Home forward as LG's Home button or a switch-on would (webOS 3.4).
     void bringHomeForward(const std::string &foregroundId) const;
     mutable service::HomeImageProxy homeImageProxy_;
     mutable service::YoutubeAccounts youtubeAccounts_;

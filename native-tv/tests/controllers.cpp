@@ -157,7 +157,7 @@ int main() {
               "The startup splash covers the screen in Home's ink");
         check(splashScene.nodes.size() == 5 &&
                   imageNode(splashScene, "local:icons/material/mark.svg"),
-              "The splash renders its Native Tv mark, its dot and three breathing dots");
+              "The splash renders its Rooted TV mark, its dot and three breathing dots");
         splash.key(Key::Back);
         check(splash.screenName() == "splash", "Remote keys do not dismiss startup splash");
         splash.active(false);
@@ -348,7 +348,7 @@ int main() {
         reply(clock, "catalogue", twelveHourCatalogue.dump());
         Scene twelveHourScene = clock.scene();
         const Node *twelveHourTime = textNode(twelveHourScene, "5:05");
-        const Node *wordmark = textNode(twelveHourScene, "Native Tv");
+        const Node *wordmark = textNode(twelveHourScene, "Rooted TV");
         const Rect clockBox = wordmark ? kit::geometry::clock(wordmark->rect.w) : Rect{};
         check(twelveHourTime && wordmark && twelveHourTime->rect.x == clockBox.x &&
                   twelveHourTime->rect.y == 84 && twelveHourTime->rect.w == 130 &&
@@ -1309,11 +1309,11 @@ int main() {
                   "Back held opens the recent apps from Home");
         }
 
-        // The Native Tv tile is this client, already in front while Home shows it: OK opens the
+        // The Rooted TV tile is this client, already in front while Home shows it: OK opens the
         // settings in the client and asks the server for no launch, wherever the tile is; the
         // other apps still launch.
         const std::string ownApps =
-            R"("apps":[{"id":"com.tvweb.dashboard","title":"Native Tv","kind":"tools"},{"id":"a","title":"Alpha","kind":"video"}],"devices":[],"channels":[],"kinds":[{"key":"tools","label":"Tools"},{"key":"video","label":"Movies & TV"}],"order":{"app":["com.tvweb.dashboard","a"],"dev":[]},)";
+            R"("apps":[{"id":"com.tvweb.dashboard","title":"Rooted TV","kind":"tools"},{"id":"a","title":"Alpha","kind":"video"}],"devices":[],"channels":[],"kinds":[{"key":"tools","label":"Tools"},{"key":"video","label":"Movies & TV"}],"order":{"app":["com.tvweb.dashboard","a"],"dev":[]},)";
         const std::string ownProfiles = R"("profiles":[{"id":"main","name":"Main","active":true}]})";
         for (int layoutCase = 0; layoutCase < 3; ++layoutCase) {
             // 0: the apps row on Home's first page; 1: the Apps tab's Your apps, under its banner
@@ -1338,11 +1338,11 @@ int main() {
                 for (int i = 0; i < (layoutCase == 2 ? 4 : 1); ++i)
                     own.key(Key::Down);
             }
-            check(own.snapshot()["column"].number() == 0, "The Native Tv tile is the one focused");
+            check(own.snapshot()["column"].number() == 0, "The Rooted TV tile is the one focused");
             size_t launches = ownTransport.count("action");
             own.key(Key::Ok);
             check(own.screenName() == "dashboard" && ownTransport.count("action") == launches,
-                  "OK on the Native Tv tile opens the settings and sends no launch");
+                  "OK on the Rooted TV tile opens the settings and sends no launch");
             own.key(Key::Back);
             check(own.screenName() == "home", "Back from the settings returns to Home");
             run(own, ownMs, 600);
@@ -1402,7 +1402,7 @@ int main() {
         check(beating.snapshot()["silent"].boolean(),
               "Three silent beats raise the not-answering banner");
         run(beating, beatClock, 400);
-        check(beating.shows("Native Tv is not answering"), "The banner names the problem");
+        check(beating.shows("Rooted TV is not answering"), "The banner names the problem");
         reply(beating, "beat", R"({"ok":true,"build":"two","layoutVersion":"2"})");
         check(!beating.snapshot()["silent"].boolean(), "An answer takes the banner away");
 

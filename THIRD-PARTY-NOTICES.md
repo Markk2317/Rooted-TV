@@ -1,6 +1,6 @@
 # Third-party notices
 
-Native Tv is MIT licensed ([LICENSE](LICENSE)). It includes, links to or was
+Rooted TV is MIT licensed ([LICENSE](LICENSE)). It includes, links to or was
 built from the components below. Each keeps its own licence; the text sits at
 the path given, or is the licence named by its SPDX id at the address given.
 
@@ -46,10 +46,10 @@ The TV pages and the TV client take their sizes, colours and type scale from
 Google's TV Design Kit. No file of the kit is included; the values were
 re-created in `native-tv/design/` and `native-tv/assets/google-tv/`. Google,
 Android TV, Google TV and Material Design are trademarks of Google LLC. LG and
-webOS are trademarks of LG Electronics. Native Tv is not affiliated with either.
+webOS are trademarks of LG Electronics. Rooted TV is not affiliated with either.
 The brand logos in the app icon set and the streaming services' wordmarks in
 `native-tv/assets/icons/wordmark-*.svg` (from Wikimedia Commons) belong to their
-owners, who do not endorse Native Tv; they are shown only to name the app or the
+owners, who do not endorse Rooted TV; they are shown only to name the app or the
 service that has a title.
 
 The project the code descends from is credited in the [README](README.md#credits).

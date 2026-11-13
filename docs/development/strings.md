@@ -173,10 +173,10 @@ string that was removed is deleted.
 
 `native-tv/assets/i18n/es.json` covers every string the check finds. About four in five
 are [Glasshouse's](https://github.com/rorygallagher2024/glasshouse) Spanish (MIT), used where
-the English is unchanged. The rest, for English that Native Tv changed or added (its own name,
+the English is unchanged. The rest, for English that Rooted TV changed or added (its own name,
 the LG launcher, the Black screen saver, the newer privacy and Home messages), were
 machine-translated into neutral Latin-American Spanish, in the same terms and tone as
-Glasshouse's: the TV is "la TV", a screen saver a "salvapantallas", Native Tv Home stays "Home"
+Glasshouse's: the TV is "la TV", a screen saver a "salvapantallas", Rooted TV Home stays "Home"
 and LG's is "el Inicio de LG". **Those have not been read by a native speaker.** A correction is
 a pull request that edits the `text` of the entry and leaves its `from` alone.
 
@@ -211,7 +211,7 @@ a title's details, Search, the Apps tab, Quick settings, the profiles, the recen
 apps and the keyboard. Its words are Google TV's own where Google TV has the same
 string (taken from the Italian resources of a Chromecast with Google TV's launcher
 and from its screens), such as "Scelti per te", "Le tue app" and "Lista di titoli".
-Native Tv's own settings, setup and tools are still English.
+Rooted TV's own settings, setup and tools are still English.
 
 ## Converting part of a page
 

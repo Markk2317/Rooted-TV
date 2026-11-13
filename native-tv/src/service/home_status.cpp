@@ -32,7 +32,7 @@ Json homeStatusSupported(const std::string &version, bool allowExperimental) {
     result.set("webos", version.empty() ? Json() : Json::text(version));
     result.set("reason", Json::text(say::msg(
         "srv.home.untested",
-        "Native Tv Home has been tried only on webOS 9 and 10. This TV runs webOS {version}.",
+        "Rooted TV Home has been tried only on webOS 9 and 10. This TV runs webOS {version}.",
         variables)));
     return result;
 }
@@ -46,7 +46,7 @@ Json homeStatusProjection(const Json &rawDocument,
     const Json supported = homeStatusSupported(webosVersion, allowExperimental);
     Json result = Json::object();
     result.set("ok", Json::flag(true));
-    // The TV app has Native Tv Home inside it on every TV it runs on (Back from its Settings), so
+    // The TV app has Rooted TV Home inside it on every TV it runs on (Back from its Settings), so
     // the tab that sets what Home shows is offered where LG's Home cannot be replaced too; the
     // front door still takes it away where the TV app's probe fails.
     const bool takesLgsPlace = supported["ok"].boolean() || document["enabled"].boolean() ||

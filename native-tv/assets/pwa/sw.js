@@ -4,7 +4,7 @@
 // request, the API included, goes straight to the network.
 const OFFLINE = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1">' +
-  '<meta name="color-scheme" content="dark light"><title>Native Tv</title><style>' +
+  '<meta name="color-scheme" content="dark light"><title>Rooted TV</title><style>' +
   'body{margin:0;min-height:100vh;box-sizing:border-box;display:grid;place-content:center;gap:16px;padding:24px;text-align:center;' +
   'font:16px/1.5 system-ui,sans-serif;background:#0e0f11;color:#e3e3e3}' +
   'h1{margin:0;font-size:24px;font-weight:500}p{margin:0;opacity:.75}' +

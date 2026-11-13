@@ -1,5 +1,5 @@
 #!/bin/sh
-# tvwebctl - start/stop/restart the Native Tv daemon on the TV, and the
+# tvwebctl - start/stop/restart the Rooted TV daemon on the TV, and the
 # watchdog that restarts it if its event loop stops turning.
 #
 # Exists as a script rather than an inline ssh command on purpose: `pkill -f
@@ -254,7 +254,7 @@ restore_boot() {
   return 0
 }
 
-# LG's Home back in its place, where Native Tv Home has it. home.json is left
+# LG's Home back in its place, where Rooted TV Home has it. home.json is left
 # as it is, so the server takes the place again when it next starts.
 release_home() {
   [ -x "$DAEMON" ] || return 0
@@ -275,7 +275,7 @@ restore_remote_keys() {
 }
 
 # A daemon restarted this many times in RESTART_WINDOW seconds is not coming
-# back soon: Native Tv Home's page would wait on black, so LG's Home gets its
+# back soon: Rooted TV Home's page would wait on black, so LG's Home gets its
 # place back until a daemon stays up.
 RESTART_LIMIT=${TVWEB_RESTART_LIMIT:-3}
 RESTART_WINDOW=${TVWEB_RESTART_WINDOW:-600}
@@ -377,7 +377,7 @@ watch_loop() {
 
 case "$1" in
   start)   start_app; start_watch ;;
-  # Native Tv Home's page is only a wait for the server, so a server stopped
+  # Rooted TV Home's page is only a wait for the server, so a server stopped
   # on purpose gives LG's Home its place back; its next start takes it again.
   stop)    stop_watch; stop_app; release_home ;;
   restart) stop_watch; stop_app; sleep 1; start_app; start_watch ;;
@@ -386,7 +386,7 @@ case "$1" in
   restore-home) restore_home_screen ;;
   # Before uninstalling: the remote's keys as LG has them.
   restore-keys) restore_remote_keys ;;
-  # LG's Home as the TV's Home again, and Native Tv Home switched off.
+  # LG's Home as the TV's Home again, and Rooted TV Home switched off.
   restore-nativetv-home) restore_nativetv_home ;;
   # Before uninstalling: no start-up activity or bus grant left behind.
   restore-boot) restore_boot ;;

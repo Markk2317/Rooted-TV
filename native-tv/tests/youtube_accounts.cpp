@@ -199,7 +199,7 @@ int main() {
         assert(withdrawn.row("client.apps.googleusercontent.com", "secret-123", "main").valid()); // the old row meanwhile
         assert(waitFor([&]() { return !withdrawn.status("main")["linked"].boolean(); }));
         assert(withdrawn.status("main")["error"].string() ==
-               "Google no longer lets Native Tv in. Sign in again.");
+               "Google no longer lets Rooted TV in. Sign in again.");
         assert(!withdrawn.row("client.apps.googleusercontent.com", "secret-123", "main").valid());
     }
 

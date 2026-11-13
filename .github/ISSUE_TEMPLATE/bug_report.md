@@ -8,7 +8,7 @@ labels: bug
 
 **TV**: the Server tab's TV report, pasted, or the model, webOS version (as the dashboard shows it) and OLED or LCD
 
-**Native Tv version**: from the Server tab, or `native-tv/VERSION`
+**Rooted TV version**: from the Server tab, or `native-tv/VERSION`
 
 **Install**: Homebrew Channel or `deploy.sh`, SSH or telnet
 

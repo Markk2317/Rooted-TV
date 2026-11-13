@@ -6,7 +6,7 @@
 
 {% block htmltitle %}
   {%- if page.is_homepage -%}
-    <title>Native Tv: open-source LG webOS TV dashboard, privacy controls and Home Assistant bridge</title>
+    <title>Rooted TV: open-source LG webOS TV dashboard, privacy controls and Home Assistant bridge</title>
   {%- elif page.meta and page.meta.title -%}
     <title>{{ page.meta.title }} - {{ config.site_name }}</title>
   {%- elif page.title -%}
@@ -18,7 +18,7 @@
 
 {% block extrahead %}
   {%- set description = page.meta.description if page.meta and page.meta.description else config.site_description -%}
-  {%- set card_title = "Native Tv: open-source LG webOS TV dashboard, privacy controls and Home Assistant bridge" if page.is_homepage else ((page.title | striptags) ~ " - " ~ config.site_name) -%}
+  {%- set card_title = "Rooted TV: open-source LG webOS TV dashboard, privacy controls and Home Assistant bridge" if page.is_homepage else ((page.title | striptags) ~ " - " ~ config.site_name) -%}
   {%- set card_image = config.site_url ~ "assets/social-card.png" -%}
   <meta property="og:type" content="{{ 'website' if page.is_homepage else 'article' }}">
   <meta property="og:site_name" content="{{ config.site_name }}">
@@ -28,7 +28,7 @@
   <meta property="og:image" content="{{ card_image }}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Native Tv: a dashboard, privacy controls and Home Assistant bridge for rooted LG webOS TVs">
+  <meta property="og:image:alt" content="Rooted TV: a dashboard, privacy controls and Home Assistant bridge for rooted LG webOS TVs">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ card_title }}">
   <meta name="twitter:description" content="{{ description }}">
@@ -38,7 +38,7 @@
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "Native Tv",
+    "name": "Rooted TV",
     "alternateName": "native-tv",
     "description": "{{ config.site_description }}",
     "url": "{{ config.site_url }}",

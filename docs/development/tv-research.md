@@ -2,7 +2,7 @@
 
 Findings about how LG's webOS works, kept so the same ground is not covered
 twice. Each entry names the TV and webOS version it was found on. For how
-Native Tv itself works, see [IMPLEMENTATION.md](implementation.md).
+Rooted TV itself works, see [IMPLEMENTATION.md](implementation.md).
 
 ## HDMI CEC devices (G3, webOS 9.2.2)
 
@@ -55,7 +55,7 @@ writes a PNG of the screen, web apps included, at the size asked for.
 
 ## Home input titles (G3, webOS 9.2.2)
 
-HDMI launch points added by Native Tv are bookmarks with `systemApp: false`.
+HDMI launch points added by Rooted TV are bookmarks with `systemApp: false`.
 LG's `HomeAppListComponent/View/AppTile.qml` hides a focused tile's title
 unless `titleVisible` is set; otherwise it defaults to `systemApp`.
 `applicationManager/updateLaunchPoint` accepts `titleVisible: true`, although
@@ -71,14 +71,14 @@ CEC names on LG's own Home screen. Long titles use LG's scrolling text.
   opens it through SAM's `last_input_handler`, `mode: "last_input"`. Unlike
   webOS 10.3 (above), a replacement Home has to bring itself back after LG's
   appears: LG's showed for 0.17 s after Back and 0.31 s after Home before
-  Native Tv Home replaced it.
+  Rooted TV Home replaced it.
 - `defaultApps.home` was gone after each full restart, other entries kept.
   `defaultApps.idleApp` naming another app does not change where Back out of
   the last app goes: still `com.webos.app.home` through `last_input_handler`.
 - A compositor key filter ahead of LG's that accepts `Qt.Key_Super_L` (the
   Home key) and launches an app replaces LG's Home entirely: surface-manager
   launches that app in `hotKey` mode, and LG's Home never shows. The filter
-  is loaded from configd at boot, before any Native Tv process runs.
+  is loaded from configd at boot, before any Rooted TV process runs.
 - An app declaring `"appCategory": ["home"]` installs through the developer
   install service and is accepted as `defaultApps.home`.
 - The TV starts on the app `physicalLastInputApp` and `lastInputApp` name, and
@@ -103,11 +103,11 @@ CEC names on LG's own Home screen. Long titles use LG's scrolling text.
   nothing; with stdin held open (`sleep 5 | luna-send ...`), or from node's
   `execFile`, it answers.
 
-### Cold start with Native Tv Home as the start-up app (webOS 9.2.2, G3)
+### Cold start with Rooted TV Home as the start-up app (webOS 9.2.2, G3)
 
 Measured on 17 October 2026 by rebooting over SSH with `lastInputApp` naming `com.tvweb.home`, capturing the screen with `com.webos.service.capture/executeOneShot` (method `DISPLAY`) about once a second:
 
-- SSH answers about 36 s after the reboot, and the Native Tv server about 45 s after it.
+- SSH answers about 36 s after the reboot, and the Rooted TV server about 45 s after it.
 - From about 36 s the application manager names `com.tvweb.home` as the foreground app, but the screen shows the input or channel the TV was last on (Live TV, or HDMI 4), and the app's page never loads the view: no heartbeat arrives, while the same page opened later loads it within a second.
 - `applicationManager/launch` of `com.tvweb.home` from the server after that (about 52 s) draws it.
 - The TV's own `defaultApps.home` is unset after each of these reboots.
@@ -167,7 +167,7 @@ bind-mounted over `/usr/palm/applications/com.webos.app.home`, its
   pressed at 32.8 s showed LG's Home, black (every captured pixel 0), until the
   mount at about 53 s. Its wallpaper comes only from its own bundled images
   (`backgroundImageId` opt1 to opt3), so the layout cannot show anything else.
-- **The key filter can answer Home before any hook.** Native Tv's filter,
+- **The key filter can answer Home before any hook.** Rooted TV's filter,
   loaded by surface-manager from configd, called
   `lunaCall.send("com.webos.applicationManager", "/getAppInfo", ...)` and
   `lunaCall.send("com.webos.notification", "/createToast", ...)` with
@@ -185,7 +185,7 @@ bind-mounted over `/usr/palm/applications/com.webos.app.home`, its
   it to stop never came. `com.palm.webappmanager/killApp` with its id closed
   it; sam stopped listing it, and its removal went through.
 
-Checked on 18 October 2026 on the same TV, with Native Tv Home in the place:
+Checked on 18 October 2026 on the same TV, with Rooted TV Home in the place:
 
 - **LG's other screens still work over it.** The Input picker
   (`com.webos.app.inputcommon`) opened over it and switched to HDMI 4. A toast
@@ -199,7 +199,7 @@ Checked on 18 October 2026 on the same TV, with Native Tv Home in the place:
   result opened HBO Max at the title. Quick settings (the Settings key) opened
   over it.
 - **LG's apps that name the id launch it.** First-use setup and the on-timer
-  in Settings launch `com.webos.app.home`, so open Native Tv Home. Settings
+  in Settings launch `com.webos.app.home`, so open Rooted TV Home. Settings
   and the weather location app keep the weather location under `appId`
   `com.webos.app.home`, key `location`, in the settings service, not in the
   app.
@@ -212,7 +212,7 @@ Checked on 18 October 2026 on the same TV, with Native Tv Home in the place:
   `homeAutoLaunch` on and HDMI 4 last, the screen stayed on HDMI 4 from 26 s;
   the mount was in place at 30 s, and `com.webos.service.preloadmanager`
   launched `com.webos.app.home` at 53 s, after it.
-- **The empty layout outlives Native Tv.** With it in place, the server killed
+- **The empty layout outlives Rooted TV.** With it in place, the server killed
   without releasing and `/var/lib/tvweb` moved aside, Home after a reboot drew
   black. `rm -rf /mnt/lg/cmn_data/manifest /tmp/checkpoint/*com.webos.app.home*
   /mnt/lg/cmn_data/checkpoint/*com.webos.app.home* && reboot` brought LG's
@@ -220,7 +220,7 @@ Checked on 18 October 2026 on the same TV, with Native Tv Home in the place:
 
 ## LG Home's recent apps (G3, webOS 9.2.2)
 
-Read on 19 October 2026 from LG's Home's QML under the Native Tv Home
+Read on 19 October 2026 from LG's Home's QML under the Rooted TV Home
 mount, and tried over SSH.
 
 - **The panel is part of LG's Home.** Back on LG's Home's first page sets
@@ -236,7 +236,7 @@ mount, and tried over SSH.
 - **Removing closes.** LG's Close and Close all call only `removeRecent
   { appId }` and `removeAllRecents {}`. Each closed the apps it removed:
   Netflix left `applicationManager/running` within 2 s, and Close all took
-  Netflix and the Native Tv app with it while YouTube and the browser,
+  Netflix and the Rooted TV app with it while YouTube and the browser,
   unlisted, kept running.
 - A launched app joins the list once it has been left; launching Home over it
   is enough.
@@ -268,7 +268,7 @@ mount, and tried over SSH.
   on, including one reached with the remote's Channel Up within Live TV, which
   changes nothing in sam's foreground. Measured on 18 October 2026.
 
-## Native Tv Home's view and the foreground (G3, webOS 9.2.2)
+## Rooted TV Home's view and the foreground (G3, webOS 9.2.2)
 
 Measured on 18 October 2026 by launching apps over SSH and logging
 `applicationManager/getForegroundAppInfo`'s subscription.
@@ -396,7 +396,7 @@ hashes are different !!.. will be deleted` in `dmesg`. So:
 brings back LG's layout. Launch points added with `addLaunchPoint` are removed
 with `removeLaunchPoint`.
 
-**Which TVs have this home app.** Native Tv's LG launcher layout is offered
+**Which TVs have this home app.** Rooted TV's LG launcher layout is offered
 only on webOS 9. webOS 3 and 4 have a different, plainer home app, and webOS 10
 and later have a Flutter one (its log lines come from `flutter-client`). The
 QML has code for LG's webOS 23 (`webOS23Test`, the `webOS23` app list style),
@@ -440,13 +440,13 @@ reads Active Standby), an OLED42C24LA drew 11.9 to 12.2 W at the wall. The
 processor is fixed at 1.4 GHz (the only frequency offered, `performance`
 governor), and LG runs three of its four cores, switching cores on and off
 itself (224 core starts in five hours). About 40% of those three cores was in
-use: `ls-hubd`, `iconnectivity`, Native Tv's server and YouTube kept ready.
+use: `ls-hubd`, `iconnectivity`, Rooted TV's server and YouTube kept ready.
 None of it showed at the wall:
 
 | Change | Draw |
 |---|---|
 | None | 12.0 W |
-| Native Tv's server and watchdog stopped | 11.9 to 12.2 W |
+| Rooted TV's server and watchdog stopped | 11.9 to 12.2 W |
 | Also down to two cores (LG kept bringing a third back) | 11.9 to 12.1 W |
 
 `iconnectivity` cannot be stopped: `ls-hubd` starts it again on demand within
@@ -577,7 +577,7 @@ temperature and gyro, beside a `ManualDevice-<remote MAC>-rawInput.dsf`. A new
 `mrcu_LS2` thread started with it and used a whole core until the TV was
 rebooted, through a night in standby. lginput2's luna methods include
 `enableLoggingMotion`, `getSensorData` and `enablePrintRfStatus`, none of which
-Native Tv calls; `getConnectionStatus` and `getDeviceInfo` left it at 0%.
+Rooted TV calls; `getConnectionStatus` and `getDeviceInfo` left it at 0%.
 
 ## No firewall in the kernel (50QNED80A6A, webOS 10)
 
@@ -614,7 +614,7 @@ app in front. Remote Keys puts its own filter first.
   unchanged, so a filter file changed in place needs the entry taken out and
   put back.
 - **Read at boot.** configd keeps the value, and the compositor loads the chain
-  before Native Tv starts: after a reboot, a key mapped there opened its app
+  before Rooted TV starts: after a reboot, a key mapped there opened its app
   35 s (C2) and 40 s (B8) in, with the server not yet running.
 - **A missing file is skipped.** With the first entry naming a deleted file,
   after a reboot the next filters still ran: the TV key opened Live TV through
@@ -654,7 +654,7 @@ app in front. Remote Keys puts its own filter first.
   filter `genericTimer` (`set(ms, callback)`, `cancel`, `isRunning`), as LG's
   `appLaunch.js` uses it. On a change to the key it cancels every
   `genericTimer`, destroys the filters and loads them again, running each
-  `init()`. On a G3 (webOS 9.2.2), a 90 s timer set in Native Tv's `init()`
+  `init()`. On a G3 (webOS 9.2.2), a 90 s timer set in Rooted TV's `init()`
   ended its hold on Home: with `starting` set and nothing mounted, Home 5 s
   and 30 s after a reload showed the toast and stayed where it was, and 96 s
   after it opened LG's Home. `Date.now()` cannot time this: the system log starts at
@@ -760,7 +760,7 @@ and `com.miniclip.eightballpool` (8 Ball Pool). Both have `type: "stub"`,
 `/media/cryptofs/apps/usr/palm/applications`. Their image files were dated
 14 September and 6 October, their `appinfo.json` the minute they arrived. The
 notification list showed "Some apps are available for update" the same
-minute. Neither name is on Native Tv's ad-blocking list.
+minute. Neither name is on Rooted TV's ad-blocking list.
 
 ## Home screen (webOS 10 and 11)
 
@@ -827,7 +827,7 @@ and others' work on webOS 10
 
 ## LG's device scans (webOS 9.2.2, C2)
 
-These measurements are from [Glasshouse](https://github.com/rorygallagher2024/glasshouse)'s testing; they have not been repeated with Native Tv.
+These measurements are from [Glasshouse](https://github.com/rorygallagher2024/glasshouse)'s testing; they have not been repeated with Rooted TV.
 
 `iconnectivity` (UEI QuickSet) reverse-looks-up every address on the TV's
 /24. On a C2 with `other.ueiEnable` off, opening the Home Hub's page for
@@ -941,8 +941,8 @@ list, leaving only oledepl and screenmanager, and with:
 - every other app closed and nothing in `com.webos.media/getActivePipelines`
   or `getForegroundVideoWindow`,
 - screenmanager restarted (`systemctl restart screenmanager`),
-- LG's own Home back in its place and Native Tv stopped,
-- Native Tv's ad blocking off and screenmanager restarted after it,
+- LG's own Home back in its place and Rooted TV stopped,
+- Rooted TV's ad blocking off and screenmanager restarted after it,
 - settings `general.screenSaverEnabled` written off and on again,
 - oledepl's `setPcScreenSaverResponse` set to `ack: true` (its
   `getPcScreenSaverResponse` had read false).
@@ -1018,7 +1018,7 @@ The webOS 9 entries above describe the home app's CRIU checkpoint. On a CX:
   permissions, and its luna calls never reach the bus, so a separate app
   cannot stand in for Home.
 
-## Native Tv Home on webOS 10 (G5, webOS 10.3.1)
+## Rooted TV Home on webOS 10 (G5, webOS 10.3.1)
 
 - LG's Home's `appinfo.json` declares `"appCategory": ["home"]`. sam answers
   `launchDefaultApp { category: "home" }` with the app that declares it, with
@@ -1059,7 +1059,7 @@ Measured on 19 October 2026 on an OLED55G56LS, Quick Start+ off.
   logged `homeAutoLaunch(off)`, showed no boot logo and had Live TV in front
   at 14.2 s; nothing launched `com.webos.app.home` until
   `com.webos.service.preloadmanager` preloaded it at 67 s, after the boot hook
-  had mounted Native Tv Home over it.
+  had mounted Rooted TV Home over it.
 - **A restart from the menu or `reboot` is `micomPower`.** Not in the list:
   with `homeAutoLaunch` `on`, bootd still put Live TV in front at 14.9 s.
 - **Writing `homeAutoLaunch`** through the settings service turns
@@ -1078,7 +1078,7 @@ Measured on 19 October 2026 on an OLED55G56LS, Quick Start+ off.
 - **With Quick Start+ on**, a `powerOff` went to Suspend 5 s after Active
   Standby (`PowerOffReason` `oslbSaving`). Woken by the remote from Suspend,
   uptime carried on and the mount was still in place; bootd logged
-  `homeAutoLaunch(on)`, launched `com.webos.app.home`, and Native Tv Home
+  `homeAutoLaunch(on)`, launched `com.webos.app.home`, and Rooted TV Home
   was in front 0.76 s later.
 
 ## What the TV opens as it starts (G3, webOS 9.2.2)
@@ -1087,7 +1087,7 @@ Measured on 19 October 2026 on an OLED55G36LA.
 
 - **With Quick Start+ on, a wake runs bootd too.** Woken by the remote from
   Suspend, it logged `homeAutoLaunch(on)` and launched `com.webos.app.home`
-  with `{"boot": true}`: Native Tv Home, still mounted, in front 1.3 s later.
+  with `{"boot": true}`: Rooted TV Home, still mounted, in front 1.3 s later.
   With auto launch `off`, bootd put the last input (HDMI 4) in front instead.
 - **Wake-on-LAN is `wakeOnLan`,** and bootd stayed on HDMI 4 with auto launch
   `on`.
@@ -1105,7 +1105,7 @@ Measured on 19 October 2026 on an OLED55G36LA.
   Standby, wakes it as the remote does: tvpower and bootd log `remoteKey`.
 - **Writing `homeAutoLaunch`** left `checkHomeAutoLaunchValue` at `default`,
   unlike the G5.
-- **With Native Tv Home first, the boot hook** started 30 s in and had it in
+- **With Rooted TV Home first, the boot hook** started 30 s in and had it in
   place at 34 to 39 s, the screen saver mount after it.
 
 ## What starts the boot hook, and when (B3, webOS 10.3.2)
@@ -1122,7 +1122,7 @@ ahead of `/proc/uptime`.
 | 39 | the Homebrew Channel's service process starts (its start time in `/proc`) |
 | ~43 | `/tmp/webosbrew_startup` is touched: `startup.sh` runs |
 | 46.7 | `init.d` hooks start, after the script's `sleep 2` |
-| 56.6 | the Native Tv server is listening |
+| 56.6 | the Rooted TV server is listening |
 | 58.0, 69.0 | `rest-boot-done`, `boot-done` |
 
 - **The trigger is not `devmode.service`, and not the Activity Manager.** The
@@ -1147,7 +1147,7 @@ ahead of `/proc/uptime`.
 - **Process start times** (s): `ls-hubd` 1, `bootd` 2, `sam` 7, the first
   `WebAppMgr` 24, `activitymanager` 58. In webOS OSE the Activity Manager is in
   `webos-rbd.target`, started at `rest-boot-done`; LG's build matches that here.
-- **`rest-boot-done` came 1.5 s after Native Tv Home came to the front** (56.5
+- **`rest-boot-done` came 1.5 s after Rooted TV Home came to the front** (56.5
   s). bootd may wait on a Home in front before it emits `rest-boot-done` and
   `boot-done`, in which case the hook delays them. Not tested; one start with the
   Home open at boot switched off would show it.
@@ -1202,7 +1202,7 @@ Measured on 21 October 2026, seconds after power-on, from bootd's "is foreground
   `changeRunningAppId` at 19.6 s. Naming the splash in those two settings
   would start the TV on it with no input shown; not done, as they are the
   TV's last-input memory (what Back and a wake open) and an earlier build that
-  set them for Native Tv Home had to be cleaned up after.
+  set them for Rooted TV Home had to be cleaned up after.
 - **Naming the splash there starts the TV on black, not on the splash.** With
   `lastInputApp` alone set to `com.tvweb.splash`, bootd still read `hdmi4`
   and both keys read `hdmi4` again after the reboot. With both set, bootd
@@ -1223,7 +1223,7 @@ Measured on 21 October 2026, seconds after power-on, from bootd's "is foreground
   `luna-send`.
 - **Sent by the boot hook at 22.6 s,** `banner-ready` brought
   `SIGNAL_init-boot-done` at once and WebAppMgr's process at 22.9 s. systemd
-  called it active at 36.4 s, before it had drawn Native Tv Home (launched at
+  called it active at 36.4 s, before it had drawn Rooted TV Home (launched at
   30.3 s), and with the server started then Home was in front at 48.6 s.
 - **Hardware of this TV:** four Cortex-A55 at one fixed 1156 MHz step, 1.7 GB
   to Linux, 600 MB swap, PowerVR GPU ([b3.md](tv-specs/b3.md)). The load
@@ -1273,7 +1273,7 @@ Measured on 21 October 2026, seconds after power-on.
   (condition: `/tmp/boot-done`) runs `systemctl stop` and `start` on
   `webapp-mgr.service`, `booster` and `maliit-server`. A reload before
   boot-done (a B3: one at 58 s) is skipped by the condition; the services
-  hook's at 94 s, 12 s long, stopped WebAppMgr at 94.5 s, took Native Tv Home
+  hook's at 94 s, 12 s long, stopped WebAppMgr at 94.5 s, took Rooted TV Home
   off the screen and had LG's `last_input_handler` open it again at 97 s. A
   reload run by hand on a booted TV did not restart it. LG's Home on webOS 10
   is Flutter, so the restart goes unseen there.
@@ -1284,7 +1284,7 @@ Measured on 21 October 2026, seconds after power-on.
   WebAppMgr was active at 38.5, 34.7 and 39.2 s and the server listening at
   39.1-43.4 s. WebAppMgr's process started at 24-27 s either way.
 - **WebAppMgr draws before systemd calls it active.** On a remote power-on
-  with the server held, its process started at 36.2 s, Native Tv Home was in
+  with the server held, its process started at 36.2 s, Rooted TV Home was in
   front at 46.0 s and `webapp-mgr.service` active at 55.6 s; with the server
   running alongside (an earlier boot), it took 21 s from its start to Home in
   front.
@@ -1444,7 +1444,7 @@ name.
   was still running 5 minutes 20 seconds later: no CPU time, 3.5 MB, 8 sockets,
   no `/tmp/acr.xml`. A SIGTERM ended it, and nothing started it again within
   30 s. So a status query undoes what switching Live Plus off achieves until
-  the next reboot; Native Tv's Privacy panel asks it only while it runs.
+  the next reboot; Rooted TV's Privacy panel asks it only while it runs.
 - **Started that way, it collects nothing.** With Live Plus and
   `acrOnAllowed` off, an `acr2` started by `getACRSolutionStatus` was watched
   for 2 minutes: no CPU time, 5 threads throughout, `libvtcapture` mapped and
@@ -1549,8 +1549,8 @@ others start whatever the consents say, and sit idle:
 None had a network socket open. None of their start activities names a
 consent, so there is no consent to switch off that stops them; what keeps
 `uploadd`, `rdxd`, `nudge`, `contentminer` and `remotelogger` stopped is
-Native Tv's background services switch, which masks their units.
-Native Tv calls only `admanager` (the advertising ID, its reset and cookies)
+Rooted TV's background services switch, which masks their units.
+Rooted TV calls only `admanager` (the advertising ID, its reset and cookies)
 and `voiceinput.sound` (the microphone switch), and asks either only while
 it runs.
 
@@ -1567,7 +1567,7 @@ wake-word listening does not run in standby.
 
 ## Opening LG's Search with a query (B3, webOS 10.3.2)
 
-Tried on 21 October 2026, to open a title from Native Tv Home's feed in
+Tried on 21 October 2026, to open a title from Rooted TV Home's feed in
 LG's Search. `com.webos.app.voice` reads its launch parameters in
 `qml/InputManager/InputManager.qml` (`handleLaunchParams`): an `activateType`
 (`search` by default) and, for a search, `params.text` and `params.category`.
@@ -1674,7 +1674,7 @@ is the hint's literal name) and the app id comes from `APPID`.
   only when it is not a bounded run.
 - **A launch from the card that covers the app** reaches sam a few ms before that
   card's window is shown, while the app is still in front, and does nothing. The
-  Native Tv Home stub (`com.webos.app.home`) launches the client when it loads and
+  Rooted TV Home stub (`com.webos.app.home`) launches the client when it loads and
   when its page becomes visible, both before its window is in front, and in 13 of 14
   Home presses (client registered) the client did not return until the server
   launched it 2.5 s later. A launch made after the window change (the server's, or
@@ -1795,7 +1795,7 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   `-a`) brings the last input forward (`last_input_handler`), not the card
   behind it, so Back out of an app opened from the TV app goes to the last
   input whether the TV app is still running or not.
-- After a power cut or a reboot nothing of Native Tv runs until its tile is
+- After a power cut or a reboot nothing of Rooted TV runs until its tile is
   opened (see the boot bullet above), so until then the Home button opens LG's
   ribbon.
 - Quick Start does not keep the server through every night: the TV restarted
@@ -1833,7 +1833,7 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   cold start's `bootd.log` has `core-boot-done` to `boot-done` and no
   `instant-boot-complete`. A persistent activity with that trigger, created
   as above, survived `/sbin/reboot`; after a power-off to standby and a
-  Wake-on-LAN packet, SSH answered in 7 s and the server in 9 s, and Native Tv
+  Wake-on-LAN packet, SSH answered in 7 s and the server in 9 s, and Rooted TV
   Home came over HDMI 3 13 s after the boot manager opened it.
 - Switched on from Quick Start's standby, the boot manager opens the last
   input (`SAM NL_APP_LAUNCH_BEGIN {"app_id":"com.webos.app.hdmi1","caller_id":
@@ -1980,7 +1980,7 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
 ## A device taking the screen back at a switch-on (C6, webOS 3.4.3)
 
 - Switched on from Active Standby, the C6 logs the boot manager's `NL_APP_LAUNCH_BEGIN` of the last
-  input (HDMI 3) as a wake from Quick Start's suspend does, and Native Tv Home came over it within
+  input (HDMI 3) as a wake from Quick Start's suspend does, and Rooted TV Home came over it within
   a second. 3.5 s later `com.webos.service.tv.externaldevice` launched `com.webos.app.hdmi3` again
   (`caller_id` in the same line): the Chromecast on HDMI 3, woken over CEC with the TV, had taken
   the screen as the active source. It does not happen at every switch-on.

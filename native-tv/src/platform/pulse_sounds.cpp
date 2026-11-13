@@ -74,7 +74,7 @@ pa_simple *openStream(const Pulse &api) {
     int error = 0;
     // The default server first, then webOS's system-wide one: an app's environment names none.
     for (const char *server : {static_cast<const char *>(nullptr), "unix:/var/run/pulse/native"}) {
-        if (pa_simple *stream = api.open(server, "Native Tv", kStreamPlayback, nullptr,
+        if (pa_simple *stream = api.open(server, "Rooted TV", kStreamPlayback, nullptr,
                                          "System sounds", &spec, nullptr, &buffer, &error))
             return stream;
     }

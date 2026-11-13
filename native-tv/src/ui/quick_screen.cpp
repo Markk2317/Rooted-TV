@@ -664,7 +664,7 @@ class QuickScreen final : public ScreenView {
             paint.glyphs.text(scene, foot, msg("tv.quick.noAnswer", "The TV did not answer. Trying again…"),
                               kit::type::quickCardSub, qcolor::warn);
         else
-            paint.glyphs.text(scene, foot, "Native Tv", kit::type::quickMark, kit::alpha::quickInk);
+            paint.glyphs.text(scene, foot, "Rooted TV", kit::type::quickMark, kit::alpha::quickInk);
     }
     void drawButton(ScreenHost &host, kit::Paint paint, size_t index) {
         Scene &scene = paint.scene;

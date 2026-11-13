@@ -177,7 +177,7 @@ Json HomeTakeoverLifecycleManager::takeover(
     if (!mounted["ok"].boolean()) return mounted;
     if (!manifestAccepted(true) && !reread(true, context)) {
         rollbackTakeover(context);
-        return failure("sam did not take Native Tv Home as Home");
+        return failure("sam did not take Rooted TV Home as Home");
     }
 
     const Json layout = homeScreen_.startLayout(blankStartLayout);

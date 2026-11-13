@@ -1,14 +1,14 @@
-# Native TV application
+# Rooted TV application
 
-Native Tv's native TV client uses SDL2 for the window and input, and OpenGL ES 2
+Rooted TV's native TV client uses SDL2 for the window and input, and OpenGL ES 2
 for drawing. Home, content views, the keyboard, profiles, quick settings, setup
 and TV dashboard tabs live here. The phone/browser dashboard remains a web app
 with its canonical sources in `web/`.
 
-The native client is under development. Its data adapter calls the Native Tv
+The native client is under development. Its data adapter calls the Rooted TV
 daemon, the server that runs on the TV, over loopback. The Node server it
 replaced is gone; [ARCHITECTURE.md](ARCHITECTURE.md) defines the module boundaries. The developer
-app is the Native Tv tile's, `com.tvweb.dashboard`, which Native Tv Home also opens;
+app is the Rooted TV tile's, `com.tvweb.dashboard`, which Rooted TV Home also opens;
 deployment does not replace LG Home or enable Home takeover.
 
 ## Layout
@@ -157,7 +157,7 @@ extracted into generated client/runtime packages. CivetWeb's upstream
 `LICENSE.md` and notices for staged SDK libraries are also included in the
 server runtime package. Cross-building both the client and service with the
 webOSbrew SDK confirms the current SONAMEs; runtime staging verifies their
-dependency closure and notices. Native Tv
+dependency closure and notices. Rooted TV
 self-update and rollback were removed; releases are
 installed through deployment or the Homebrew Channel package. Homebrew app
 catalog updates remain available. Manual installation includes the runtime.
@@ -182,7 +182,7 @@ python3 native-tv/deploy.py --tv root@TV_ADDRESS \
   --identity ~/.ssh/id_ed25519 --known-hosts ~/.ssh/known_hosts --run
 ```
 
-`deploy.py` stages the client in the Native Tv tile's app folder (`com.tvweb.dashboard`) and the managed service runtime.
+`deploy.py` stages the client in the Rooted TV tile's app folder (`com.tvweb.dashboard`) and the managed service runtime.
 It removes the obsolete worker copy from that directory.
 `--run` launches a bounded 12-second smoke check, saves a PPM capture and JSON report in ignored `out/`,
 then exits. `--screen dashboard:system` opens a dashboard tab; `--script` accepts

@@ -1,4 +1,4 @@
-<!-- A plain-language summary first: what changes for the people using Native Tv.
+<!-- A plain-language summary first: what changes for the people using Rooted TV.
      Short sentences or a few bullets, no file or function names. -->
 
 ## Technical details

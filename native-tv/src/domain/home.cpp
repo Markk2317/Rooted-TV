@@ -190,7 +190,7 @@ CardRow catalogueRow(const std::string &kind, const Json &catalogue, const Json 
             if (programme.valid())
                 card.subtitle += "  " + programme["title"].string();
         }
-        // The Native Tv tile is this client: it is already in front while Home shows it, so a
+        // The Rooted TV tile is this client: it is already in front while Home shows it, so a
         // launch would change nothing. It opens the settings the tile opens from LG's launcher.
         card.command = kind == "app" && id == kClientApp
                            ? navigate("dashboard")
@@ -457,7 +457,7 @@ namespace {
 // banners and rows come from the Play Store; here they are the TV's own apps: the banners its apps
 // of films, music and games in Your apps' order, the rows its apps by kind in the owner's order of
 // the kinds. In the Play Store's place, LG Content Store (opened like any app, hidden or not) and
-// the Homebrew Channel's catalogue, which installs its apps from Native Tv.
+// the Homebrew Channel's catalogue, which installs its apps from Rooted TV.
 constexpr size_t kAppBanners = 6;
 constexpr const char *kLgStoreApp = "com.webos.app.discovery", *kHomebrewApp = "org.webosbrew.hbchannel";
 CardRow storesRow(const Json &catalogue) {

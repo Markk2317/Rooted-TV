@@ -496,7 +496,7 @@ void YoutubeAccounts::refresh(const std::string &profile, const Wanted &wanted) 
                 saveAccountsLocked();
             }
             errors_[profile] = say::msg("srv.youtube.signedOut",
-                                        "Google no longer lets Native Tv in. Sign in again.");
+                                        "Google no longer lets Rooted TV in. Sign in again.");
             return;
         }
         return fail(googleError(reply));

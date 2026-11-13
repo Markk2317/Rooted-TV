@@ -14,7 +14,7 @@ struct HomeWatchOptions {
     // This many unexpected exits within the window give LG's Home back.
     int exitLimit = 3;
     long long windowMs = 120000;
-    // How long LG's Home (Native Tv's stub) may be in front before the native
+    // How long LG's Home (Rooted TV's stub) may be in front before the native
     // client is, a cold start included, before that is counted as an exit.
     long long stubGraceMs = 15000;
     // How long the stub is left to open the client itself before the server opens
@@ -32,11 +32,11 @@ struct HomeOrchestratorDeps {
     std::function<Json()> config;
     // Loads home.json, lets `mutate` edit the normalised document and saves it.
     std::function<bool(const std::function<void(Json &)> &mutate, std::string &error)> update;
-    // {ok, reason}: whether Native Tv Home is offered on this TV: its webOS, and
+    // {ok, reason}: whether Rooted TV Home is offered on this TV: its webOS, and
     // the native client's probe. A refusal by the probe carries `probe` (its
     // verdict); the version's has none.
     std::function<Json()> supported;
-    // Native Tv Home holds LG's Home's place.
+    // Rooted TV Home holds LG's Home's place.
     std::function<bool()> mounted;
     // LG's Home is open by one of the ways back to it.
     std::function<bool()> escaped;
@@ -73,7 +73,7 @@ struct HomeOrchestratorDeps {
     std::function<void()> removeLegacyApp;
 
     // The crash watch, off unless all three of these are set. clientRunning:
-    // the native client (the Native Tv tile's app) is in the app manager's running
+    // the native client (the Rooted TV tile's app) is in the app manager's running
     // list, 1 yes, 0 no, -1 unknown. release: LG's Home back in its place with
     // home.json left as it is (what tvwebctl does when the server stops):
     // {ok, error}. nowMs: a steady clock.
@@ -95,11 +95,11 @@ struct HomeOrchestratorDeps {
 
 // What lib/home.js still did around the daemon's own Home routes: the start-up
 // sequence (what earlier builds left, taking LG's Home's place, the starting
-// notice, LG's auto launch), the wake from standby that opens Native Tv Home
+// notice, LG's auto launch), the wake from standby that opens Rooted TV Home
 // over the input LG put in front, and LG's auto launch following the screen.
 // It also watches the native client that the Home stub starts: one that keeps
 // failing, or that the probe refused, gives LG's Home back, so no TV is left
-// without a Home. Native Tv's own switching on and off, layout and the ways back
+// without a Home. Rooted TV's own switching on and off, layout and the ways back
 // to LG's Home are the front door's, and stay there.
 class HomeOrchestrator {
   public:

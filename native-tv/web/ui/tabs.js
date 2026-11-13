@@ -187,7 +187,7 @@ document.querySelectorAll('.tabs').forEach(bar => {
     showTab(tabs[nextIdx].dataset.tab);
   });
 });
-// Reveals the Game tab on TVs with LG's Game Optimizer, and Home where Native Tv Home is offered.
+// Reveals the Game tab on TVs with LG's Game Optimizer, and Home where Rooted TV Home is offered.
 loadGame();
 loadHomeAvailable();
 

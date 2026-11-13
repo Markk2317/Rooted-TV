@@ -596,7 +596,7 @@ void barAndHero() {
     check(sameRect(pill->rect, {tabs[0].x, 72, tabs[0].w, 72}) && pill->radius == 36 &&
               sameColor(pill->color, kit::alpha::tabRest),
           "Without the focus the pill rests on the selected tab as Google TV's faint grey one");
-    const Node *mark = textAt(bar.scene, "Native Tv");
+    const Node *mark = textAt(bar.scene, "Rooted TV");
     check(mark && near(mark->rect.x + mark->rect.w, 1804, .01f) && textAt(bar.scene, "10:11") &&
               sameRect(textAt(bar.scene, "10:11")->rect, kit::geometry::clock(mark->rect.w)) &&
               textAt(bar.scene, "10:11")->align == Node::Align::Right &&
@@ -666,7 +666,7 @@ void barAndHero() {
     top.tabs = {"Home", "Films", "Shows", "Live", "Apps", "Inputs", "Kids"};
     kit::topBar(crowded.paint(), top);
     const Node *crowdedClock = textAt(crowded.scene, "10:11");
-    check(!textAt(crowded.scene, "Native Tv") && crowdedClock &&
+    check(!textAt(crowded.scene, "Rooted TV") && crowdedClock &&
               near(crowdedClock->rect.x + crowdedClock->rect.w, 1804, .01f) &&
               crowdedClock->rect.x >=
                   crowded.scene.nodes[1].rect.x + crowded.scene.nodes[1].rect.w + 24,

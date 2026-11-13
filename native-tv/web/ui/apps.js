@@ -793,7 +793,7 @@ function restoreHome() { return postHomeScreen('btn-home-restore', { restore: tr
 async function toggleHomeLayoutAllowed(btnId) {
   const b = q(btnId);
   const turnOn = !(b && b.dataset.on);
-  if (turnOn && !confirm(t('apps.home.exp.confirm', 'Switch on the LG launcher layout?\n\nOn webOS 10 Native Tv lays its own launcher layout over LG\u2019s each time the TV starts, so LG\u2019s can show for a moment first, and it has been tried on only a few TVs. Put back LG\u2019s Home screen, or switching this off, undoes it.'))) return;
+  if (turnOn && !confirm(t('apps.home.exp.confirm', 'Switch on the LG launcher layout?\n\nOn webOS 10 Rooted TV lays its own launcher layout over LG\u2019s each time the TV starts, so LG\u2019s can show for a moment first, and it has been tried on only a few TVs. Put back LG\u2019s Home screen, or switching this off, undoes it.'))) return;
   await postHomeScreen(btnId, { allow: turnOn });
   if (typeof loadServerStatus === 'function') loadServerStatus();
 }

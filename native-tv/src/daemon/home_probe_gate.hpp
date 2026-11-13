@@ -12,7 +12,7 @@ namespace daemon {
 class ChildProcessRunner;
 class LunaClient;
 
-// The app that is Home's screens: the Native Tv tile, the one native app the
+// The app that is Home's screens: the Rooted TV tile, the one native app the
 // install registers with sam. The Home stub opens it on its Home screen.
 constexpr const char *kHomeClientApp = "com.tvweb.dashboard";
 
@@ -44,7 +44,7 @@ struct HomeProbeOptions {
 HomeProbeOptions homeProbeOptions(const Json &config, const std::string &systemRoot,
                                   const std::string &dataRoot);
 
-// Runs the native client's probe and says whether Native Tv Home may take LG's
+// Runs the native client's probe and says whether Rooted TV Home may take LG's
 // Home's place: the stub that replaces it has no page to fall back to.
 //
 // A verdict is {ok, exit, class, cached, report?, error?}. `class` names the

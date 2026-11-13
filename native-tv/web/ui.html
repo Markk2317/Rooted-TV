@@ -8,13 +8,13 @@
     />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0e0f11" />
-    <title>Native Tv</title>
+    <title>Rooted TV</title>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <link rel="manifest" href="/assets/pwa/manifest.webmanifest" />
     <!-- iOS ignores the manifest's icons and wants an opaque square, which it rounds itself. -->
     <link rel="apple-touch-icon" href="/assets/pwa/icon-maskable-512.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Native Tv" />
+    <meta name="apple-mobile-web-app-title" content="Rooted TV" />
     <link rel="stylesheet" href="/assets/ui/theme.css" />
     <link rel="stylesheet" href="/assets/ui/ui.css" />
   </head>
@@ -82,7 +82,7 @@
            pill on the one shown, a capsule of tools, and the clock and the wordmark. -->
       <header class="appbar" id="appbar">
         <nav class="nav" id="nav" aria-label="Sections" data-t-aria-label="nav.sections">
-          <span class="nav-brand" translate="no" title="Native Tv">
+          <span class="nav-brand" translate="no" title="Rooted TV">
             <!-- docs/logo/nativetv.svg without its tile, on the avatar's colours. -->
             <svg class="mark-logo" viewBox="140 128 232 266" aria-hidden="true">
               <path
@@ -165,7 +165,7 @@
           </a>
         </div>
         <div class="bar-clock" aria-hidden="true">
-          <span id="bar-clock" class="num"></span><i></i><span translate="no">Native Tv</span>
+          <span id="bar-clock" class="num"></span><i></i><span translate="no">Rooted TV</span>
         </div>
         <h1 id="page-title" class="sr-only">&mdash;</h1>
       </header>
@@ -777,7 +777,7 @@
 <button type="button" class="tab" role="tab" id="tab-btn-apps" data-tab="apps" aria-controls="appspane" aria-selected="false" tabindex="-1"><span data-t="sub.installed">Installed</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-catalogue" data-tab="catalogue" aria-controls="appspane" aria-selected="false" tabindex="-1"><span data-t="sub.catalogue">Catalogue</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-homescreen" data-tab="homescreen" aria-controls="appspane" aria-selected="false" tabindex="-1"><span data-t="sub.homeScreen">LG launcher</span></button>
-<button type="button" class="tab" role="tab" id="tab-btn-home" data-tab="home" aria-controls="homepane" aria-selected="false" tabindex="-1" hidden><span data-t="sub.nativeTvHome">Native Tv Home</span></button>
+<button type="button" class="tab" role="tab" id="tab-btn-home" data-tab="home" aria-controls="homepane" aria-selected="false" tabindex="-1" hidden><span data-t="sub.nativeTvHome">Rooted TV Home</span></button>
 <span class="tab-ind"></span></div>
       <section class="panel grid" id="appspane" role="tabpanel" hidden>
 <div data-pane="installed">
@@ -1238,9 +1238,9 @@
             </summary>
             <div class="pv-note" data-nativetv-home-note hidden>
               <span data-t="apps.nativeTvHomeNote"
-                >Native Tv Home is switched on, so this applies only to
+                >Rooted TV Home is switched on, so this applies only to
                 LG&rsquo;s Home, seen from its tile, by holding Home, or while
-                Native Tv starts.</span
+                Rooted TV starts.</span
               >
               <a
                 href="?tab=home"
@@ -1249,7 +1249,7 @@
                   showTab('home');
                 "
                 data-t="apps.nativeTvHomeLink"
-                >Arrange Native Tv Home</a
+                >Arrange Rooted TV Home</a
               >
             </div>
             <div class="pv-sub" data-t="apps.home.desc">
@@ -1264,7 +1264,7 @@
                     Experimental on this TV
                   </div>
                   <div class="prot-desc" data-t="apps.home.exp.desc">
-                    On webOS 10 Native Tv lays its own launcher layout over
+                    On webOS 10 Rooted TV lays its own launcher layout over
                     LG&rsquo;s each time the TV starts, so LG&rsquo;s can show
                     for a moment first, and it has been tried on only a few TVs.
                     Put back LG&rsquo;s launcher, or switching this off,
@@ -1336,8 +1336,8 @@
             </summary>
             <div class="pv-note" data-nativetv-home-note hidden>
               <span data-t="apps.nativeTvHomeTilesNote"
-                >Native Tv Home is switched on. Apps hidden here are hidden on
-                it too; the Home tab hides others on Native Tv Home only.</span
+                >Rooted TV Home is switched on. Apps hidden here are hidden on
+                it too; the Home tab hides others on Rooted TV Home only.</span
               >
               <a
                 href="?tab=home"
@@ -1346,7 +1346,7 @@
                   showTab('home');
                 "
                 data-t="apps.nativeTvHomeLink"
-                >Arrange Native Tv Home</a
+                >Arrange Rooted TV Home</a
               >
             </div>
             <div class="pv-sub" data-t="apps.tiles.desc">
@@ -1420,10 +1420,10 @@
 </section>
       <section class="panel grid" id="homepane" role="tabpanel" hidden>
 <div class="pv-note warn" data-t="home.experimental">
-          Experimental. Native Tv Home replaces LG's Home screen with
-          Native Tv's own. It has been tried on webOS 9 only. In the first half
+          Experimental. Rooted TV Home replaces LG's Home screen with
+          Rooted TV's own. It has been tried on webOS 9 only. In the first half
           minute after the TV starts from cold, Home shows a message that
-          Native Tv Home is starting.
+          Rooted TV Home is starting.
         </div>
 <article class="card" style="--p:2;--t:4;--d:12">
 <div class="prot-table">
@@ -1457,7 +1457,7 @@
                 id="home-button-desc"
                 data-t="home.buttonDesc"
               >
-                Opens Native Tv Home when LG's Home is opened with the remote's
+                Opens Rooted TV Home when LG's Home is opened with the remote's
                 Home button. LG's Home shows for a moment first; the LG Home
                 tile still opens it.
               </div>
@@ -1490,7 +1490,7 @@
                 id="home-power-on-desc"
                 data-t="home.powerOnDesc"
               >
-                Opens Native Tv Home over the input the TV opens as it comes on, from standby and,
+                Opens Rooted TV Home over the input the TV opens as it comes on, from standby and,
                 with Start after a reboot, after a cold start.
               </div>
             </div>
@@ -1522,10 +1522,10 @@
                 id="home-reboot-desc"
                 data-t="home.rebootDesc"
               >
-                Registers an activity with the TV's activity manager that starts the Native Tv server
+                Registers an activity with the TV's activity manager that starts the Rooted TV server
                 as the TV is switched on after a reboot or a power cut, including the restarts the TV
                 makes on its own in standby, and gives it the bus access it needs to call the Homebrew
-                Channel. Needs Quick Start. Without it, the server starts only once the Native Tv tile
+                Channel. Needs Quick Start. Without it, the server starts only once the Rooted TV tile
                 is opened. Kept until switched off.
               </div>
             </div>
@@ -1623,7 +1623,7 @@
                 id="home-startup-desc"
                 data-t="home.startupDesc"
               >
-                Choose Native Tv Home to skip LG Home and open it when ready,
+                Choose Rooted TV Home to skip LG Home and open it when ready,
                 or follow LG's power-on setting. Full shutdown still needs time
                 to start. Choosing another app or input cancels the automatic
                 opening.
@@ -1689,7 +1689,7 @@
                 id="home-clock-desc"
                 data-t="home.clockFormatDesc"
               >
-                Choose 12-hour time with AM/PM or 24-hour time on Native Tv
+                Choose 12-hour time with AM/PM or 24-hour time on Rooted TV
                 Home.
               </div>
             </div>
@@ -1752,7 +1752,7 @@
                 id="home-show-live-desc"
                 data-t="home.showLiveDesc"
               >
-                Show the Live tab, with the channels added to Native Tv Home.
+                Show the Live tab, with the channels added to Rooted TV Home.
                 Off by default. Switching off leaves the whole tab out; the
                 added channels are kept.
               </div>
@@ -1809,9 +1809,9 @@
                 Hide LG’s Home while the TV starts
               </div>
               <div class="prot-desc" data-t="home.hideLgDesc">
-                For about 25 seconds after a cold start, until Native Tv Home
+                For about 25 seconds after a cold start, until Rooted TV Home
                 takes its place, LG’s Home opens as a black screen instead of
-                its own. If Native Tv stops running, for example after a
+                its own. If Rooted TV stops running, for example after a
                 firmware update removes root, LG’s Home stays black until it is
                 put back over SSH.
               </div>
@@ -1833,7 +1833,7 @@
                 Picture details
               </div>
               <div class="prot-desc" data-t="home.pictureDesc">
-                In the top right of Native Tv Home: the resolution, refresh
+                In the top right of Rooted TV Home: the resolution, refresh
                 rate and HDR of what was last on, and the picture mode and
                 brightness it gets.
               </div>
@@ -1855,7 +1855,7 @@
                 Films and series
               </div>
               <div class="prot-desc" data-t="home.tmdbDesc">
-                Native Tv Home lists what is trending and recent from TMDB,
+                Rooted TV Home lists what is trending and recent from TMDB,
                 and shows only titles that open on Netflix or YouTube. It needs
                 a TMDB API key (free at themoviedb.org, under Settings, API),
                 the 32-character one. The key is kept on the TV and never shown again.
@@ -1994,7 +1994,7 @@
                 Gemini assistant
               </div>
               <div class="prot-desc" data-t="home.geminiDesc">
-                Adds the assistant to the bar of Native Tv Home, as Google TV's
+                Adds the assistant to the bar of Rooted TV Home, as Google TV's
                 Gemini button: ask for something to watch, or ask it to open a
                 title or turn the volume down. It needs a Gemini API key of your
                 own (free at aistudio.google.com, under Get API key). Each question
@@ -2046,7 +2046,7 @@
 <div class="sub" data-t="home.profiles.desc">
             Each profile has a Home layout of its own: its rows and tiles, tabs,
             clock. What is set below changes the profile in use.
-            With more than one, Native Tv Home shows an avatar in its bar to
+            With more than one, Rooted TV Home shows an avatar in its bar to
             switch between them, and Quick settings lists them too.
           </div>
 <div class="home-profiles" id="home-profiles"></div>
@@ -2055,7 +2055,7 @@
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-apps"/></svg></span><h2 data-t="home.layout">Rows and tiles</h2></div>
 <div class="sub" data-t="home.layoutDesc">
             Apps and inputs come from the TV: hide the ones not wanted. Channels
-            are only the ones added here. Holding OK on Native Tv Home arranges
+            are only the ones added here. Holding OK on Rooted TV Home arranges
             the same layout on the TV.
           </div>
 <div
@@ -2130,7 +2130,7 @@
           </div>
 <div class="sub" data-t="home.wall.uploadHelp">
             JPEG, PNG or WebP, up to 25 MB. Images are resized to fit 1920 ×
-            1080, the size Native Tv Home is drawn at, before upload, and fill
+            1080, the size Rooted TV Home is drawn at, before upload, and fill
             the screen.
           </div>
 <div class="sub" id="home-wall-upload-note" role="status"></div>
@@ -2435,7 +2435,7 @@
             <div class="pv-sub" data-t="pv.adblock.custom.desc">
               Use your own hosts file to customise what the ad blocker blocks.
               The TV keeps the list, so it is not uploaded again after a
-              Native Tv server redeploy.
+              Rooted TV server redeploy.
             </div>
             <div class="oled-warn abc-warn" data-t="pv.adblock.custom.warn">
               Depending on what it blocks, a list can stop apps, LG's services
@@ -2497,7 +2497,7 @@
                     What is blocked
                   </div>
                   <div class="prot-desc" data-t="pv.adblock.custom.how.desc">
-                    Native Tv's list is the one the ad blocker uses on its own.
+                    Rooted TV's list is the one the ad blocker uses on its own.
                   </div>
                 </div>
                 <div class="prot-status">
@@ -2509,7 +2509,7 @@
                     data-t-aria-label="pv.adblock.custom.how"
                   >
                     <option value="add" data-t="pv.adblock.custom.add">
-                      Your file and Native Tv's list
+                      Your file and Rooted TV's list
                     </option>
                     <option value="replace" data-t="pv.adblock.custom.replace">
                       Only your file
@@ -2746,7 +2746,7 @@
                     <div class="mqtt-net-name" id="mqtt-node-tv-name">
                       &mdash;
                     </div>
-                    <div class="mqtt-net-sub" translate="no">Native Tv</div>
+                    <div class="mqtt-net-sub" translate="no">Rooted TV</div>
                   </div>
                   <div class="mqtt-net-state">
                     <span class="mqtt-dot good" id="mqtt-dot-tv"></span>
@@ -2965,7 +2965,7 @@
 </section>
       <section class="panel grid" id="serverpane" role="tabpanel" hidden>
 <article class="card" style="--p:2;--t:4;--d:12">
-<div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-dns"/></svg></span><h2 data-t="server.nativetv" translate="no">Native Tv</h2></div>
+<div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-dns"/></svg></span><h2 data-t="server.nativetv" translate="no">Rooted TV</h2></div>
 <div class="prot-table">
             <div class="prot-row" id="server-health-row">
               <div class="prot-main">
@@ -2973,7 +2973,7 @@
                   Server health
                 </div>
                 <div class="prot-desc" data-t="server.health.desc">
-                  Memory footprint and uptime of the Native Tv background
+                  Memory footprint and uptime of the Rooted TV background
                   process on this TV.
                 </div>
               </div>
@@ -3045,7 +3045,7 @@
                 </div>
                 <div class="prot-desc" data-t="server.backup.desc">
                   Saves LG's sound, device, HDMI and ad settings, and
-                  Native Tv's own, to a file. Restoring it, on this TV or
+                  Rooted TV's own, to a file. Restoring it, on this TV or
                   another, sets those the TV has. Network access, MQTT and game
                   settings are not included.
                 </div>
@@ -3106,7 +3106,7 @@
                   Updates
                 </div>
                 <div class="prot-desc" data-t="server.release.desc">
-                  Asks GitHub whether a newer Native Tv has been released. It
+                  Asks GitHub whether a newer Rooted TV has been released. It
                   only tells: the update is installed from the Homebrew Channel
                   on the TV.
                 </div>
@@ -3565,7 +3565,7 @@
 <article class="card" id="srv-report" style="--p:2;--t:4;--d:12">
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-dns"/></svg></span><h2 data-t="server.report">TV report</h2></div>
 <div class="pv-sub" data-t="server.report.desc">
-              The Native Tv and webOS versions, the model and which readings
+              The Rooted TV and webOS versions, the model and which readings
               this TV answered, to paste into an issue. It holds no address, no
               MAC address, no network or host name and none of the TV's
               settings.
@@ -3592,7 +3592,7 @@
 <article class="card tools-card" style="--p:2;--t:4;--d:12">
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-terminal"/></svg></span><h2 data-t="tools.title">System logs</h2></div>
 <div class="pv-sub" data-t="tools.desc">
-          Logs from the TV, Native Tv and the TV's hardware, for
+          Logs from the TV, Rooted TV and the TV's hardware, for
           troubleshooting.
         </div>
 <div class="pv-sub" id="tools-fwd" hidden></div>
@@ -3620,7 +3620,7 @@
                 onclick="toggleToolsSource('nativetv')"
               >
                 <span class="src-dot src-nativetv"></span
-                ><span data-t="tools.src.nativetv">Native Tv</span>
+                ><span data-t="tools.src.nativetv">Rooted TV</span>
               </button>
               <button
                 type="button"
@@ -4315,7 +4315,7 @@
               </div>
               <div class="prot-desc" data-t="server.tvUpdates.block.desc">
                 Stops the TV installing LG's system updates, which can take away
-                the access Native Tv runs with. Homebrew app catalog updates
+                the access Rooted TV runs with. Homebrew app catalog updates
                 are unaffected.
               </div>
             </div>

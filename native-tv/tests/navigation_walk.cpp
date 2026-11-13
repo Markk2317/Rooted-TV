@@ -90,7 +90,7 @@ struct Server {
         for (int id : apps)
             app("app" + std::to_string(id), "App " + std::to_string(id), kindOfApp(id));
         if (nativeTile)
-            app("com.tvweb.dashboard", "Native Tv", "tools");
+            app("com.tvweb.dashboard", "Rooted TV", "tools");
         if (lgHome)
             order += (order.empty() ? "" : ",") + std::string("\"lg-home\"");
         out << R"(],"devices":[)";

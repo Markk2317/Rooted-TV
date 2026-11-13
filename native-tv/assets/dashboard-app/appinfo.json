@@ -1,10 +1,10 @@
 {
   "id": "com.tvweb.dashboard",
   "version": "2.0.0",
-  "vendor": "Native Tv",
+  "vendor": "Rooted TV",
   "type": "native",
   "main": "nativetv-tv",
-  "title": "Native Tv",
+  "title": "Rooted TV",
   "icon": "assets/icon80.png",
   "largeIcon": "assets/icon130.png",
   "iconColor": "#000000",

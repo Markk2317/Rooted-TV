@@ -302,7 +302,7 @@ function haConfigText(v) {
     '        service: button.press',
     '        target:',
     '          entity_id: button.' + id + '_' + entity];
-  const head = ['# Native Tv: ' + v.name + (v.address ? ' (' + v.address + ')' : '') + '. For Home Assistant\'s configuration.yaml.'];
+  const head = ['# Rooted TV: ' + v.name + (v.address ? ' (' + v.address + ')' : '') + '. For Home Assistant\'s configuration.yaml.'];
   if (!v.mac) head.push('# This TV\'s MAC address was not found: put it in the wake_on_lan action below.');
   return head.concat([
     'template:',

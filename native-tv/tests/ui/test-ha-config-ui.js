@@ -51,7 +51,7 @@ test('the card shows the saved values and the TV\'s own MAC address and address'
   page.context.__s = settings;
   return vm.runInContext('renderHaConfig(__s)', page.context).then(function () {
     var text = page.el('ha-config').value;
-    assert.ok(text.indexOf('# Native Tv: Den TV (192.168.1.50)') === 0, text.split('\n')[0]);
+    assert.ok(text.indexOf('# Rooted TV: Den TV (192.168.1.50)') === 0, text.split('\n')[0]);
     assert.ok(text.indexOf('mac: "00:11:22:AA:BB:CC"') !== -1);
     assert.ok(text.indexOf('"home/tv/command/volumeStep"') !== -1);
     assert.ok(text.indexOf('number.den_tv_volume') !== -1 && text.indexOf('lg_tv') === -1);

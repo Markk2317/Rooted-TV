@@ -15,7 +15,7 @@
 namespace nativetv {
 namespace service {
 
-// Trailers for the details pages of Native Tv Home: the start of a film's trailer (about 30 s of
+// Trailers for the details pages of Rooted TV Home: the start of a film's trailer (about 30 s of
 // Apple TV's HLS one, or of the iTunes Store's preview) is kept on the TV under
 // home-trailers/, so the page plays it from the TV. Finding the trailer (Wikidata, then Apple TV's
 // page or the iTunes lookup) is the caller's; this keeps the files, fetches them one at a time in

@@ -440,7 +440,7 @@ void threeCrashesGiveLgHomeBack() {
     check(happened(w, "notice:off"), "the Home key's starting notice is cleared");
     check(happened(w, "sync:false"), "and LG's auto launch is put back in line");
     check(w.errors.size() == 1 && w.errors[0].find("stopped 3 times within 120 seconds") != std::string::npos &&
-              w.errors[0].find("until Native Tv restarts or Home is switched on again") != std::string::npos,
+              w.errors[0].find("until Rooted TV restarts or Home is switched on again") != std::string::npos,
           "the log says why: " + joined(w.errors));
     check(!w.mounted && w.document()["enabled"].boolean(),
           "LG's Home is back and Home is still switched on, for the next start");
@@ -748,7 +748,7 @@ void theProbeKeepsLgHomeAtStart() {
     {
         World w = watched();
         w.probeRefusal = Json::parse(
-            R"({"ok":false,"webos":"10.3.2","reason":"This TV's graphics driver cannot run the Native Tv app (check exit 12).","probe":{"ok":false,"exit":12,"class":"gl"}})");
+            R"({"ok":false,"webos":"10.3.2","reason":"This TV's graphics driver cannot run the Rooted TV app (check exit 12).","probe":{"ok":false,"exit":12,"class":"gl"}})");
         HomeOrchestrator orchestrator(depsFor(w));
         orchestrator.start();
         check(!happened(w, "release") && !happened(w, "take") && !happened(w, "take:blank"),

@@ -195,7 +195,7 @@ class Termination(NeedsGl):
         self.addCleanup(lambda: process.poll() is None and process.kill())
         self.addCleanup(process.stderr.close)
         # Printed just before the loop starts.
-        self.assertIn("Native Tv native:", process.stderr.readline())
+        self.assertIn("Rooted TV native:", process.stderr.readline())
         return process
 
     def test_sigterm_while_idle_exits_zero_without_spinning(self):

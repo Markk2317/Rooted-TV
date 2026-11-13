@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage the native client in the Native Tv tile's app folder with the managed runtime, optionally running a bounded TV smoke test.
+"""Stage the native client in the Rooted TV tile's app folder with the managed runtime, optionally running a bounded TV smoke test.
 
 The client is the one native app sam is told of (assets/dashboard-app, added by the
 dashboard's "App on the TV's home screen" or lifecycle/deploy.sh); this puts a development

@@ -1,4 +1,4 @@
-// The Home tab: Native Tv Home, a home screen of Native Tv's own in place of LG's.
+// The Home tab: Rooted TV Home, a home screen of Rooted TV's own in place of LG's.
 
 let homeStatus = null;
 let homeCat = null;      // what the TV's Home lists: apps, devices, picked channels, order
@@ -10,7 +10,7 @@ let homeSaving = false;
 let homeLoadRevision = 0;
 let homeWallTimer = null;
 let homeWallUploading = false;
-// null until the server says; false on a TV Native Tv Home is not offered on.
+// null until the server says; false on a TV Rooted TV Home is not offered on.
 let homeAvailable = null;
 
 const HOME_ROWS = {
@@ -36,7 +36,7 @@ async function homePost(path, body) {
   return r;
 }
 
-// The tab, as Game's, only where the server offers Native Tv Home.
+// The tab, as Game's, only where the server offers Rooted TV Home.
 function setHomeAvailable(st) {
   homeAvailable = st.available !== false;
   if (q('tab-btn-home')) q('tab-btn-home').hidden = !homeAvailable;
@@ -106,7 +106,7 @@ function renderHomeButton() {
   const row = q('home-button-row'), btn = q('home-button');
   if (!row || !btn) return;
   row.hidden = homeButtonOn === null;
-  updateToggle(btn, { cls: homeButtonOn ? 'good' : 'idle', label: homeButtonOn ? t('home.buttonNativeTv', 'Native Tv Home') : t('home.buttonLg', 'LG’s Home'), on: !!homeButtonOn });
+  updateToggle(btn, { cls: homeButtonOn ? 'good' : 'idle', label: homeButtonOn ? t('home.buttonNativeTv', 'Rooted TV Home') : t('home.buttonLg', 'LG’s Home'), on: !!homeButtonOn });
   btn.setAttribute('aria-pressed', String(!!homeButtonOn));
   btn.disabled = !homeWritable();
 }
@@ -151,7 +151,7 @@ function renderTmdb() {
   row.hidden = false;
   q('home-tmdb-state').textContent = tmdbKeySet
     ? t('home.tmdbOn', 'A TMDB key is saved. Films and series are on.')
-    : t('home.tmdbOff', 'No TMDB key is saved, so Native Tv Home shows no films or series.');
+    : t('home.tmdbOff', 'No TMDB key is saved, so Rooted TV Home shows no films or series.');
   q('home-tmdb-remove').hidden = !tmdbKeySet;
 }
 async function homeTmdbSave() {
@@ -171,7 +171,7 @@ function renderYoutube() {
   row.hidden = false;
   q('home-youtube-state').textContent = youtubeKeySet
     ? t('home.youtubeOn', 'A YouTube key is saved. Trending on YouTube is on.')
-    : t('home.youtubeOff', 'No YouTube key is saved, so Native Tv Home shows no Trending on YouTube row.');
+    : t('home.youtubeOff', 'No YouTube key is saved, so Rooted TV Home shows no Trending on YouTube row.');
   q('home-youtube-remove').hidden = !youtubeKeySet;
 }
 async function homeYoutubeSave() {
@@ -196,8 +196,8 @@ function renderGoogle() {
   let state;
   if (pending) state = t('home.googleCode', 'On a phone or computer, open {url} and enter {code}. This page follows along.', { url: pending.url, code: pending.code });
   else if (account.linked) state = account.name
-    ? t('home.googleIn', 'Signed in as {name}. Its subscriptions are on Native Tv Home.', { name: account.name })
-    : t('home.googleInUnnamed', 'Signed in. Its subscriptions are on Native Tv Home.');
+    ? t('home.googleIn', 'Signed in as {name}. Its subscriptions are on Rooted TV Home.', { name: account.name })
+    : t('home.googleInUnnamed', 'Signed in. Its subscriptions are on Rooted TV Home.');
   else if (account.clientSet) state = t('home.googleOut', 'This profile is not signed in.');
   else state = t('home.googleNoClient', 'No Google client is saved.');
   if (account.error && !pending) state += ' ' + account.error;
@@ -246,7 +246,7 @@ function renderGemini() {
   if (!row) return;
   row.hidden = false;
   q('home-gemini-state').textContent = geminiKeySet
-    ? t('home.geminiOn', 'A Gemini key is saved. The assistant is on the bar of Native Tv Home.')
+    ? t('home.geminiOn', 'A Gemini key is saved. The assistant is on the bar of Rooted TV Home.')
     : t('home.geminiOff', 'No Gemini key is saved.');
   q('home-gemini-remove').hidden = !geminiKeySet;
   q('home-ask-box').hidden = !geminiKeySet;
@@ -291,21 +291,21 @@ function renderHome() {
   if (!st || !state) return;
   if (st.restorePending) {
     state.textContent = t('home.restorePending', 'LG Home restoration is incomplete');
-    desc.textContent = t('home.restoreRetry', 'Retry restoring LG Home before switching Native Tv Home on again.');
+    desc.textContent = t('home.restoreRetry', 'Retry restoring LG Home before switching Rooted TV Home on again.');
   } else if (!st.supported.ok) {
-    state.textContent = t('home.inApp', 'In the Native Tv app');
+    state.textContent = t('home.inApp', 'In the Rooted TV app');
     desc.textContent = (st.supported.reason ? st.supported.reason + ' ' : '') +
-      t('home.inAppDesc', 'LG’s Home stays the TV’s Home: Native Tv Home opens inside the Native Tv app, with Back from its Settings, and shows the films and series set below.');
+      t('home.inAppDesc', 'LG’s Home stays the TV’s Home: Rooted TV Home opens inside the Rooted TV app, with Back from its Settings, and shows the films and series set below.');
   } else if (st.enabled) {
-    state.textContent = t('home.isOn', 'Native Tv Home is the TV’s Home');
+    state.textContent = t('home.isOn', 'Rooted TV Home is the TV’s Home');
     desc.textContent = st.lgHomeOpen
-      ? t('home.isOnLgOpen', 'LG’s Home is open for now. Native Tv Home comes back when something else is opened, or Home is pressed.')
+      ? t('home.isOnLgOpen', 'LG’s Home is open for now. Rooted TV Home comes back when something else is opened, or Home is pressed.')
       : st.active
         ? t('home.isOnDesc', 'It opens in LG’s Home’s place: with the Home and Back buttons, and when the TV wakes on Home.')
         : t('home.isOnPending', 'Switched on, but LG’s Home is still in its place. Switching off and on again tries once more.');
   } else {
     state.textContent = t('home.isOff', 'LG’s Home is the TV’s Home');
-    desc.textContent = t('home.isOffDesc', 'Nothing of LG’s is changed: Native Tv Home is laid over LG’s Home while on, and switching off takes it away.');
+    desc.textContent = t('home.isOffDesc', 'Nothing of LG’s is changed: Rooted TV Home is laid over LG’s Home while on, and switching off takes it away.');
   }
   // Where LG's Home cannot be replaced, Home is the TV app's own: its layout is set here, the
   // switch and the warning about replacing LG's Home are left out.
@@ -318,7 +318,7 @@ function renderHome() {
   const startup = q('home-startup');
   if (startup) {
     const on = st.openOnPowerOn === true;
-    updateToggle(startup, { cls: on ? 'good' : 'idle', label: on ? t('home.startupNativeTv', 'Native Tv Home') : t('home.startupLg', 'Follow LG setting') });
+    updateToggle(startup, { cls: on ? 'good' : 'idle', label: on ? t('home.startupNativeTv', 'Rooted TV Home') : t('home.startupLg', 'Follow LG setting') });
     startup.setAttribute('aria-pressed', String(on));
     startup.disabled = !homeWritable() || !st.enabled;
   }
@@ -375,7 +375,7 @@ function renderHome() {
     btn.className = 'pill ' + (armed ? 'warn' : st.enabled ? 'good' : 'idle');
     btn.textContent = armed
       ? (wantOn ? t('home.confirmOn', 'Press again to switch on') : t('home.confirmOff', 'Press again to use LG Home'))
-      : (st.restorePending ? t('home.retryRestore', 'Retry restoring LG Home') : wantOn ? t('home.switchOn', 'Use Native Tv Home') : t('home.switchOff', 'Use LG Home'));
+      : (st.restorePending ? t('home.retryRestore', 'Retry restoring LG Home') : wantOn ? t('home.switchOn', 'Use Rooted TV Home') : t('home.switchOff', 'Use LG Home'));
   }
   const hist = q('home-history-note');
   if (hist) hist.hidden = st.history;
@@ -495,7 +495,7 @@ function homeSortRow(kind, usable) {
   return `<div class="prot-row">
     <div class="prot-main"><div class="prot-title"><label for="home-sort-${kind}">${esc(t('home.sort', 'Order'))}</label></div>
       <div class="prot-desc">${esc(sort === 'recent'
-        ? t('home.sortRecentDesc', 'The tile opened last comes first, whether it was opened from Native Tv Home or not. Tiles not yet opened follow in this row’s own order.')
+        ? t('home.sortRecentDesc', 'The tile opened last comes first, whether it was opened from Rooted TV Home or not. Tiles not yet opened follow in this row’s own order.')
         : sort === 'kind'
           ? t('home.sortKindDesc', 'Rows by kind on the Apps screen, in the order under Kinds. Tiles keep their order within a kind.')
           : t('home.sortCustomDesc', 'As arranged here.'))}</div></div>
@@ -558,7 +558,7 @@ function homeMoveTile(kind, i, d) {
   homeSaveLayout({ order: { [kind]: order } });
 }
 
-// The ids hidden from a list: a row's own ('app' is the apps row on Native Tv Home), or 'appsTab', the
+// The ids hidden from a list: a row's own ('app' is the apps row on Rooted TV Home), or 'appsTab', the
 // Apps tab's own apps (a layout from before it had a list hides there what Home hides).
 function homeHiddenIds(list) {
   const hidden = homeLayout.hidden;
@@ -752,7 +752,7 @@ async function homeUploadWall() {
       img.onerror = () => reject(new Error(t('home.wall.unreadable', 'The image could not be opened.')));
       img.src = url;
     });
-    // Native Tv Home is drawn at 1920 x 1080; the server refuses anything larger.
+    // Rooted TV Home is drawn at 1920 x 1080; the server refuses anything larger.
     const scale = Math.min(1, 1920 / img.naturalWidth, 1080 / img.naturalHeight);
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));

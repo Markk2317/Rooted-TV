@@ -171,7 +171,7 @@ WebOSWindow {
         color: "#8a8f96"
         font.family: lightFace.status === FontLoader.Ready ? lightFace.name : ""
         font.pixelSize: Math.round(36 * win.unit)
-        text: "Add photos on the Screensaver tab of the Native Tv dashboard."
+        text: "Add photos on the Screensaver tab of the Rooted TV dashboard."
     }
 
     Timer { interval: 20000; running: true; repeat: true; onTriggered: win.nextPhoto() }

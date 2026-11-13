@@ -13,7 +13,7 @@
 namespace nativetv {
 namespace service {
 
-// A Google account linked to each Native Tv Home profile, through Google's sign-in for TVs with
+// A Google account linked to each Rooted TV Home profile, through Google's sign-in for TVs with
 // the owner's own OAuth client ("TVs and Limited Input devices") and read-only YouTube access, and
 // the row of new videos from that account's YouTube subscriptions. The refresh tokens are kept in
 // youtube-accounts.json beside the server, mode 0600, and go nowhere but Google.

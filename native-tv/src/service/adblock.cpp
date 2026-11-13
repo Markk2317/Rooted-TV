@@ -488,7 +488,7 @@ std::string adBlockExport(const std::string &format,
         return std::string();
     }
     std::ostringstream output;
-    output << comment << "Native Tv block list: " << names.size() << " names\n";
+    output << comment << "Rooted TV block list: " << names.size() << " names\n";
     // A router or AdGuard rule also matches subdomains, which the TV's own hosts
     // table does not; the names already include the regional ones.
     for (const std::string &name : names)

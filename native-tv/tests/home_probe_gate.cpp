@@ -209,7 +209,7 @@ void knownFollowsTheClientFile() {
 }
 
 
-// The Native Tv tile is the one app sam is told of: Home needs it known, asked every time.
+// The Rooted TV tile is the one app sam is told of: Home needs it known, asked every time.
 void aClientSamDoesNotKnowIsRefused() {
     ChildProcessRunner runner(quickRunner());
     const std::string client = standIn("registered", 0);

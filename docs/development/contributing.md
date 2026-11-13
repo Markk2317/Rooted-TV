@@ -133,7 +133,7 @@ writes the TV's settings, so they come from a TV before it is set up.
 ## Pull requests
 
 Open with a plain-language summary of what changes for the people using
-Native Tv, then a `## Technical details` section for larger changes. Third person,
+Rooted TV, then a `## Technical details` section for larger changes. Third person,
 short, no process commentary.
 
 Every pull request has a **Testing** section: the TV and webOS version the change

@@ -72,7 +72,7 @@ struct TopBar {
     float saverFocus = 0; // the screen saver's button, before the gear
     std::string clock;
     // After the clock and a divider, as Google TV ends its bar with its name.
-    std::string wordmark = "Native Tv";
+    std::string wordmark = "Rooted TV";
     Enter enter;
 };
 // Tab boxes for the bar's tabs, so the view can aim the pill's springs at them; `search` moves

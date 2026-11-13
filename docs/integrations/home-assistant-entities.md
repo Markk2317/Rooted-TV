@@ -1,5 +1,5 @@
 ---
-description: "Every Home Assistant entity Native Tv publishes for an LG webOS TV over MQTT."
+description: "Every Home Assistant entity Rooted TV publishes for an LG webOS TV over MQTT."
 ---
 
 # Home Assistant entities
@@ -44,7 +44,7 @@ Every entity the TV publishes, by category. Which categories are published is se
 | `button` | `button.lg_tv_rewind` | Rewind | Presses Rewind on the remote |
 | `button` | `button.lg_tv_fast_forward` | Fast Forward | Presses Fast Forward on the remote |
 | `switch` | `switch.lg_tv_oled_screen_shift` | OLED Screen Shift | Pixel orbiting, on OLED TVs |
-| `select` | `select.lg_tv_oled_logo_dimming` | OLED Logo Dimming | Local logo dimming: Off, Light, High; OLED TVs only. On an OLED on webOS 3.4, Native Tv's own, which lowers the whole picture's OLED light |
+| `select` | `select.lg_tv_oled_logo_dimming` | OLED Logo Dimming | Local logo dimming: Off, Light, High; OLED TVs only. On an OLED on webOS 3.4, Rooted TV's own, which lowers the whole picture's OLED light |
 | `select` | `select.lg_tv_screensaver_mode` | Screen Saver | Which screen saver the TV runs: LG default, Clock, Clock with date, Black screen, Starfield, Fireworks, Bokeh, Harmonograph, Filament, Currents, Veils, Incense, Murmuration, Vortex, Neo, Tesseract, Panel vitals, Your photos or Google TV. Brightness is set on the dashboard's Screensaver tab |
 | `button` | `button.lg_tv_screensaver` | Start Screensaver | Starts the webOS screensaver, or dismisses one that is showing. Where the TV refuses the request, it opens the screen saver itself, except while something is playing full screen or playback cannot be checked ([Screen savers](../dashboard/screen-savers.md)) |
 | `text` | `text.lg_tv_screen_notification` | Screen Notification | Send custom toast messages to TV screen |

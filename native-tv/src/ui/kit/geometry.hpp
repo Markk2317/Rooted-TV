@@ -15,7 +15,7 @@ constexpr float clamp(float value, float low, float high) {
 }
 
 // Top bar.
-// Home, its tabs and the bar keep Google TV's margin (layout::homeX, 116 px); Native Tv's own pages
+// Home, its tabs and the bar keep Google TV's margin (layout::homeX, 116 px); Rooted TV's own pages
 // (Settings, setup) keep canvas::safeX.
 constexpr Rect avatar() {
     return {layout::homeX, layout::navTop + (layout::navH - layout::avatar) / 2, layout::avatar,

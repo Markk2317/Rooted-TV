@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
                callPayload["id"].string() == "com.tvweb.dashboard" &&
                !environment("NATIVETV_FAKE_LUNA_UNREGISTERED").empty() &&
                ::access(environment("NATIVETV_FAKE_LUNA_UNREGISTERED").c_str(), F_OK) == 0) {
-        // The Native Tv tile taken off the home screen: sam does not know the app, nor open it.
+        // The Rooted TV tile taken off the home screen: sam does not know the app, nor open it.
         reply.set("returnValue", Json::flag(false));
         reply.set("errorText", Json::text("Invalid appId"));
     } else if (mode == "screen-time" &&
@@ -1358,7 +1358,7 @@ int main(int argc, char **argv) {
         apps.add(gallery);
         Json protectedApp = Json::object();
         protectedApp.set("id", Json::text("com.tvweb.dashboard"));
-        protectedApp.set("title", Json::text("Native Tv"));
+        protectedApp.set("title", Json::text("Rooted TV"));
         protectedApp.set("removable", Json::flag(true));
         protectedApp.set("folderPath", Json::text(
             "/media/developer/apps/com.tvweb.dashboard"));

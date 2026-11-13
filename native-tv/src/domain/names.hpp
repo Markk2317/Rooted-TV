@@ -51,7 +51,7 @@ Json emmcEolStates();
 Json emmcEol(unsigned code);
 Json vrrType(const Json &raw);
 
-// A streaming service Native Tv Home has a row for: its name, TMDB's watch-provider IDs for it
+// A streaming service Rooted TV Home has a row for: its name, TMDB's watch-provider IDs for it
 // ("9|119": either), and the webOS apps that are it, in the order they are looked for.
 struct StreamingService {
     std::string key;

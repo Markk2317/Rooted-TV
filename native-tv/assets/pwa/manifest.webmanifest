@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Native Tv",
-  "short_name": "Native Tv",
+  "name": "Rooted TV",
+  "short_name": "Rooted TV",
   "description": "Control and monitor an LG webOS TV from a phone or computer.",
   "start_url": "/",
   "scope": "/",

@@ -9,7 +9,7 @@ Planned features come first, most useful for the effort first. After them, what 
 
 ## Found testing the B3 by hand
 
-- **App icon.** The Native Tv tile on LG's launcher does not fill its tile the way the channel tiles do.
+- **App icon.** The Rooted TV tile on LG's launcher does not fill its tile the way the channel tiles do.
 - **Privacy.** The Overview should be easier to use (someone who only wants ad tracking off).
 
 ## Home, from the second hands-on test

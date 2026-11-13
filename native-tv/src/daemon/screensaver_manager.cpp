@@ -206,7 +206,7 @@ bool unmountTree(ChildProcessRunner &children, const std::string &systemRoot,
 // reaches the next one.
 const char *kLauncher =
     "#!/bin/sh\n"
-    "# Native Tv's screen saver in the place of LG's native one: qml-runner draws the staged QML.\n"
+    "# Rooted TV's screen saver in the place of LG's native one: qml-runner draws the staged QML.\n"
     "exec /usr/bin/qml-runner \"{\\\"main\\\":\\\"$(dirname \"$0\")/qml/main.qml\\\","
     "\\\"appId\\\":\\\"com.webos.app.screensaver\\\",\\\"params\\\":{}}\"\n";
 

@@ -101,38 +101,38 @@ std::string homeProbeReason(const Json &verdict) {
     const std::string name = verdict["class"].string();
     if (name == "missing")
         return say::msg("srv.home.probe.missing",
-                        "The Native Tv app is not installed on this TV, so Native Tv Home cannot take LG's Home's place.");
+                        "The Rooted TV app is not installed on this TV, so Rooted TV Home cannot take LG's Home's place.");
     if (name == "unregistered")
         return say::msg("srv.home.probe.unregistered",
-                        "The Native Tv app is not on this TV's home screen (it was removed, or never added), so Native Tv Home cannot take LG's Home's place. Switch on App on the TV's home screen, on the Server tab, first.");
+                        "The Rooted TV app is not on this TV's home screen (it was removed, or never added), so Rooted TV Home cannot take LG's Home's place. Switch on App on the TV's home screen, on the Server tab, first.");
     if (name == "unasked")
         return say::msg("srv.home.probe.unasked",
-                        "The TV did not say whether the Native Tv app is on its home screen, so Native Tv Home cannot take LG's Home's place.");
+                        "The TV did not say whether the Rooted TV app is on its home screen, so Rooted TV Home cannot take LG's Home's place.");
     if (name == "timeout")
         return say::msg("srv.home.probe.timeout",
-                        "The Native Tv app's start-up check did not finish in time, so Native Tv Home cannot take LG's Home's place.");
+                        "The Rooted TV app's start-up check did not finish in time, so Rooted TV Home cannot take LG's Home's place.");
     if (name == "display")
         return say::msg("srv.home.probe.display",
-                        "The Native Tv app could not reach this TV's display (check exit {code}), so Native Tv Home cannot take LG's Home's place.",
+                        "The Rooted TV app could not reach this TV's display (check exit {code}), so Rooted TV Home cannot take LG's Home's place.",
                         variables);
     if (name == "context")
         return say::msg("srv.home.probe.context",
-                        "The Native Tv app could not open a graphics window on this TV (check exit {code}), so Native Tv Home cannot take LG's Home's place.",
+                        "The Rooted TV app could not open a graphics window on this TV (check exit {code}), so Rooted TV Home cannot take LG's Home's place.",
                         variables);
     if (name == "gl")
         return say::msg("srv.home.probe.gl",
-                        "This TV's graphics driver cannot run the Native Tv app (check exit {code}), so Native Tv Home cannot take LG's Home's place.",
+                        "This TV's graphics driver cannot run the Rooted TV app (check exit {code}), so Rooted TV Home cannot take LG's Home's place.",
                         variables);
     if (name == "readback")
         return say::msg("srv.home.probe.readback",
-                        "This TV's graphics driver drew the Native Tv app's check frame wrongly (check exit {code}), so Native Tv Home cannot take LG's Home's place.",
+                        "This TV's graphics driver drew the Rooted TV app's check frame wrongly (check exit {code}), so Rooted TV Home cannot take LG's Home's place.",
                         variables);
     if (name == "crashed")
         return say::msg("srv.home.probe.crashed",
-                        "The Native Tv app crashed in its start-up check (signal {code}), so Native Tv Home cannot take LG's Home's place.",
+                        "The Rooted TV app crashed in its start-up check (signal {code}), so Rooted TV Home cannot take LG's Home's place.",
                         variables);
     return say::msg("srv.home.probe.failed",
-                    "The Native Tv app's start-up check failed (exit {code}), so Native Tv Home cannot take LG's Home's place.",
+                    "The Rooted TV app's start-up check failed (exit {code}), so Rooted TV Home cannot take LG's Home's place.",
                     variables);
 }
 

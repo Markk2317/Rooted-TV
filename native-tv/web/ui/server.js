@@ -325,7 +325,7 @@ async function saveBackup() {
     const b = await r.json();
     if (!r.ok || b.format !== 'nativetv-backup') throw new Error(b.error || r.status);
     downloadBackupFile(b);
-    backupMessage(t('server.backup.saved', 'Saved {count} LG settings and Native Tv’s own.', { count: Object.keys(b.lg || {}).length }));
+    backupMessage(t('server.backup.saved', 'Saved {count} LG settings and Rooted TV’s own.', { count: Object.keys(b.lg || {}).length }));
   } catch (e) {
     backupMessage(t('server.backup.saveFailed', 'Could not make a backup — {error}', { error: e.message }));
   }
@@ -342,7 +342,7 @@ async function restoreBackup(input) {
 
 async function restoreBackupData(b) {
   if (!b || b.format !== 'nativetv-backup') {
-    return backupMessage(t('server.backup.notBackup', 'That file is not a Native Tv backup'));
+    return backupMessage(t('server.backup.notBackup', 'That file is not a Rooted TV backup'));
   }
   const from = (b.from && b.from.model) || t('server.backup.unknownTv', 'an unknown TV');
   const when = b.created ? new Date(b.created).toLocaleString() : '?';
@@ -362,7 +362,7 @@ async function restoreBackupData(b) {
     const apps = d.apps || {};
     if ((apps.toInstall || []).length) text += ' ' + t('server.backup.appsToInstall', '{count} apps from the backup can be installed from the Apps tab.', { count: apps.toInstall.length });
     if ((apps.manual || []).length) text += ' ' + t('server.backup.appsManual', 'Not in the Homebrew Channel catalog, to install by hand: {names}.', { names: apps.manual.map(a => a.title).join(', ') });
-    if (d.restart) text += ' ' + t('server.backup.restarting', 'Native Tv restarts to apply its own settings.');
+    if (d.restart) text += ' ' + t('server.backup.restarting', 'Rooted TV restarts to apply its own settings.');
     backupMessage(text);
   } catch (e) {
     backupMessage(t('server.backup.restoreFailed', 'Could not restore — {error}', { error: e.message }));
@@ -420,7 +420,7 @@ function renderRelease(r, daily, writable) {
   if (!r.available) return;
   offer.innerHTML = `<div>${esc(r.fromSource
     ? t('server.release.source', 'This server was built from a git checkout. Pull the release and deploy it again.')
-    : t('server.release.how', 'On the TV, open the Homebrew Channel and update Native Tv. If it is not listed there, install the .ipk.'))}</div>` +
+    : t('server.release.how', 'On the TV, open the Homebrew Channel and update Rooted TV. If it is not listed there, install the .ipk.'))}</div>` +
     `<div><a href="${esc(r.latest.releaseUrl)}" target="_blank" rel="noopener">${esc(t('server.release.notes', 'Release notes'))}</a>` +
     ` &middot; <a href="${esc(r.latest.ipkUrl)}" target="_blank" rel="noopener">${esc(t('server.release.ipk', 'Download the .ipk'))}</a></div>` +
     `<div class="rel-sha">${esc(t('server.release.sha', 'SHA-256 {hash}', { hash: r.latest.sha256 }))}</div>`;

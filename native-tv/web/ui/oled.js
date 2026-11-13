@@ -45,8 +45,8 @@ async function loadOledCare() {
     } else if (r.kind === 'logo') {
       if (d.logoDimmingSoftware) {
         r = Object.assign({}, r, {
-          sub: t('oled.logo.subSoftware', 'Native Tv, whole picture'),
-          desc: t('oled.logo.descSoftware', 'This panel has no logo dimming of its own, so Native Tv\'s stands in: a bright logo, score or HUD that stays put for two minutes while the picture moves lowers the OLED light of the whole picture by 15 % (light) or 30 % (strong) until it goes.')
+          sub: t('oled.logo.subSoftware', 'Rooted TV, whole picture'),
+          desc: t('oled.logo.descSoftware', 'This panel has no logo dimming of its own, so Rooted TV\'s stands in: a bright logo, score or HUD that stays put for two minutes while the picture moves lowers the OLED light of the whole picture by 15 % (light) or 30 % (strong) until it goes.')
         });
       }
       const v = String(d.logoDimming || 'off').toLowerCase();

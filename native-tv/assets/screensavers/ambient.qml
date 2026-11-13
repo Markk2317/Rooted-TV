@@ -6,7 +6,7 @@
  * capitalised overline over the name) and the time and the weather in the lower
  * right, in Google Sans. The pictures are the owner's photos where some are
  * uploaded on the dashboard's Screensaver tab, else the stills of the titles on
- * Native Tv Home's banner and trending rows. The temperature, the weather's
+ * Rooted TV Home's banner and trending rows. The temperature, the weather's
  * picture and the time stand on one line in the lower right corner, as Google
  * TV's ambient mode sets them. The text moves a few pixels every minute, so on
  * an OLED no pixel holds the same text for long.
@@ -28,7 +28,7 @@ WebOSWindow {
     visible: true
     color: "black"
 
-    // Native Tv's own copy of the client's face; LG's Museo Sans where it cannot be read.
+    // Rooted TV's own copy of the client's face; LG's Museo Sans where it cannot be read.
     FontLoader { id: sansFace; source: "file:///var/lib/tvweb/assets/fonts/GoogleSansFlex-Regular.ttf" }
     FontLoader { id: lightFace; source: "file:///usr/share/fonts/MuseoSans-Light.ttf" }
     property string face: sansFace.status === FontLoader.Ready ? sansFace.name
