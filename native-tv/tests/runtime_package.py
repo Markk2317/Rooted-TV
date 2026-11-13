@@ -305,7 +305,8 @@ class RuntimeTests(unittest.TestCase):
                              "fonts/GoogleSansFlex-Medium.ttf", "fonts/LICENSE-GoogleSansFlex-OFL.txt",
                              "icons/material/LICENSE-MaterialDesignIcons.txt",
                              "icons/splash-mark.svg", "icons/logo.svg", "carousel-scrim.svg",
-                             "Roboto-Regular.woff"):
+                             "Roboto-Regular.woff", "sounds/Effect_Tick.wav",
+                             "sounds/LICENSE-AndroidSounds.txt"):
                 self.assertIn(required, assets)
             self.assertEqual(listed["nativetv-tv"]["mode"], "0755")
             self.assertTrue((output / "LICENSE-json-c.txt").is_file())

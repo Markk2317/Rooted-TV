@@ -55,7 +55,7 @@ Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshou
 * **[Connect it to Home Assistant](integrations/home-assistant.md).** An MQTT bridge with Discovery exposes the TV as one device; the remote's buttons can trigger automations. [Prometheus metrics](integrations/prometheus.md) and [log forwarding](integrations/syslog.md) are there for monitoring.
 * **[Open the service menu](dashboard/service-menu.md)** from a browser, with no service remote, and unlock it where newer firmware cuts it down.
 * **[Use it in English or Spanish](dashboard/server.md).** The dashboard follows the browser's language, with a Language setting on the Server tab, and shows the TV's own messages in it too. The Spanish is [partly machine-translated](development/strings.md#spanish) and open to review by native speakers.
-* **[Use it on the TV itself](apps/tv-app.md).** A native app on the home screen, driven by the remote and [drawn at 60 frames a second](apps/tv-app.md#how-smooth-it-is), with [Native Tv Home](dashboard/home.md), a home screen after Google TV's that plays titles in Prime Video and Disney+ straight from Home, keeps Continue watching and what has been watched, and installs apps from LG Content Store from its search.
+* **[Use it on the TV itself](apps/tv-app.md).** A native app on the home screen, driven by the remote, [drawn at 60 frames a second](apps/tv-app.md#how-smooth-it-is) and making Google TV's system sound, with [Native Tv Home](dashboard/home.md), a home screen after Google TV's that plays titles in Prime Video and Disney+ straight from Home, keeps Continue watching and what has been watched, and installs apps from LG Content Store from its search.
 
 ## Compatibility
 
@@ -89,3 +89,4 @@ Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshou
 * [StevenBlack/hosts](https://github.com/StevenBlack/hosts): the advertising hosts reviewed for the blocker (MIT)
 * [Roboto](https://github.com/googlefonts/roboto-3-classic) and [Google Sans Flex](https://github.com/googlefonts/googlesans-flex): fonts (Apache-2.0, OFL-1.1)
 * [Material Design Icons](https://pictogrammers.com/library/mdi/) and [Material Symbols](https://fonts.google.com/icons): icons (Apache-2.0)
+* [Android's UI sounds](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/data/sounds/): the TV app's system sound, as on Google TV (Apache-2.0)

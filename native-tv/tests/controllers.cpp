@@ -190,6 +190,90 @@ int main() {
               "A tap of Back on the bar does nothing");
         app.longBack();
         check(app.screenName() == "quick:recents", "Back held opens recent apps");
+
+        // Google TV's system sound: the tick where the focus moves or OK does something, none
+        // where a key changes nothing, for Back but Home's way back to its start, for a stepped
+        // value, or with System sounds off.
+        struct CountingSounds final : SystemSounds {
+            int ticks = 0;
+            void tick() override {
+                ++ticks;
+            }
+        } sounds;
+        struct StepScreen final : ScreenView {
+            int value = 0;
+            std::string name() const override {
+                return "step";
+            }
+            bool key(ScreenHost &host, Key key) override {
+                if (key == Key::Right) {
+                    host.quietKey();
+                    ++value;
+                }
+                return key == Key::Right || key == Key::Ok || key == Key::Down;
+            }
+            void build(ScreenHost &, kit::Paint paint) override {
+                paint.scene.hits.push_back({{100, 400, 300, 100}, "step:hit"});
+            }
+            Json snapshot() const override {
+                Json value = Json::object();
+                value.set("value", Json::numeric(this->value));
+                return value;
+            }
+        };
+        FakeTransport soundTransport;
+        Application sounding(soundTransport);
+        sounding.systemSounds(&sounds);
+        sounding.screens().add([](const std::string &route) {
+            return route == "step" ? std::unique_ptr<ScreenView>(new StepScreen) : nullptr;
+        });
+        reply(sounding, "catalogue", catalogue);
+        reply(sounding, "discover", feed);
+        sounding.key(Key::Left);
+        check(sounds.ticks == 0, "Left from a row's first card moves nothing and makes no sound");
+        sounding.key(Key::Down);
+        check(sounds.ticks == 1, "A focus move ticks");
+        sounding.key(Key::Back);
+        check(sounds.ticks == 2 && sounding.snapshot()["row"].number() == 0,
+              "Back taking Home towards its start ticks, as Google TV's home-zero sound does");
+        sounding.key(Key::Back);
+        check(sounds.ticks == 3 && sounding.snapshot()["navigation"].boolean(),
+              "Back from the first row to the bar ticks too");
+        sounding.key(Key::Back);
+        check(sounds.ticks == 3, "Back that changes nothing makes no sound");
+        sounding.key(Key::Down);
+        sounding.key(Key::Ok);
+        check(sounds.ticks == 5 && sounding.screenName() == "details", "OK that opens something ticks");
+        sounding.key(Key::Back);
+        check(sounds.ticks == 5 && sounding.screenName() == "home",
+              "Back out of a screen is silent, as Android's Back is");
+        sounding.key(Key::Down);
+        sounding.key(Key::Ok);
+        check(sounds.ticks == 7 && soundTransport.count("action") == 1,
+              "OK that launches an app ticks though the page shows nothing new");
+        reply(sounding, "action", R"({"ok":true})", 200, soundTransport.revisions["action"]);
+        sounding.open("step");
+        const int beforeStep = sounds.ticks;
+        sounding.key(Key::Right);
+        check(sounds.ticks == beforeStep, "A stepped value makes no sound, as Android's sliders");
+        sounding.key(Key::Down);
+        check(sounds.ticks == beforeStep, "A key the page takes without changing anything is silent");
+        sounding.key(Key::Ok);
+        check(sounds.ticks == beforeStep + 1, "OK the page used ticks");
+        sounding.click(250, 450);
+        check(sounds.ticks == beforeStep + 2, "A pointer click on the page ticks");
+        sounding.key(Key::Up);
+        check(sounds.ticks == beforeStep + 3 && sounding.snapshot()["barFocus"].boolean(),
+              "Up from the page to the bar ticks");
+        reply(sounding, "caps", R"({"ok":true,"systemSounds":false})");
+        sounding.key(Key::Down);
+        check(sounds.ticks == beforeStep + 3 && !sounding.snapshot()["barFocus"].boolean(),
+              "With System sounds off nothing ticks");
+        reply(sounding, "settings:data:options", R"({"ok":true,"systemSounds":true})");
+        sounding.key(Key::Up);
+        check(sounds.ticks == beforeStep + 4,
+              "Switched back on in Settings, the next move ticks without waiting for the caps");
+
         FakeTransport navigationTransport;
         Application navigation(navigationTransport);
         reply(navigation, "catalogue", catalogue);

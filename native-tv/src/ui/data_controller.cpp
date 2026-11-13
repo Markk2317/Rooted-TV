@@ -84,6 +84,9 @@ void Application::response(const Response &response) {
     }
     Json data = response.json();
     dirty_ = true;
+    // Settings' System page, read again once its System sounds switch has been saved.
+    if (response.channel == "settings:data:options" && data["systemSounds"].isBoolean())
+        systemSoundsOn_ = data["systemSounds"].boolean();
     if (response.channel == "action") {
         state_.busy = false;
         if (!response.ok() || !data.valid() || (data.has("ok") && !data["ok"].boolean())) {
@@ -147,6 +150,7 @@ void Application::response(const Response &response) {
     if (response.channel == "caps") {
         state_.caps = data;
         capsAnswered_ = true;
+        systemSoundsOn_ = data["systemSounds"].boolean(true);
         // The rule of the old dashboard page: a server that says setup is needed opens setup first,
         // whichever screen the client was asked for. A setup screen already open (Settings'
         // phone link, or setup itself) stays: it is where the person was sent.
@@ -159,8 +163,14 @@ void Application::response(const Response &response) {
         if (homeKey["seq"].isNumber()) {
             const double seq = homeKey["seq"].number();
             if (seq != homeKeySeq_ && homeKey["agoMs"].number() < 5000 &&
-                !(screen_ && screen_->name().compare(0, 6, "setup:") == 0))
+                !(screen_ && screen_->name().compare(0, 6, "setup:") == 0)) {
+                // Home somewhere other than its start comes back to it with the launcher's
+                // home-zero sound (the tick, while Google's own sounds are off).
+                const std::string before = snapshot().dump();
                 route("home");
+                if (snapshot().dump() != before)
+                    tick();
+            }
             homeKeySeq_ = seq;
         }
     } else if (response.channel == "catalogue") {

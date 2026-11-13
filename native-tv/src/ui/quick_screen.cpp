@@ -873,11 +873,13 @@ class QuickScreen final : public ScreenView {
                 toMain(host);
             return;
         }
-        if (row.id == "volume")
-            stepVolume(host, direction);
-        else if (row.id == "light")
-            stepLight(host, direction * kLightStep);
-        else if (row.column >= 0)
+        if (row.id == "volume" || row.id == "light") {
+            host.quietKey();
+            if (row.id == "volume")
+                stepVolume(host, direction);
+            else
+                stepLight(host, direction * kLightStep);
+        } else if (row.column >= 0)
             for (size_t i = 0; i < rows_.size(); ++i)
                 if (rows_[i].line == row.line && rows_[i].column == row.column + direction) {
                     focus_ = i;

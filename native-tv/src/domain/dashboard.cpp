@@ -661,13 +661,19 @@ void options(Rows &rows, const Json &data, const Json &caps) {
                 "", enabled ? 1 : 0);
         }
     }
-    if (anyLg(lg, "sound")) {
+    const bool sound = anyLg(lg, "sound") || data.has("systemSounds");
+    if (sound) {
         page(rows, say::msg("tv.settings.page.sound", "Sound and HDMI"));
         head(rows, say::msg("adv.sound", "Sound"));
+        // Where Google TV has it: Display & Sound, then System sounds.
+        switchRow(rows, data, "systemSounds", say::msg("tv.options.systemSounds", "System sounds"),
+                  say::msg("tv.options.systemSounds.hint",
+                           "Plays Google TV’s tick in this app when the focus moves and when OK "
+                           "opens or changes something, at the TV’s volume."));
         lgRows(rows, lg, true, "sound");
     }
     if (anyLg(lg, "hdmi")) {
-        if (!anyLg(lg, "sound"))
+        if (!sound)
             page(rows, say::msg("tv.settings.page.sound", "Sound and HDMI"));
         head(rows, say::msg("adv.hdmi", "HDMI inputs"));
         lgRows(rows, lg, true, "hdmi");

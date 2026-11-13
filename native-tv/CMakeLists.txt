@@ -978,6 +978,7 @@ if(NATIVETV_BUILD_CLIENT)
   target_include_directories(nativetv_batch PUBLIC src)
   target_compile_options(nativetv_batch PRIVATE -Wall -Wextra -Werror)
   add_executable(nativetv-tv src/main.cpp src/platform/paths.cpp src/platform/server_wake.cpp
+    src/platform/pulse_sounds.cpp
     src/graphics/renderer.cpp)
   target_link_libraries(nativetv-tv PRIVATE nativetv_batch)
   target_link_libraries(nativetv-tv PRIVATE nativetv_client_config nativetv_client_launch nativetv_presentation nativetv_kit_glyphs nativetv_http qrcodegen nativetv_raster nativetv_video nativetv_frame_loop nativetv_gl_probe PkgConfig::SDL)

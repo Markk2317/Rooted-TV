@@ -10,6 +10,29 @@ void Application::key(Key key) {
     // The first key after the screen dimmed only wakes it, on every screen.
     if (wake())
         return;
+    const std::string before = snapshot().dump();
+    const unsigned commands = commands_;
+    const bool homeBefore =
+        !screen_ && state_.screen == Screen::Home && !state_.home.arranging && !state_.home.editing;
+    keyUsed_ = keyQuiet_ = false;
+    dispatchKey(key);
+    // Google TV's tick, where Android plays it: the focus moved (ViewRootImpl), OK did something
+    // (View.performClick), or Back took Home back towards its start (the launcher's home-zero
+    // sound, the tick while Google's own sounds are off). Back is otherwise silent, and so is a
+    // step of a value, as Android's sliders are.
+    if (keyQuiet_)
+        return;
+    const bool changed = snapshot().dump() != before;
+    if (key == Key::Back ? changed && homeBefore && !screen_ && state_.screen == Screen::Home
+        : key == Key::Ok || key == Key::Red ? changed || keyUsed_ || commands_ != commands
+                                           : changed)
+        tick();
+}
+void Application::tick() {
+    if (sounds_ && systemSoundsOn_)
+        sounds_->tick();
+}
+void Application::dispatchKey(Key key) {
     if (screen_) {
         screenKey(key);
         return;
@@ -169,7 +192,10 @@ void Application::click(float x, float y) {
                 back();
                 return;
             }
+            // A pointer click makes the click sound, as on Android; the hits that stand for OK
+            // below make it through key().
             if (screen_ && id.compare(0, 4, "tab:") != 0 && id.compare(0, 5, "tool:") != 0) {
+                tick();
                 screen_->click(*this, id);
                 dirty_ = true;
                 return;
@@ -191,8 +217,10 @@ void Application::click(float x, float y) {
                 state_.home.nav = index;
                 key(Key::Ok);
             } else if (type == "tool" && index == 4) {
+                tick();
                 startScreensaver();
             } else if (type == "tool") {
+                tick();
                 if (state_.home.editing)
                     homeEditDone(false);
                 route(index == 0   ? "profiles"
@@ -200,6 +228,7 @@ void Application::click(float x, float y) {
                       : index == 2 ? "search"
                                    : "dashboard");
             } else if (type == "edit") {
+                tick();
                 if (state_.home.editing)
                     homeEditDone(true);
             } else if (type == "card") {
@@ -209,6 +238,7 @@ void Application::click(float x, float y) {
                     static_cast<size_t>(std::atoi(argument.substr(argument.find(':') + 1).c_str()));
                 key(Key::Ok);
             } else if (type == "dash") {
+                tick();
                 if (index < dashboardTabs().size())
                     route("dashboard:" + dashboardTabs()[index].key);
             } else if (type == "menu") {

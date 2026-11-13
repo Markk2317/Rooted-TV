@@ -117,6 +117,7 @@ void Application::execute(const Command &command) {
     }
     if (command.operation == Operation::None || state_.busy)
         return;
+    ++commands_; // OK that sends something makes the system sound, whatever the page shows
     std::string id = std::to_string(static_cast<int>(command.operation)) + command.body.dump();
     if (command.confirm && (confirmId_ != id || static_cast<int32_t>(now_ - confirmUntil_) >= 0)) {
         confirmId_ = id;
@@ -216,7 +217,8 @@ void Application::screenKey(Key key) {
         return;
     }
     if (!barFocus_) {
-        if (!screen_->key(*this, key) && key == Key::Up && screen_->hasBar()) {
+        keyUsed_ = screen_->key(*this, key);
+        if (!keyUsed_ && key == Key::Up && screen_->hasBar()) {
             barFocus_ = home.navigation = true;
             int tab = screen_->barTab();
             home.nav = screen_->barSearch() ? home.tabs.size() + 2

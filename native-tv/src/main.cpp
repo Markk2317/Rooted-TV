@@ -13,6 +13,7 @@
 #include "platform/gl_window.hpp"
 #include "platform/paths.hpp"
 #include "platform/probe.hpp"
+#include "platform/pulse_sounds.hpp"
 #include "platform/row_sweep.hpp"
 #include "platform/key_hold.hpp"
 #include "platform/server_wake.hpp"
@@ -372,6 +373,13 @@ int main(int argc, char **argv) {
                                [&http](const std::string &id) { return http.image(id) != 0; });
             LoaderPictures pictures(loader, videos);
             app.attach(glyphs, pictures);
+            // Google TV's system sounds, in a real run only: a bounded one (a capture, a test) is
+            // silent.
+            std::unique_ptr<PulseSounds> sounds;
+            if (!opts.duration && opts.time < 0) {
+                sounds.reset(new PulseSounds(assets + "/sounds/Effect_Tick.wav"));
+                app.systemSounds(sounds.get());
+            }
             app.holdForSetupCheck();
             markStartup("atlasesMs");
             prewarm(renderer, glyphs, glyphAtlas, iconAtlas, runs);

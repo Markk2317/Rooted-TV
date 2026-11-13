@@ -2998,6 +2998,18 @@ bool HttpFrontDoor::serverSettingControl(const std::string &action, const Json &
         reloadNode();
         return answer();
     }
+    if (action == "systemSounds") {
+        // Google TV's tick when the TV app's focus moves or OK does something; on unless switched
+        // off. The TV app reads it from /api/caps and from the System settings it changes it on.
+        if (!value.isBoolean()) return fail("systemSounds takes true or false");
+        Json change = Json::object();
+        change.set("systemSounds", Json::flag(value.boolean()));
+        std::string error;
+        if (!ConfigStore(configPath_).setTopLevel(change, &error))
+            return fail("could not save setting: " + error);
+        reloadNode();
+        return answer();
+    }
     if (action == "setHomeTrailers") {
         // The film trailers in Native Tv Home's banner; on unless switched off.
         if (!value.isBoolean()) return fail("setHomeTrailers takes true or false");
@@ -19966,6 +19978,7 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
             const Json homeKey = homeKeyWatcher_->status();
             if (homeKey.isObject()) caps.set("homeKey", homeKey);
         }
+        caps.set("systemSounds", Json::flag(currentConfigDocument()["systemSounds"].boolean(true)));
         (void)exchange.respond(200,
                                {{"Content-Type", "application/json"},
                                 {"Cache-Control", "no-store"},
@@ -20180,6 +20193,9 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
                 Json copy = Json::object();
                 for (const std::string &key : stats.keys()) copy.set(key, stats[key]);
                 copy.set("lgSettings", settingsResponse["rows"]);
+                // The TV app's own sound setting, on the page that holds LG's sound settings.
+                copy.set("systemSounds",
+                         Json::flag(currentConfigDocument()["systemSounds"].boolean(true)));
                 stats = copy;
             }
             sendMetricsJson(exchange, stats.dump());

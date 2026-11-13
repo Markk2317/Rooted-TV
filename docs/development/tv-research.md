@@ -1914,3 +1914,14 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   it installs a free app the same way (ARTE, 17 KB, in 4 s). `com.webos.appInstallService/remove`
   with `{"id", "subscribe": true}` removes it (`statusValue` 31, `removed`). The store opens on an
   app's page when launched with `{"query": "category/GAME_APPS/<id>"}`.
+
+## Sound from a native app (C6, webOS 3.4.3)
+
+- PulseAudio 2.1 runs system-wide (`/var/run/pulse/native`, `auth-anonymous=1`, so root and the
+  apps connect without a cookie), and `/usr/lib` has `libpulse-simple.so.0`. The only real sink
+  is `pcm_output`, ALSA `hw:0,6` at 44.1 kHz, which is the default; `palerts`, `pfeedback`,
+  `pmedia`, `pdefaultapp`, `peffects` and the other role sinks are null sinks, and
+  `module-palm-policy` moves a stream opened on one of them onto `pcm_output`, at 100 % except
+  `peffects`, which it sets to 46 %. What `pcm_output` plays comes out at the TV's volume, beside
+  the input's or app's own sound.
+- The TV's SDL 2 has the `pulseaudio` and `dummy` audio drivers.

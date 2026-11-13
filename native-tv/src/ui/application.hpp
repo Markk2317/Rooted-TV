@@ -7,6 +7,7 @@
 #include "ui/pictures.hpp"
 #include "ui/scene.hpp"
 #include "ui/screen.hpp"
+#include "ui/system_sounds.hpp"
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -157,6 +158,14 @@ class Application : private ScreenHost {
     // somewhere to come from: the screen it hands back to keeps the origin it had.
     std::string currentRoute_, cameFrom_;
     std::map<std::string, Json> memory_;  // what screens keep between openings
+    // Google TV's system sounds: the player (none in tests and captures) and the TV's setting
+    // (caps' systemSounds, followed by the System settings page as it is changed).
+    SystemSounds *sounds_ = nullptr;
+    bool systemSoundsOn_ = true;
+    // What the key being handled did beyond what snapshot() shows: a registered screen used it, a
+    // screen asked for silence (a value stepped), a command went out.
+    bool keyUsed_ = false, keyQuiet_ = false;
+    unsigned commands_ = 0;
     // Home's choreography (home_motion.cpp).
     struct HomeFlow {
         bool entered = false;        // the page's entrance has played
@@ -208,6 +217,11 @@ class Application : private ScreenHost {
         return optimistic_;
     }
     ImageView picture(const std::string &id, int width, int height) override;
+    void quietKey() override {
+        keyQuiet_ = true;
+    }
+    void dispatchKey(Key key);
+    void tick();
     bool isRecents() const;
     void homeStart();
     void homeData();
@@ -283,6 +297,10 @@ class Application : private ScreenHost {
         holdForCaps_ = initial_.compare(0, 4, "kit:") != 0 && initial_.compare(0, 6, "setup:") != 0 &&
                        initial_ != "splash";
         dirty_ = true;
+    }
+    // The system sounds' player, owned by the caller; null leaves the client silent.
+    void systemSounds(SystemSounds *sounds) {
+        sounds_ = sounds;
     }
     void key(Key key);
     // OK held: on Home it starts editing the apps or lifts a kind's row; elsewhere it does nothing.

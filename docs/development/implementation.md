@@ -313,6 +313,33 @@ No set covers every app: Dashboard Icons lacks LG's apps and most regional
 broadcasters. LG's apps therefore get Material glyphs, and anything unmatched
 keeps its own icon, whatever its look, so that no brand is redrawn.
 
+## System sounds
+
+The TV client plays Google TV's system sound where Android plays it. Android's
+`audio_assets.xml`, the same on a Chromecast with Google TV as in AOSP, gives one file,
+`Effect_Tick.ogg`, to the focus moves, the click and Back; `ViewRootImpl` plays it when a D-pad
+key moved the focus, `View.performClick` when a click was handled, and nothing plays it for the
+Back key. Google TV's launcher (launcherx) has four sounds of its own, for an app's launch,
+select and deselect (Watchlist, watched, thumbs) and Home's return to its start, behind
+`Configuration__enable_gtv_sound_effects`, a server flag that is false unless Google sets it;
+while it is false the launcher plays the tick in their place, so the client plays only the tick.
+The file is AOSP's (`frameworks/base/data/sounds/effects/ogg/`, Apache-2.0), kept as 16-bit
+44.1 kHz WAV in `native-tv/assets/sounds/`.
+
+`Application::key` compares `snapshot()` before and after the key: a direction key ticks when
+it changed, OK when it changed, a registered screen used the key, or a command went out; Back
+only when Home stays Home and changed (its way back to the first tab, the first row and the
+bar), and the Home button likewise. A screen that stepped a value calls
+`ScreenHost::quietKey()` (Quick settings' volume and backlight), and a pointer click on a hit
+ticks. `PulseSounds` (`platform/pulse_sounds`) opens `libpulse-simple.so.0` with `dlopen` and
+writes to the default sink, the TV's sound output
+([research](tv-research.md#sound-from-a-native-app-c6-webos-343)): samples 6 dB down (Android's
+`config_soundEffectVolumeDb`), up to four at once, 40 ms ahead, and the stream closed after ten
+seconds without a tick so the output can go idle. Runs bounded by `--time` or `--duration-ms`
+play nothing. `systemSounds` in `config.json` (true unless set false) reaches the client in
+`/api/caps` and in `/api/stats?with=settings`, the System page that switches it with the
+`/api/control` action `systemSounds`.
+
 ## Admin PIN
 
 `service/admin_pin.{hpp,cpp}` keeps the PIN: four digits stretched with

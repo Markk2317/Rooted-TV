@@ -10,6 +10,8 @@ It is drawn by the Native Tv client in the style of Google TV: a dark page with 
 
 Because the panel is an OLED, no screen of the app holds still at full brightness: thirty seconds without a key or a click dim it to two thirds black, and the first key or click after that only wakes it. This holds for Live, Settings, the catalogue and the setup pages alike. Home, whose banner changes every 12 seconds and keeps changing while dimmed, waits five minutes, as Google TV's home stays lit until its ambient mode. The app coming back to the front (the Home button, a key that closed the TV's screen saver over it) wakes a dimmed screen. The TV's own screen saver is left as it is set.
 
+As on Google TV, the app makes Android's system sound, a soft tick, when the focus moves and when OK opens, launches or changes something. Back makes none, except when it takes Native Tv Home back towards its start, as the Home button does; nor does a key that changes nothing, or one that steps the volume or the backlight. The tick plays at Android's level for sound effects, at the TV's volume. **System sounds**, on the Sound and HDMI page of Settings' System section, switches it off, where Google TV has its own System sounds switch, under Display & Sound; it is on by default (`"systemSounds"` in `config.json`).
+
 ### How smooth it is
 
 The app is drawn on the GPU at the display's 60 frames a second, with no browser, JavaScript or garbage collector between the remote and the picture. How it holds that on a TV:

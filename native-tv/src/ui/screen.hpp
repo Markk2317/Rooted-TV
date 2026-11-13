@@ -53,6 +53,9 @@ class ScreenHost {
     virtual ImageView picture(const std::string &, int, int) {
         return ImageView();
     }
+    // The key being handled stepped a value (the volume, the backlight): it makes no system sound,
+    // as Android's sliders make none. Otherwise a key that moved the focus or did something ticks.
+    virtual void quietKey() {}
 };
 
 class ScreenView {
