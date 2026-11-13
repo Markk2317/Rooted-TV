@@ -60,14 +60,26 @@ Beside the app, a server on the TV gives phones and computers a dashboard, priva
 
 ## 📸 Screens
 
+<p align="center">
+  <img src="docs/screenshots/readme-tour.webp" alt="A tour of Rooted TV on an LG C6: Home's banner, Home's rows with Your apps, the Films tab, a title's page and its cast, the Apps tab, Search and Quick settings" width="100%">
+</p>
+
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/readme-home.jpg" alt="Rooted TV's Home on an LG C6: the banner with a trending film, More info and the Top picks for you row"></td>
-    <td width="50%"><img src="docs/screenshots/readme-apps.jpg" alt="The Apps tab: favourite apps, Search apps, app categories and the Movies and TV row"></td>
+    <td width="50%"><img src="docs/screenshots/readme-details.jpg" alt="A title's page: the title, its rating, genre, year and length, the overview, and Trailer, On watchlist, Watched it?, the thumbs and Full overview"></td>
   </tr>
   <tr>
     <td align="center"><b>Home</b><br><sub>Trending titles with their trailers, and rows picked for each profile</sub></td>
-    <td align="center"><b>Apps</b><br><sub>Favourite apps, app search and categories, as on Google TV</sub></td>
+    <td align="center"><b>A title's page</b><br><sub>Trailer, watchlist and thumbs, then its cast and similar titles</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/readme-apps.jpg" alt="The Apps tab: Netflix and Prime Video banners, Your apps and Search apps"></td>
+    <td><img src="docs/screenshots/readme-search.jpg" alt="Search: the search field and Search by genre"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Apps</b><br><sub>Featured apps, the installed apps and app search, as on Google TV</sub></td>
+    <td align="center"><b>Search</b><br><sub>By title or genre, and in LG Content Store</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/readme-quick-settings.jpg" alt="Quick settings after Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps" height="340"></td>
@@ -82,7 +94,7 @@ Beside the app, a server on the TV gives phones and computers a dashboard, priva
   </tr>
 </table>
 
-<p align="center"><sub>Captured from the running app on an LG TV and from the dashboard in a phone's browser.</sub></p>
+<p align="center"><sub>The TV's screens are captures from an LG OLED55C6V, the tour among them; the dashboard is a phone's browser.</sub></p>
 
 ## ✨ Features
 
