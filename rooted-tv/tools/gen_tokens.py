@@ -26,11 +26,13 @@ constexpr Color rgb(unsigned value, float alpha = 1) {
     return {((value >> 16) & 255) / 255.0f, ((value >> 8) & 255) / 255.0f, (value & 255) / 255.0f,
             alpha};
 }
-// px and line are TV px at 1920x1080; tracking is in em.
+// px and line are TV px at 1920x1080; tracking is in em. rounded sets the style in the cut with
+// rounded terminals, as Google TV's theme sets its big titles in "Google Sans Flex TV".
 struct TypeStyle {
     float px, line;
     int weight;
     float tracking;
+    bool rounded = false;
 };
 // A shadow recipe from the elevation tokens; the scene's own Shadow also carries a colour.
 struct ShadowRecipe {
@@ -70,8 +72,9 @@ def emit_namespace(name, lines, body):
 
 
 def style(entry):
-    return "{%s, %s, %d, %s}" % (number(entry["px"]), number(entry["line"]), entry["weight"],
-                                 number(entry["tracking"]))
+    rounded = ", true" if entry.get("rounded") else ""
+    return "{%s, %s, %d, %s%s}" % (number(entry["px"]), number(entry["line"]), entry["weight"],
+                                   number(entry["tracking"]), rounded)
 
 
 def generate(tokens, metrics):

@@ -16,6 +16,7 @@ struct TextStyle {
     int size = 24;
     int weight = 400;
     float tracking = 0; // letter spacing in em, added after every glyph as CSS does
+    bool rounded = false; // the cut with rounded terminals, for the big titles
 };
 struct TextOptions {
     float maxWidth = 0;   // 0 lays the text out on unbounded lines

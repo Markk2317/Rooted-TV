@@ -39,15 +39,16 @@ class GlyphAtlas {
                int height = 1024);
     ~GlyphAtlas();
     bool ok() const;
-    // Weights 500 and up use the medium cut, lighter ones the regular cut.
-    FontMetrics metrics(int size, int weight);
+    // Weights 500 and up use the medium cut, lighter ones the regular cut, or with rounded the
+    // regular cut with rounded terminals (there is no rounded medium).
+    FontMetrics metrics(int size, int weight, bool rounded = false);
     // Advance and glyph index only, no bitmap. The reference stays valid for the lifetime of
     // the atlas.
-    Glyph &glyph(int size, int weight, uint32_t codepoint);
+    Glyph &glyph(int size, int weight, uint32_t codepoint, bool rounded = false);
     // Makes the bitmap resident; false only for a glyph larger than the whole atlas.
     bool place(Glyph &glyph);
     // GPOS pair kerning between two glyph indices, in pixels (negative pulls them together).
-    float kerning(int size, int weight, unsigned left, unsigned right);
+    float kerning(int size, int weight, unsigned left, unsigned right, bool rounded = false);
     A8Atlas &atlas() {
         return atlas_;
     }

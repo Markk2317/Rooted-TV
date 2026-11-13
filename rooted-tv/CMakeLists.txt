@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(rootedtv_tv VERSION 0.1.0 LANGUAGES C CXX)
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" ROOTEDTV_SERVER_VERSION LIMIT_COUNT 1)
+# Read when configuring, so a new version configures the build again rather than ship the old one.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
 if(NOT ROOTEDTV_SERVER_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
   message(FATAL_ERROR "rooted-tv/VERSION must contain a semantic release version")
 endif()

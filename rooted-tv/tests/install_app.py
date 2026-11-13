@@ -18,15 +18,35 @@ SCRIPT = ROOT / "assets/dashboard-app/install-app.sh"
 
 # Stands in for luna-send: the install service reads the package the script
 # built (an ar of control, debian-binary and data tarballs) into the stand-in
-# apps tree; applicationManager/running lists what $RUNNING_APPS names. Both answer
+# apps tree; applicationManager/running lists what $RUNNING_APPS names, or the
+# file $RUNNING_FILE, which closeByAppId edits; getForegroundAppInfo answers
+# $FOREGROUND_APP; closing and launching are written to $CALLS_LOG. All answer
 # in luna-send's compact JSON, which the script greps.
 LUNA_SEND = r"""#!/usr/bin/env python3
 import json, os, sys, tarfile, io
 args = sys.argv[1:]
 uri = next((a for a in args if a.startswith("luna://")), "")
+running_file = os.environ.get("RUNNING_FILE")
+def running():
+    if running_file:
+        return open(running_file).read().split() if os.path.exists(running_file) else []
+    return os.environ.get("RUNNING_APPS", "").split()
+def called(line):
+    with open(os.environ["CALLS_LOG"], "a") as log:
+        log.write(line + "\n")
 if uri.endswith("applicationManager/running"):
-    ids = os.environ.get("RUNNING_APPS", "").split()
+    ids = running()
     print(json.dumps({"returnValue": True, "running": [{"id": i} for i in ids]}, separators=(",", ":")))
+elif uri.endswith("applicationManager/getForegroundAppInfo"):
+    print(json.dumps({"returnValue": True, "appId": os.environ.get("FOREGROUND_APP", "")}, separators=(",", ":")))
+elif uri.endswith("applicationManager/closeByAppId"):
+    closed = json.loads(args[-1])["id"]
+    open(running_file, "w").write(" ".join(i for i in running() if i != closed))
+    called("close " + closed)
+    print(json.dumps({"returnValue": True}, separators=(",", ":")))
+elif uri.endswith("applicationManager/launch"):
+    called("launch " + args[-1])
+    print(json.dumps({"returnValue": True}, separators=(",", ":")))
 elif uri.endswith("appInstallService/dev/install"):
     package = json.loads(args[-1])["ipkUrl"]
     data = open(package, "rb").read()
@@ -139,6 +159,39 @@ class InstallAppTests(unittest.TestCase):
         self.assertEqual((self.installed("com.tvweb.dashboard") /
                           "assets/fonts/GoogleSansFlex-Regular.ttf").read_text(), "font v2")
         self.assertEqual(json.loads(self.run_script("refresh"))["refreshed"], False)
+
+    def test_refresh_open_closes_and_reopens_a_stale_open_tile_on_webos_3_only(self):
+        self.run_script("install")
+        root = Path(self.folder)
+        running, calls, issue = root / "running", root / "calls", root / "issue"
+        self.environment.update(RUNNING_FILE=str(running), CALLS_LOG=str(calls),
+                                FOREGROUND_APP="com.tvweb.dashboard", TVWEB_ISSUE=str(issue))
+        running.write_text("com.tvweb.dashboard")
+        self.put(self.dashboard / "rootedtv-tv", "client v2", 0o755)
+        client = self.installed("com.tvweb.dashboard") / "rootedtv-tv"
+
+        self.put(issue, "webOS TV 4.4.0 \\n \\l\n")
+        self.assertEqual(json.loads(self.run_script("refresh-open"))["reason"], "running")
+        self.assertFalse(calls.exists(), "never closed from outside on webOS 4")
+        self.assertEqual(client.read_text(), "client v1")
+
+        self.put(issue, "webOS TV 3.4.3 \\n \\l\n")
+        self.assertEqual(self.run_script("refresh-open"), "dashboard added to the home screen")
+        self.assertEqual(client.read_text(), "client v2")
+        self.assertEqual(calls.read_text().splitlines(), [
+            "close com.tvweb.dashboard",
+            'launch {"id":"com.tvweb.dashboard","params":{"screen":"home"}}'])
+
+        calls.unlink()
+        running.write_text("com.tvweb.dashboard")
+        self.assertEqual(json.loads(self.run_script("refresh-open"))["reason"], "running")
+        self.assertFalse(calls.exists(), "a current app is left open")
+
+        self.put(self.dashboard / "rootedtv-tv", "client v3", 0o755)
+        self.environment["FOREGROUND_APP"] = "netflix"
+        self.assertEqual(self.run_script("refresh-open"), "dashboard added to the home screen")
+        self.assertEqual(calls.read_text().splitlines(), ["close com.tvweb.dashboard"],
+                         "not opened again when something else was in front")
 
     def test_refresh_does_not_install_a_removed_app(self):
         self.assertEqual(json.loads(self.run_script("refresh")),

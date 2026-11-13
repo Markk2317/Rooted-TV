@@ -232,7 +232,7 @@ void prewarm(Renderer &renderer, kit::RunGlyphs &glyphs, GlyphAtlas &atlas, Icon
                                        type::heroSource, type::heroTitle, type::heroLine};
     for (const TypeStyle &style : styles)
         for (uint32_t c = 32; c < 127; ++c)
-            atlas.place(atlas.glyph(static_cast<int>(style.px + .5f), style.weight, c));
+            atlas.place(atlas.glyph(static_cast<int>(style.px + .5f), style.weight, c, style.rounded));
     icons.prewarm({"settings", "search", "play", "apps", "home", "hdmi", "tv"}, {18, 28, 34, 40, 52});
     for (const char *name : {"home", "apps"}) {
         runs.beginFrame();

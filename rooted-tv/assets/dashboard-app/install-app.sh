@@ -15,6 +15,20 @@
 
 ACTION=${1:-install}
 SRC=${2:-/var/lib/tvweb/assets/dashboard-app}
+# refresh-open is the refresh an update runs (deploy.sh). On webOS 3 the tile is
+# the TV's Home, open from the moment the TV is, and the server starts only once
+# it is open, so the refresh at the server's start never finds it closed and an
+# update would leave the old client in place. There it is closed, reinstalled
+# and, if it was in front, opened on Home again. Elsewhere it is a plain refresh:
+# closing an open app from outside made a webOS 4 TV relaunch its last input in
+# the background (see retire). TVWEB_ISSUE is for the tests.
+REOPEN=""
+FRONT=""
+if [ "$ACTION" = refresh-open ]; then
+  ACTION=refresh
+  webos_major=$(sed -n 's/.*webOS[^0-9]*\([0-9][0-9]*\)\..*/\1/p' "${TVWEB_ISSUE:-/etc/issue}" 2>/dev/null | head -n 1)
+  [ "$webos_major" = 3 ] && REOPEN=1
+fi
 # The same script installs Rooted TV Home's app (assets/home-app) and the splash
 # (assets/splash-app), named by the app's own appinfo.json. Only the dashboard's
 # app gives way to the Homebrew Channel's tile: the others have no other.
@@ -45,6 +59,9 @@ installed() { [ -d "$APPDIR" ]; }
 app_files() { ( cd "$SRC" && find . -type f ! -name install-app.sh ! -name packageinfo.json ) | sed 's|^\./||' | sort; }
 # The text of file $1 as the TV installs it: the home page carries its port.
 installed_form() { if [ "$1" = index.html ]; then ported "$SRC/$1"; else cat "$SRC/$1"; fi; }
+running() {
+  luna-send -n 1 -w 5000 luna://com.webos.applicationManager/running '{}' 2>/dev/null | grep -q "\"id\":\"$ID\""
+}
 
 # The app's page opens the dashboard at the port on its `var PORT = n; // tvweb:port`
 # line, which the server keeps in step with config.json at every start. The copy
@@ -133,19 +150,33 @@ fi
 if [ "$ACTION" = refresh ]; then
   installed || { echo '{"ok":true,"installed":false,"refreshed":false}'; exit 0; }
   from_hbc && { echo '{"ok":true,"installed":true,"refreshed":false}'; exit 0; }
+  stale() {
+    # packageinfo.json is kept with the packages, the rest with the app.
+    [ "$(md5sum < "$SRC/packageinfo.json")" = "$(md5sum < "$PKGDIR/packageinfo.json" 2>/dev/null)" ] || return 0
+    for f in $(app_files); do
+      [ -f "$APPDIR/$f" ] || return 0
+      [ "$(installed_form "$f" | md5sum)" = "$(md5sum < "$APPDIR/$f")" ] || return 0
+    done
+    return 1
+  }
   # A reinstall would pull the files from under a client that is open; it is
-  # done at a later start instead, when nothing is.
-  if luna-send -n 1 -w 5000 luna://com.webos.applicationManager/running '{}' 2>/dev/null | grep -q "\"id\":\"$ID\""; then
-    echo '{"ok":true,"installed":true,"refreshed":false,"reason":"running"}'; exit 0
+  # done at a later start instead, when nothing is - or, for refresh-open on
+  # webOS 3, now, with the app closed first.
+  if running; then
+    if [ -z "$REOPEN" ] || ! stale; then
+      echo '{"ok":true,"installed":true,"refreshed":false,"reason":"running"}'; exit 0
+    fi
+    luna-send -n 1 -w 5000 luna://com.webos.applicationManager/getForegroundAppInfo '{}' 2>/dev/null |
+      grep -q "\"appId\":\"$ID\"" && FRONT=1
+    luna-send -n 1 -w 5000 luna://com.webos.applicationManager/closeByAppId "{\"id\":\"$ID\"}" >/dev/null 2>&1
+    n=0
+    while [ "$n" -lt 10 ] && running; do sleep 1; n=$((n + 1)); done
+    if running; then
+      echo '{"ok":true,"installed":true,"refreshed":false,"reason":"running"}'; exit 0
+    fi
+  elif ! stale; then
+    echo '{"ok":true,"installed":true,"refreshed":false}'; exit 0
   fi
-  stale=""
-  # packageinfo.json is kept with the packages, the rest with the app.
-  [ "$(md5sum < "$SRC/packageinfo.json")" = "$(md5sum < "$PKGDIR/packageinfo.json" 2>/dev/null)" ] || stale=1
-  for f in $(app_files); do
-    [ -z "$stale" ] || break
-    [ "$(installed_form "$f" | md5sum)" = "$(md5sum < "$APPDIR/$f" 2>/dev/null)" ] || stale=1
-  done
-  [ -n "$stale" ] || { echo '{"ok":true,"installed":true,"refreshed":false}'; exit 0; }
   ACTION=install
 fi
 
@@ -229,4 +260,17 @@ if grep -q '"state":"installed"' "$LOG" 2>/dev/null; then
   echo "$WHAT added to the home screen"
 else
   echo "$WHAT app not installed (the dashboard is still served to browsers)"
+fi
+# Back to where the TV was: the dashboard tile on webOS 3 is opened as Home.
+# Right after the install the app manager can turn a launch down for a moment.
+if [ -n "$FRONT" ]; then
+  params='{}'
+  [ "$ID" = com.tvweb.dashboard ] && params='{"screen":"home"}'
+  n=0
+  until luna-send -n 1 -w 5000 luna://com.webos.applicationManager/launch "{\"id\":\"$ID\",\"params\":$params}" 2>/dev/null |
+    grep -q '"returnValue":true'; do
+    n=$((n + 1))
+    [ "$n" -lt 10 ] || break
+    sleep 1
+  done
 fi

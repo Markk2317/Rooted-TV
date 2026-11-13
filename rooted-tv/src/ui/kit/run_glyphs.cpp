@@ -9,6 +9,7 @@ rootedtv::TextStyle atlasStyle(const TypeStyle &style) {
     result.size = static_cast<int>(std::lround(style.px));
     result.weight = style.weight;
     result.tracking = style.tracking;
+    result.rounded = style.rounded;
     return result;
 }
 TextAlign atlasAlign(Node::Align align) {

@@ -9,13 +9,18 @@
 
 namespace rootedtv {
 namespace {
-// Two static cuts of Google Sans Flex (tools/gen_fonts.py) at the two weights the type scale uses.
-// Both are at optical size 18 whatever the pixel size: Google TV's launcher sets its google-sans
-// family to opsz 18 for every weight, the big titles included.
-constexpr int kFaceCount = 2;
-const char *const kFiles[kFaceCount] = {"GoogleSansFlex-Regular.ttf", "GoogleSansFlex-Medium.ttf"};
-int faceFor(int, int weight) {
-    return weight >= 450 ? 1 : 0;
+// Static cuts of Google Sans Flex (tools/gen_fonts.py) at the two weights the type scale uses,
+// and the regular with rounded terminals that the big titles use. All are at optical size 18
+// whatever the pixel size: Google TV's launcher sets its google-sans family to opsz 18 for every
+// weight, the big titles included.
+constexpr int kFaceCount = 3;
+const char *const kFiles[kFaceCount] = {"GoogleSansFlex-Regular.ttf", "GoogleSansFlex-Medium.ttf",
+                                        "GoogleSansFlex-RoundedRegular.ttf"};
+constexpr int kRoundedFace = 2;
+int faceFor(int, int weight, bool rounded) {
+    if (weight >= 450)
+        return 1;
+    return rounded ? kRoundedFace : 0;
 }
 int bitCount(unsigned value) {
     int count = 0;
@@ -183,7 +188,11 @@ GlyphAtlas::GlyphAtlas(TextureStore *store, const std::string &fontDirectory, in
         return;
     for (int i = 0; i < kFaceCount; ++i) {
         Impl::Face &face = impl_->faces[i];
-        if (FT_New_Face(impl_->library, (fontDirectory + "/" + kFiles[i]).c_str(), 0, &face.ft)) {
+        // Without the rounded cut (an install from before it) the big titles fall back to the
+        // regular one rather than disappear.
+        if (FT_New_Face(impl_->library, (fontDirectory + "/" + kFiles[i]).c_str(), 0, &face.ft) &&
+            (i != kRoundedFace ||
+             FT_New_Face(impl_->library, (fontDirectory + "/" + kFiles[0]).c_str(), 0, &face.ft))) {
             face.ft = nullptr;
             continue;
         }
@@ -205,9 +214,9 @@ bool GlyphAtlas::ok() const {
             return false;
     return true;
 }
-FontMetrics GlyphAtlas::metrics(int size, int weight) {
+FontMetrics GlyphAtlas::metrics(int size, int weight, bool rounded) {
     FontMetrics result;
-    FT_Face ft = impl_->faces[faceFor(size, weight)].ft;
+    FT_Face ft = impl_->faces[faceFor(size, weight, rounded)].ft;
     if (!ft)
         return result;
     double scale = static_cast<double>(size) / ft->units_per_EM;
@@ -217,8 +226,8 @@ FontMetrics GlyphAtlas::metrics(int size, int weight) {
         0, static_cast<int>(std::lround((ft->height - (ft->ascender - ft->descender)) * scale)));
     return result;
 }
-Glyph &GlyphAtlas::glyph(int size, int weight, uint32_t codepoint) {
-    int face = faceFor(size, weight);
+Glyph &GlyphAtlas::glyph(int size, int weight, uint32_t codepoint, bool rounded) {
+    int face = faceFor(size, weight, rounded);
     uint64_t key =
         (static_cast<uint64_t>(face) << 48) | (static_cast<uint64_t>(size) << 32) | codepoint;
     auto found = glyphs_.find(key);
@@ -272,8 +281,8 @@ bool GlyphAtlas::place(Glyph &glyph) {
     glyph.placedIn = atlas_.generation();
     return true;
 }
-float GlyphAtlas::kerning(int size, int weight, unsigned left, unsigned right) {
-    Impl::Face &face = impl_->faces[faceFor(size, weight)];
+float GlyphAtlas::kerning(int size, int weight, unsigned left, unsigned right, bool rounded) {
+    Impl::Face &face = impl_->faces[faceFor(size, weight, rounded)];
     if (!face.kerning || !left || !right)
         return 0;
     auto found = face.pairs.find(left << 16 | right);

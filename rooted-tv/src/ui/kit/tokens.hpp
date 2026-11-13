@@ -8,11 +8,13 @@ constexpr Color rgb(unsigned value, float alpha = 1) {
     return {((value >> 16) & 255) / 255.0f, ((value >> 8) & 255) / 255.0f, (value & 255) / 255.0f,
             alpha};
 }
-// px and line are TV px at 1920x1080; tracking is in em.
+// px and line are TV px at 1920x1080; tracking is in em. rounded sets the style in the cut with
+// rounded terminals, as Google TV's theme sets its big titles in "Google Sans Flex TV".
 struct TypeStyle {
     float px, line;
     int weight;
     float tracking;
+    bool rounded = false;
 };
 // A shadow recipe from the elevation tokens; the scene's own Shadow also carries a colour.
 struct ShadowRecipe {
@@ -120,7 +122,7 @@ constexpr Color chooserGlow = rgb(0xFFFFFF, 0.4f);
 namespace type {
 constexpr const char *family = "Google Sans Flex";
 constexpr TypeStyle display = {72, 88, 400, -0.01f};
-constexpr TypeStyle heroTitle = {90, 112, 400, -0.01f};
+constexpr TypeStyle heroTitle = {90, 112, 400, -0.01f, true};
 constexpr TypeStyle heroLine = {32, 44, 500, 0};
 constexpr TypeStyle headline = {56, 72, 400, 0};
 constexpr TypeStyle title = {32, 48, 500, 0};
@@ -145,8 +147,8 @@ constexpr TypeStyle cardTitle = {28, 40, 500, 0};
 constexpr TypeStyle inputName = {28, 40, 500, 0};
 constexpr TypeStyle cap = {22, 28, 500, 0.01f};
 constexpr TypeStyle cardCaption = {24, 36, 400, 0};
-constexpr TypeStyle detailsTitle = {122, 120, 400, -0.01f};
-constexpr TypeStyle storeTitle = {152, 160, 400, -0.01f};
+constexpr TypeStyle detailsTitle = {122, 120, 400, -0.01f, true};
+constexpr TypeStyle storeTitle = {152, 160, 400, -0.01f, true};
 constexpr TypeStyle storeBody = {28, 48, 400, 0};
 constexpr TypeStyle detailsFacts = {30, 48, 500, 0};
 constexpr TypeStyle cardAction = {20, 28, 500, 0.08f};

@@ -168,9 +168,10 @@ Run shape(GlyphAtlas &atlas, const std::vector<uint32_t> &codepoints, const Text
     float tracking = style.tracking * static_cast<float>(style.size), pen = 0;
     const Glyph *previous = nullptr;
     for (uint32_t value : codepoints) {
-        Glyph &glyph = atlas.glyph(style.size, style.weight, value);
+        Glyph &glyph = atlas.glyph(style.size, style.weight, value, style.rounded);
         if (previous)
-            pen += atlas.kerning(style.size, style.weight, previous->index, glyph.index);
+            pen += atlas.kerning(style.size, style.weight, previous->index, glyph.index,
+                                 style.rounded);
         run.x.push_back(pen);
         run.glyphs.push_back(&glyph);
         pen += glyph.advance + tracking;
@@ -239,7 +240,7 @@ std::vector<std::vector<uint32_t>> breakLines(GlyphAtlas &atlas, const std::vect
         spans.resize(static_cast<size_t>(options.maxLines));
         spans.back().end = text.size();
     }
-    float ellipsisWidth = atlas.glyph(style.size, style.weight, kEllipsis).advance +
+    float ellipsisWidth = atlas.glyph(style.size, style.weight, kEllipsis, style.rounded).advance +
                           style.tracking * static_cast<float>(style.size);
     std::vector<std::vector<uint32_t>> lines;
     for (size_t i = 0; i < spans.size(); ++i) {
@@ -282,6 +283,7 @@ uint64_t hashOf(const std::string &text, const TextStyle &style, const TextOptio
     mix(&style.size, sizeof style.size);
     mix(&style.weight, sizeof style.weight);
     mix(&style.tracking, sizeof style.tracking);
+    mix(&style.rounded, sizeof style.rounded);
     mix(&options.maxWidth, sizeof options.maxWidth);
     mix(&options.maxLines, sizeof options.maxLines);
     mix(&options.lineHeight, sizeof options.lineHeight);
@@ -291,6 +293,7 @@ uint64_t hashOf(const std::string &text, const TextStyle &style, const TextOptio
 }
 bool sameKey(const TextStyle &a, const TextStyle &b, const TextOptions &c, const TextOptions &d) {
     return a.size == b.size && a.weight == b.weight && a.tracking == b.tracking &&
+           a.rounded == b.rounded &&
            c.maxWidth == d.maxWidth && c.maxLines == d.maxLines && c.lineHeight == d.lineHeight &&
            c.align == d.align && c.ellipsis == d.ellipsis && c.snap == d.snap;
 }
@@ -322,7 +325,7 @@ TextLayout layoutText(GlyphAtlas &atlas, const std::string &text, const TextStyl
     TextLayout layout;
     bool truncated = false;
     auto lines = breakLines(atlas, decode(text), style, options, truncated);
-    FontMetrics metrics = atlas.metrics(style.size, style.weight);
+    FontMetrics metrics = atlas.metrics(style.size, style.weight, style.rounded);
     float lineHeight = options.lineHeight > 0 ? options.lineHeight
                                               : static_cast<float>(metrics.naturalLineHeight());
     float halfLeading = (lineHeight - static_cast<float>(metrics.ascent + metrics.descent)) / 2;

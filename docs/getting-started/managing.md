@@ -13,7 +13,17 @@ ssh root@<tv-ip> /var/lib/tvweb/tvwebctl status    # start | stop | restart | st
 Rooted TV does not install its own server releases. Its **Updates** card, on
 the dashboard's [Server tab](../dashboard/server.md), tells when a newer one is
 out, when asked or once a day if switched on. Update a TV by deploying the
-server or installing the Homebrew Channel package.
+server from a [release](install.md#install-a-release-no-build) or a git checkout.
+
+**From a release.** Unpack the newer `rooted-tv-<version>.tar.gz` and run
+`bash deploy.sh <tv-ip> --bundle=bundle.tar` from its folder, as for the first
+install.
+
+An update brings the installed TV app up to date too. On webOS 3 the app is the
+TV's Home and stays open, so the update closes it, reinstalls it and opens Home
+again when it was in front, which takes a few seconds on screen. On later webOS
+an open app is not closed from outside: it is brought up to date the next time
+the server starts while it is closed.
 
 **Deployed from a git checkout.** Pull the desired release or commit, rebuild,
 then run the deploy script again. The deploy script packages whatever is in the

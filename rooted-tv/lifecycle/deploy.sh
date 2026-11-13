@@ -105,7 +105,7 @@ assets/splash-app/assets/icon80.png assets/splash-app/assets/icon130.png \
 assets/early-service/install.sh assets/early-service/early-start.sh \
 assets/i18n/es.json assets/i18n/it.json \
 assets/fonts/Roboto-Regular.woff assets/fonts/Roboto-Medium.woff assets/fonts/LICENSE-Roboto.txt \
-assets/fonts/GoogleSansFlex-Regular.ttf assets/fonts/GoogleSansFlex-Medium.ttf assets/fonts/LICENSE-GoogleSansFlex-OFL.txt \
+assets/fonts/GoogleSansFlex-Regular.ttf assets/fonts/GoogleSansFlex-Medium.ttf assets/fonts/GoogleSansFlex-RoundedRegular.ttf assets/fonts/LICENSE-GoogleSansFlex-OFL.txt \
 assets/app-icons/app-icons.pack assets/app-icons/LICENSE-DashboardIcons.txt \
 assets/google-tv/shared/common.css assets/google-tv/shared/common.js assets/google-tv/shared/qr.js \
 assets/google-tv/pages/dashboard/index.html assets/google-tv/pages/dashboard/dashboard.css assets/google-tv/pages/dashboard/dashboard.js \
@@ -285,6 +285,12 @@ esac
 # The native OpenGL splash the boot key filter opens; it has no home-screen tile.
 # (The dashboard's tile above is the same client, opened on the dashboard screen.)
 [ -n "\$doapp" ] && { sh "\$D/assets/dashboard-app/install-app.sh" install "\$D/assets/splash-app" 2>&1 || true; }
+# An update brings the installed apps up to date as well, the open TV app on
+# webOS 3 included (install-app.sh refresh-open).
+if [ -z "\$doapp" ]; then
+  sh "\$D/assets/dashboard-app/install-app.sh" refresh-open 2>&1 | grep -v '^{' || true
+  sh "\$D/assets/dashboard-app/install-app.sh" refresh-open "\$D/assets/splash-app" 2>&1 | grep -v '^{' || true
+fi
 EOF
 }
 

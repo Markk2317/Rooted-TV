@@ -6,11 +6,13 @@
 """Cut the TV client's fonts from Google Sans Flex into rooted-tv/assets/fonts.
 
 The client draws text with FreeType from static TTFs (src/graphics/glyph_atlas.cpp), so the
-variable font Google Fonts publishes is instanced here into two Latin cuts on the type scale
+variable font Google Fonts publishes is instanced here into Latin cuts on the type scale
 the kit uses at 1080p (design/tokens.json, dp x 2): regular and medium, both at optical size 18,
-which Google TV's launcher uses for all of its text, titles included. Each cut is about 58 KB. The source is the google/fonts repository at a pinned commit, with its licence.
+which Google TV's launcher uses for all of its text, titles included, and a regular with fully
+rounded terminals (ROND 100) for the big titles, which the launcher's theme sets in its own
+"Google Sans Flex TV" family. Each cut is about 58 KB. The source is the google/fonts repository at a pinned commit, with its licence.
 
-    tools/gen_fonts.py            # writes the two TTFs and LICENSE-GoogleSansFlex-OFL.txt
+    tools/gen_fonts.py            # writes the TTFs and LICENSE-GoogleSansFlex-OFL.txt
 """
 import sys
 import tempfile
@@ -32,6 +34,7 @@ VARIABLE = "GoogleSansFlex[ROND,opsz,slnt,wdth,wght].ttf"
 CUTS = {
     "GoogleSansFlex-Regular.ttf": {"opsz": 18, "wght": 400},
     "GoogleSansFlex-Medium.ttf": {"opsz": 18, "wght": 500},
+    "GoogleSansFlex-RoundedRegular.ttf": {"opsz": 18, "wght": 400, "ROND": 100},
 }
 # Latin, its punctuation and the few symbols the screens use (middle dot, ellipsis, arrows,
 # the euro and trademark signs).
@@ -62,7 +65,8 @@ def main():
         (OUTPUT / "LICENSE-GoogleSansFlex-OFL.txt").write_bytes(fetch("OFL.txt", folder).read_bytes())
         for name, location in CUTS.items():
             font = TTFont(source)
-            axes = {"opsz": location["opsz"], "wght": location["wght"], "wdth": 100, "ROND": 0, "slnt": 0}
+            axes = {"opsz": location["opsz"], "wght": location["wght"], "wdth": 100,
+                    "ROND": location.get("ROND", 0), "slnt": 0}
             font = instantiateVariableFont(font, axes, inplace=False, updateFontNames=True)
             options = Options()
             options.layout_features = ["kern", "liga", "calt", "ccmp", "mark", "mkmk", "locl", "tnum", "pnum"]
