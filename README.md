@@ -17,7 +17,7 @@
   <a href="#-screens"><b>Screens</b></a> &nbsp;·&nbsp;
   <a href="#-features"><b>Features</b></a> &nbsp;·&nbsp;
   <a href="#-faq"><b>FAQ</b></a> &nbsp;·&nbsp;
-  <a href="docs/index.md"><b>Docs</b></a> &nbsp;·&nbsp;
+  <a href="https://markk2317.github.io/Rooted-TV/"><b>Website</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/Markk2317/Rooted-TV/releases"><b>Releases</b></a>
 </p>
 

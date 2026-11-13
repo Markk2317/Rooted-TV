@@ -779,8 +779,9 @@ simulated here; actual webOS visibility behavior needs a real-TV check.
 ## Documentation
 
 [`docs.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/docs.yml) builds this site on each pull request that changes it, with every
-link and section link checked, and [`docs-publish.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/docs-publish.yml) publishes it when
-started by hand.
+link and section link checked, and [`docs-publish.yml`](https://github.com/Markk2317/Rooted-TV/blob/main/.github/workflows/docs-publish.yml) publishes it to
+[markk2317.github.io/Rooted-TV](https://markk2317.github.io/Rooted-TV/) when a change to `docs/` or `mkdocs.yml` reaches
+main, or when started by hand.
 
 ## Releases
 

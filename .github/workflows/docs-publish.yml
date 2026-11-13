@@ -1,10 +1,12 @@
 name: Docs publish
 
-# Builds the site from docs/ and publishes it to GitHub Pages once a change is
-# merged. Pull requests only build it, in docs.yml.
-# Not on pushes to main: in the private repository they would spend the Actions
-# minutes the release build (release.yml) needs. Run by hand or on a pull request.
+# Builds the site from docs/ and publishes it to GitHub Pages when a change to
+# it reaches main, or when run by hand. Pull requests only build it, in docs.yml.
+# mkdocs.yml sets strict, so a broken link stops the publish.
 on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'mkdocs.yml', '.github/workflows/docs-publish.yml']
   workflow_dispatch:
 
 permissions:

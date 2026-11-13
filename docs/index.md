@@ -1,12 +1,75 @@
 ---
-description: "Open-source dashboard, privacy controls and Home Assistant MQTT bridge for rooted LG webOS TVs. Turn off ACR and ads, debloat apps, protect OLED panels, remap the remote."
+description: "Rooted TV: Google TV's Home, native on rooted LG webOS TVs, with a dashboard for phones and computers, privacy controls and a Home Assistant bridge."
+hide:
+  - navigation
+  - toc
 ---
 
-<p align="center"><img src="logo/rootedtv-512.png" width="112" alt="Rooted TV logo: a screen with a sprout for its aerial, and a pixel"></p>
+![Rooted TV: Google TV's Home on an LG webOS TV, with its dashboard on a phone](assets/readme-hero.jpg)
 
 # Rooted TV
 
-**Your TV, your rules.** An open-source dashboard, privacy toolkit and Home Assistant bridge for rooted LG webOS TVs.
+**Google TV's Home, native on rooted LG webOS TVs.** Rooted TV replaces an LG webOS TV's home screen with a copy of Google TV's: the same Home with its banner and rows of titles, the Films, Shows, Apps and Inputs tabs, a page for each title, Search, Quick settings and profiles. It is a C++ and OpenGL ES app that runs on the TV itself, with no browser behind it, at the display's 60 frames a second, and it speaks the TV's menu language. Beside the app, a server on the TV gives phones and computers a dashboard, privacy tools and a Home Assistant bridge.
+
+[Take the tour](apps/launcher.md){ .md-button .md-button--primary } [Install](getting-started/install.md){ .md-button } [Source on GitHub](https://github.com/Markk2317/Rooted-TV){ .md-button }
+
+![A tour of Rooted TV Home on an LG C6: the banner, the rows with Your apps, the Films tab, a title's page and its cast, the Apps tab, Search and Quick settings](screenshots/readme-tour.gif)
+
+## At a glance
+
+<div class="grid cards" markdown>
+
+-   :material-television-play:{ .lg .middle } __Google TV, faithfully__
+
+    ---
+
+    Home, tabs, title pages, Search and Quick settings follow Google TV's own layout, type, motion and system sounds.
+
+    [:octicons-arrow-right-24: A tour of Rooted TV Home](apps/launcher.md)
+
+-   :material-lightning-bolt:{ .lg .middle } __Native and smooth__
+
+    ---
+
+    Drawn in OpenGL ES at 60 frames a second by a C++ app on the TV. No web page, no browser engine.
+
+    [:octicons-arrow-right-24: How smooth it is](apps/tv-app.md#how-smooth-it-is)
+
+-   :material-translate:{ .lg .middle } __The TV's language__
+
+    ---
+
+    Menus follow the TV's menu language, with titles, overviews and genres from TMDB in the same language.
+
+    [:octicons-arrow-right-24: The TV app's languages](development/strings.md#the-tv-app)
+
+-   :material-cellphone:{ .lg .middle } __A phone dashboard__
+
+    ---
+
+    Remote control, apps, OLED care, hardware readings, backup and logs, in Google TV's look.
+
+    [:octicons-arrow-right-24: The dashboard](dashboard/index.md)
+
+-   :material-shield-lock:{ .lg .middle } __Privacy__
+
+    ---
+
+    LG's content recognition and ad tracking switched off, and LG's ad and telemetry servers blocked.
+
+    [:octicons-arrow-right-24: Privacy](dashboard/privacy.md)
+
+-   :material-home-assistant:{ .lg .middle } __Smart home__
+
+    ---
+
+    The TV as Home Assistant entities over MQTT, and its readings as Prometheus metrics.
+
+    [:octicons-arrow-right-24: Home Assistant](integrations/home-assistant.md)
+
+</div>
+
+## Why Rooted TV
 
 > [!NOTE]
 >
@@ -21,19 +84,17 @@ description: "Open-source dashboard, privacy controls and Home Assistant MQTT br
 > Rooted TV itself is local and transparent, and needs no cloud service. It
 > collects no data, shows no ads and has no dark patterns.
 
-Rooted TV is a server that runs directly on a rooted LG webOS TV, with a live dashboard for any phone or computer browser and a native app on the TV itself.
-
 Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv). The server is a C++ daemon with no Node on the TV, and the TV has a native app in Google TV's design. It supports webOS 3.4 and later.
 
-[Install](getting-started/install.md){ .md-button .md-button--primary } [See the dashboard](dashboard/index.md){ .md-button }
+## The dashboard and tools
+
+A dashboard in the browser of any phone or computer on the network, in Google TV's look:
 
 <p align="center">
   <a href="screenshots/dashboard.png"><img src="screenshots/dashboard.png" alt="Rooted TV dashboard in the dark theme: what the TV is showing, quick controls, processor, temperature, memory and network readings" width="440"></a>
   &nbsp;
   <a href="screenshots/privacy.png"><img src="screenshots/privacy.png" alt="Rooted TV Privacy tab: what LG can collect, the ad and telemetry blocker and the advertising identifier" width="440"></a>
 </p>
-
-## What it does
 
 * **[Control the TV without the cloud](dashboard/control.md).** D-pad, typing into the TV's text fields, volume, playback keys, app launcher, picture presets, sound output, power and reboot.
 * **[See what the TV collects, and switch it off](dashboard/privacy.md).** LG's content recognition (ACR, Live Plus), the advertising identifier, data agreements, and an on-TV blocker for LG's ad and telemetry servers, whose list can be downloaded for a router, Pi-hole or AdGuard Home. [What LG's ACR does](administration/acr.md).
@@ -59,7 +120,7 @@ Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv).
 
 ## Compatibility
 
-* **webOS**: 4 and later. The native server is verified on one TV, an LG B3 on webOS 10.3.2; reports from 48 TVs on earlier releases are in [Tested TVs](getting-started/tested-tvs.md). LG names its versions two ways: [webOS version numbers](getting-started/tested-tvs.md#webos-version-numbers).
+* **webOS**: 3.4 and later. Rooted TV Home in Google TV's design is tried on an LG OLED55C6V with webOS 3.4.3, and the native server also on an LG B3 with webOS 10.3.2; [Tested TVs](getting-started/tested-tvs.md) has the details, and reports from 48 TVs of the earlier Node release. LG names its versions two ways: [webOS version numbers](getting-started/tested-tvs.md#webos-version-numbers).
 * **Panels**: OLED (panel wear telemetry and burn-in controls) and LCD (the OLED Care tab hides itself).
 * **Access**: rooted with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel), over SSH or telnet. The TV needs no internet access.
 
