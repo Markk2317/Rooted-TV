@@ -61,7 +61,7 @@ Beside the app, a server on the TV gives phones and computers a dashboard, priva
 ## 📸 Screens
 
 <p align="center">
-  <img src="docs/screenshots/readme-tour.webp" alt="A tour of Rooted TV on an LG C6: Home's banner, Home's rows with Your apps, the Films tab, a title's page and its cast, the Apps tab, Search and Quick settings" width="100%">
+  <img src="docs/screenshots/readme-tour.gif" alt="A tour of Rooted TV on an LG C6: Home's banner, Home's rows with Your apps, the Films tab, a title's page and its cast, the Apps tab, Search and Quick settings" width="100%">
 </p>
 
 <table>
