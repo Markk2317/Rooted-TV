@@ -1,5 +1,5 @@
 // The clock in the site's top bar, beside search, as Google TV's bar has one
-// beside the name. stylesheets/extra.css shows it on wide screens only.
+// beside the name. stylesheets/rooted-tv.css shows it on wide screens only.
 (function () {
   function two(value) {
     return (value < 10 ? '0' : '') + value;

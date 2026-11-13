@@ -49,7 +49,7 @@ in all of them: README.md, docs/index.md and the page that holds the data.
 The published site is `docs/` and `mkdocs.yml`, built by `mkdocs build
 --strict` (docs.yml) and deployed to GitHub Pages by docs-publish.yml when it
 reaches main. Its look is Rooted TV's own, after the launcher
-(`docs/stylesheets/extra.css`: the ink and green palette, Google Sans Flex with
+(`docs/stylesheets/rooted-tv.css`: the ink and green palette, Google Sans Flex with
 rounded titles, the capsule bar with its pill and the TV's focus on cards; the
 home page is `docs/overrides/home.html`); keep new content inside Material's
 components so it inherits that.

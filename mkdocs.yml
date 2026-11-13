@@ -24,7 +24,7 @@ theme:
       primary: custom
       accent: custom
       toggle: { icon: material/brightness-7, name: Dark theme }
-  # Google Sans Flex comes from docs/assets/fonts (stylesheets/extra.css), not Google Fonts.
+  # Google Sans Flex comes from docs/assets/fonts (stylesheets/rooted-tv.css), not Google Fonts.
   font: false
   features:
     - navigation.tabs
@@ -102,7 +102,7 @@ exclude_docs: |
   /overrides/
 
 extra_css:
-  - stylesheets/extra.css
+  - stylesheets/rooted-tv.css
 
 extra_javascript:
   - javascripts/tvbar.js

@@ -3,7 +3,10 @@
    cut the launcher sets its big titles in, the top bar as the TV's capsule with
    a light pill on the section shown, and the TV's focus (a card grows, takes a
    ring and glows) on whatever can be opened. Every text pair is WCAG AA or
-   better. The fonts are the app's own cuts (tools/gen_fonts.py), OFL-1.1. */
+   better. The fonts are the app's own cuts (tools/gen_fonts.py), OFL-1.1.
+   GitHub Pages lets a browser keep this file for ten minutes: a change that new
+   markup depends on (overrides/home.html) renames the file, or a browser with
+   the old copy shows the new page unstyled. */
 
 @font-face {
   font-family: "Google Sans Flex";
