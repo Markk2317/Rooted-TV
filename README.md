@@ -16,6 +16,7 @@
   <a href="#-install"><b>Install</b></a> &nbsp;·&nbsp;
   <a href="#-screens"><b>Screens</b></a> &nbsp;·&nbsp;
   <a href="#-features"><b>Features</b></a> &nbsp;·&nbsp;
+  <a href="#-faq"><b>FAQ</b></a> &nbsp;·&nbsp;
   <a href="docs/index.md"><b>Docs</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/Markk2317/Rooted-TV/releases"><b>Releases</b></a>
 </p>
@@ -85,6 +86,8 @@ Beside the app, a server on the TV gives phones and computers a dashboard, priva
 
 ## ✨ Features
 
+### 📺 On the TV
+
 * 🏠 **Google TV's Home.** A banner of trending titles with their logos and HD trailers; rows of Top picks for you (chosen by Gemini when a Gemini key is set), Continue watching, what is popular on Netflix, Prime Video and Disney+ in the TV's country, and YouTube's trending videos and each profile's subscriptions.
 * 🗂️ **Films, Shows, Apps and Inputs tabs.** Rows by genre with a caption for the focused row, the installed apps laid out as Google TV's Apps tab, and the HDMI inputs named after the device on each.
 * 🎞️ **A title's page.** Overview, rating, cast and crew, similar titles and rows of its genres, with Watch on Prime Video or Disney+, which opens the title itself, Trailer, Watchlist, Watched it? and Like or Not for me.
@@ -94,8 +97,30 @@ Beside the app, a server on the TV gives phones and computers a dashboard, priva
 * 🔊 **Sounds and screen savers.** Google TV's system sound on each key press; Google TV's screen saver, an ambient mode with the owner's photos, a clock and [other savers](docs/dashboard/screen-savers.md) in place of LG's.
 * 🌍 **The TV's language.** The app follows the TV's menu language where it has a translation, in Google TV's own words where it has the same string, with titles, overviews and genres from TMDB in that language. The app's settings, setup and tools stay in English.
 * 🔌 **Switching on.** The TV opens Home when it comes on and on the Home key. If the device on the input, such as a Chromecast woken with the TV over HDMI-CEC, takes the screen back within 10 seconds, Home comes back over it; if that device switched the TV on, the device stays in front.
-* 📺 **Built for webOS 3.4.** The server starts from the app's tile, since the firmware runs nothing as root at boot; still logos dim on OLED panels that have no logo dimming of their own; memory is freed for the streaming apps.
-* 📱 **A dashboard in the browser.** For a phone or computer, in Google TV's look: remote control, apps, [privacy](docs/dashboard/privacy.md) (LG's ACR and ad tracking, a blocker for LG's ad and telemetry servers), [OLED care](docs/dashboard/oled-care.md), hardware readings, backup and logs. The TV appears in [Home Assistant](docs/integrations/home-assistant.md) over MQTT and in [Prometheus](docs/integrations/prometheus.md).
+* ⚙️ **Built for webOS 3.4.** The server starts from the app's tile, since the firmware runs nothing as root at boot; still logos dim on OLED panels that have no logo dimming of their own; memory is freed for the streaming apps.
+
+The [TV app's guide](docs/apps/tv-app.md) goes through every screen.
+
+### 📱 On a phone or computer
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/dashboard-light.png">
+    <img src="docs/screenshots/dashboard.png" alt="The dashboard in a computer's browser: what the TV is playing, quick controls, and the processor, temperature, memory and network readings" width="100%">
+  </picture>
+</p>
+
+* 🕹️ **Remote and controls.** A remote control, playback, picture and sound, the panel, timers and power, from any phone or computer on the network. [Control](docs/dashboard/control.md)
+* 🛡️ **Privacy.** LG's content recognition (ACR), ad tracking and data agreements, and a blocker for LG's ad and telemetry servers. [Privacy](docs/dashboard/privacy.md)
+* ✨ **OLED care.** Panel hours, the pixel refresher and the panel's protections, such as Screen Shift and logo dimming. [OLED care](docs/dashboard/oled-care.md)
+* 📊 **Readings, backup and logs.** Processor, temperature, memory and network, a backup of the settings, and the server's log.
+* 📲 **An app of its own.** The dashboard installs on a phone's home screen or a computer's app list, with the Rooted TV icon. [Install as an app](docs/dashboard/index.md#install-as-an-app)
+
+### 🏠 Around the house
+
+* **Home Assistant.** The TV as one device over MQTT Discovery, with its controls and readings, and the remote's coloured buttons as triggers for automations. [Setup](docs/integrations/home-assistant.md) · [Entities](docs/integrations/home-assistant-entities.md) · [Remote buttons](docs/integrations/home-assistant-remote-buttons.md)
+* **Prometheus.** Temperature, processor, memory, Wi-Fi and picture state for a monitoring stack. [Prometheus](docs/integrations/prometheus.md)
+* **Syslog.** The TV's logs forwarded to a syslog server on the network. [Log forwarding](docs/integrations/syslog.md)
 
 ## 🧩 How it works
 
@@ -132,6 +157,8 @@ ROOTEDTV_SSH_KEY=~/.ssh/lgtv_root bash deploy.sh <tv-ip> --bundle=bundle.tar
 **3. Open the app** from its tile on the TV: it starts the server and runs the first-run setup. The dashboard is at `http://<tv-ip>:8080/`.
 
 The same command updates a TV that has Rooted TV, keeping its settings; on webOS 3 it also reopens Home on the new version.
+
+**Removing it** takes a few `tvwebctl` commands over SSH, which put LG's Home, the remote's keys and the start-up back as they were: [Updating and uninstalling](docs/getting-started/managing.md#uninstalling).
 
 <details>
 <summary><b>Build from source</b></summary>
@@ -191,6 +218,71 @@ The keys stay on the TV, in `/var/lib/tvweb/config.json`. This product uses the 
 | **Tested on** | LG OLED55C6V (2016), webOS 3.4.3, firmware 05.70.45 |
 | **Other models** | Untried with Rooted TV. The server and the app are written for webOS 3.4 and later |
 | **Requirements** | A rooted TV with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and root SSH access |
+
+## ❓ FAQ
+
+<details>
+<summary><b>Does Rooted TV root the TV?</b></summary>
+
+No. The TV has to be rooted first, with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and root SSH access; Rooted TV installs over that access.
+
+</details>
+
+<details>
+<summary><b>Can LG's own Home come back?</b></summary>
+
+Yes. Stopping the server gives LG's Home its place back, and so does a server that fails three times in ten minutes. [Uninstalling](docs/getting-started/managing.md#uninstalling) puts LG's Home, the remote's keys and the start-up back as they were. Nothing on the TV's read-only system partition is changed: [what Rooted TV changes on the TV](docs/administration/tv-changes.md) lists the rest.
+
+</details>
+
+<details>
+<summary><b>Do Netflix, Prime Video, Disney+ and YouTube still work?</b></summary>
+
+Yes. They are the TV's own apps: Rooted TV opens them from Home and the Apps tab, and Watch on Prime Video or Disney+ opens the title itself in its app.
+
+</details>
+
+<details>
+<summary><b>Does it need a Google account, or any account?</b></summary>
+
+No. The app, the dashboard and the tools work without one. The [optional keys](#-optional-keys) add Home's rows of titles, and a Google sign-in adds each profile's YouTube subscriptions.
+
+</details>
+
+<details>
+<summary><b>What leaves the TV?</b></summary>
+
+Rooted TV collects nothing and shows no ads. With keys set, the server fetches titles, artwork and trailers (TMDB, YouTube and Apple TV's trailer pages) and Gemini's picks; the Server tab's update check asks GitHub for the latest release. The keys stay on the TV.
+
+</details>
+
+<details>
+<summary><b>How is LG's ACR (Live Plus) turned off?</b></summary>
+
+The dashboard's Privacy tab shows whether LG's content recognition is running and switches it off, with ad tracking and the advertising identifier. [What LG's ACR does](docs/administration/acr.md) sets out what it samples.
+
+</details>
+
+<details>
+<summary><b>Which languages does it speak?</b></summary>
+
+The TV app follows the TV's menu language: English and Italian so far. The dashboard is in English and Spanish, the Spanish partly machine-translated.
+
+</details>
+
+<details>
+<summary><b>Can an LG software update break it?</b></summary>
+
+An update can take away the root access Rooted TV runs with. The dashboard's Advanced tab can block LG's system updates, and leaves the Homebrew Channel's updates alone. [Advanced](docs/dashboard/advanced.md)
+
+</details>
+
+<details>
+<summary><b>Does it work on other LG TVs?</b></summary>
+
+Rooted TV has been tried only on an LG OLED55C6V with webOS 3.4.3. The server and the app are written for webOS 3.4 and later; on an LCD panel the OLED care tab hides itself.
+
+</details>
 
 ## 🔒 Security
 
