@@ -1065,7 +1065,7 @@ long environmentNumber(const char *name, long fallback) {
 }
 
 bool waitForLuna(LunaClient &luna, const std::string &uri, const Json &payload,
-                 LunaReply &reply) {
+                 LunaReply &reply, const std::string &appId = std::string()) {
     struct Result {
         std::mutex mutex;
         std::condition_variable condition;
@@ -1079,7 +1079,8 @@ bool waitForLuna(LunaClient &luna, const std::string &uri, const Json &payload,
                        result->reply = value;
                        result->complete = true;
                        result->condition.notify_one();
-                   }))
+                   },
+                   appId))
         return false;
     std::unique_lock<std::mutex> lock(result->mutex);
     if (!result->condition.wait_for(lock, std::chrono::seconds(5),
@@ -1992,13 +1993,21 @@ void HttpFrontDoor::startHomeKeyWatcher() {
         logger_, options));
     // The TV switched on: the boot manager opens the last input, and Native Tv Home comes over it.
     watcher->setPowerOn([this]() { return currentConfigDocument()["homeOnPowerOn"].boolean(true); });
+    // The boot activity has just fired (it is gone once it has), so it is put back.
+    watcher->setPoweredOn([this]() {
+        eventLoop_->scheduleAfter(std::chrono::milliseconds(15000), [this]() {
+            (void)eventLoop_->submitBlocking([this]() {
+                if (currentConfigDocument()["startAfterReboot"].boolean()) (void)setBootActivity(true);
+            });
+        });
+    });
     if (!watcher->start()) return;
     homeKeyWatcher_ = std::move(watcher);
     eventLoop_->scheduleAfter(std::chrono::milliseconds(3000), [this]() {
         (void)eventLoop_->submitBlocking([this]() { openHomeAfterBoot(); });
     });
-    // Kept registered while switched on: put back at every start and every half hour, in case the
-    // activity manager drops it once it has called.
+    // Kept registered while switched on: put back at every start, after every switch-on and every
+    // half hour.
     eventLoop_->scheduleEvery(std::chrono::milliseconds(30 * 60 * 1000), [this]() {
         (void)eventLoop_->submitBlocking([this]() {
             if (currentConfigDocument()["startAfterReboot"].boolean()) (void)setBootActivity(true);
@@ -2012,7 +2021,16 @@ void HttpFrontDoor::startHomeKeyWatcher() {
 }
 
 namespace {
+// Also the activity's creator: the name the bus grant below is for.
 const char *const kBootActivity = "com.tvweb.dashboard.boot";
+// The activity manager takes an activity only if com.palm.bus/isCallAllowed lets its creator call
+// the callback. The C6's hub reads access groups from the read-only /usr/share only, so the
+// Homebrew Channel's API is in none, and only a creator with "all" may call it. A developer
+// package's grant counts for the names under its wildcard, not for an app's own id, so it is
+// for the creator's name above, which no app on the TV has.
+const char *const kBootGrant =
+    "/var/luna-service2-dev/client-permissions.d/com.tvweb.dashboard.boot.root.json";
+const char *const kBootGrantText = "{\"com.tvweb.dashboard.boot*\":[\"all\"]}\n";
 
 bool inputApp(const std::string &appId) {
     for (const char *prefix : {"com.webos.app.hdmi", "com.webos.app.livetv", "com.webos.app.inputcommon",
@@ -2022,14 +2040,19 @@ bool inputApp(const std::string &appId) {
 }
 } // namespace
 
-// The server started minutes after a cold start (by the boot activity, or the tile): the boot
-// manager's opening of the last input was before the watcher, so Native Tv Home is opened here, if
-// that input is still in front.
+// The server started within minutes of the TV being switched on (by the boot activity, or the
+// tile): the boot manager's opening of the last input was before the watcher, so Native Tv Home is
+// opened here, if that input is still in front. The time is counted from the switch-on in the log:
+// after a night's restart in standby, /proc/uptime also counts the minutes the TV was awake then.
 void HttpFrontDoor::openHomeAfterBoot() {
     if (!currentConfigDocument()["homeOnPowerOn"].boolean(true)) return;
-    std::ifstream uptimeFile((systemRoot_ == "/" ? std::string() : systemRoot_) + "/proc/uptime");
+    const std::string root = systemRoot_ == "/" ? std::string() : systemRoot_;
+    std::ifstream uptimeFile(root + "/proc/uptime");
     double uptime = 0;
-    if (!(uptimeFile >> uptime) || uptime > 8 * 60) return;
+    if (!(uptimeFile >> uptime)) return;
+    const double poweredOn = lastPowerOnUptime(root + "/var/log/messages");
+    const double since = poweredOn >= 0 && poweredOn <= uptime ? uptime - poweredOn : uptime;
+    if (since > 8 * 60) return;
     LunaReply reply;
     if (!waitForLuna(luna_, "com.webos.applicationManager/getForegroundAppInfo", Json::object(),
                      reply) ||
@@ -2042,35 +2065,78 @@ void HttpFrontDoor::openHomeAfterBoot() {
     payload.set("params", params);
     LunaReply launched;
     if (waitForLuna(luna_, "com.webos.applicationManager/launch", payload, launched) && logger_)
-        logger_->info("power on: started " + std::to_string(static_cast<long>(uptime)) +
-                      " s after the TV's boot; bringing Native Tv Home forward");
+        logger_->info("power on: started " + std::to_string(static_cast<long>(since)) +
+                      " s after the TV was switched on; bringing Native Tv Home forward");
 }
 
 // webOS 3.4 runs no root code at boot, so after a power cut or a reboot nothing of Native Tv runs
-// until its tile is opened. The TV's activity manager keeps a persistent activity across reboots:
-// this one calls the Homebrew Channel's autostart every 5 minutes, which runs the boot hooks once
-// per boot (its own flag in /tmp), so the server is up within 5 minutes of a boot. Only on the
-// owner's word: the Home tab's switch.
+// until its tile is opened, and the C6 restarts itself in standby some nights. The TV's activity
+// manager keeps a persistent activity across reboots: this one calls the Homebrew Channel's
+// autostart when the boot manager signals instant-boot-complete, as the TV wakes from Quick Start's
+// standby, which runs the boot hooks once per boot (its own flag in /tmp). The Homebrew Channel's
+// service adopts and completes the activities that call it, which ends them, so an interval would
+// call once; this one fires only at a switch-on and is put back after it. Only on the owner's
+// word: the Home tab's switch.
 bool HttpFrontDoor::setBootActivity(bool on) const {
+    const std::string grant = rootedSystemPath(systemRoot_, kBootGrant);
+    std::string granted;
+    {
+        std::ifstream file(grant.c_str(), std::ios::in | std::ios::binary);
+        granted.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    }
+    // The hub reads client permissions again only when told to reload everything.
+    auto reloadBus = [this]() {
+        const std::string control =
+            findSystemExecutable(systemRoot_, {"/usr/sbin/ls-control", "/usr/bin/ls-control"});
+        if (control.empty()) return false;
+        ChildOptions options;
+        options.arguments = {control, "scan-services"};
+        options.timeout = std::chrono::milliseconds(10000);
+        options.maximumOutputBytes = 16 * 1024;
+        return children_.run(options).succeeded();
+    };
     if (!on) {
         Json payload = Json::object();
         payload.set("activityName", Json::text(kBootActivity));
         LunaReply reply;
-        return waitForLuna(luna_, "com.palm.activitymanager/cancel", payload, reply) &&
-               reply.response["returnValue"].boolean();
+        const bool cancelled =
+            waitForLuna(luna_, "com.palm.activitymanager/cancel", payload, reply, kBootActivity) &&
+            reply.response["returnValue"].boolean();
+        if (!granted.empty() && unlink(grant.c_str()) == 0) (void)reloadBus();
+        return cancelled;
+    }
+    if (granted != kBootGrantText) {
+        const int fd =
+            open(grant.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW, 0644);
+        const size_t length = std::strlen(kBootGrantText);
+        bool written = fd >= 0 && fchmod(fd, 0644) == 0 &&
+                       write(fd, kBootGrantText, length) == static_cast<ssize_t>(length);
+        if (fd >= 0 && close(fd) != 0) written = false;
+        if (!written || !reloadBus()) {
+            if (logger_)
+                logger_->warning("start after reboot: could not grant the boot activity's bus access");
+            return false;
+        }
     }
     const Json payload = Json::parse(std::string("{\"activity\":{\"name\":\"") + kBootActivity +
         "\",\"description\":\"Starts the Native Tv server after the TV boots\","
         "\"type\":{\"foreground\":true,\"persist\":true},"
-        "\"schedule\":{\"interval\":\"5m\"},"
+        "\"trigger\":{\"method\":\"luna://com.palm.bus/signal/addmatch\","
+        "\"params\":{\"category\":\"/com/webos/bootManager\",\"method\":\"boottime\"},"
+        "\"where\":{\"op\":\"=\",\"prop\":\"name\",\"val\":\"instant-boot-complete\"}},"
         "\"callback\":{\"method\":\"luna://org.webosbrew.hbchannel.service/autostart\","
         "\"params\":{\"reason\":\"nativetv\"}}},\"start\":true,\"replace\":true}");
     LunaReply reply;
-    const bool done = waitForLuna(luna_, "com.palm.activitymanager/create", payload, reply) &&
-                      reply.response["returnValue"].boolean();
-    if (!done && logger_)
-        logger_->warning("start after reboot: the activity manager refused the boot activity: " +
-                         reply.raw);
+    const bool done =
+        waitForLuna(luna_, "com.palm.activitymanager/create", payload, reply, kBootActivity) &&
+        reply.response["returnValue"].boolean();
+    if (!done) {
+        if (logger_)
+            logger_->warning("start after reboot: the activity manager refused the boot activity: " +
+                             reply.raw);
+        // A grant made for this activity alone goes with it.
+        if (granted != kBootGrantText && unlink(grant.c_str()) == 0) (void)reloadBus();
+    }
     return done;
 }
 

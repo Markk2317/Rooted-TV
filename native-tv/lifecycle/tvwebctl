@@ -7,7 +7,7 @@
 # that very command (its argv contains the path), so the shell kills itself
 # before starting anything. Inside a script, the shell's argv is just this file.
 #
-# Usage: tvwebctl {start|stop|restart|status|watch|restore-home|restore-keys|restore-nativetv-home}
+# Usage: tvwebctl {start|stop|restart|status|watch|restore-home|restore-keys|restore-nativetv-home|restore-boot}
 
 # Each can be moved by a TVWEB_ variable of the same name, which only
 # native-tv/tests/tvwebctl_test.sh sets: it runs this script against a stand-in
@@ -242,6 +242,18 @@ restore_nativetv_home() {
   "$DAEMON" --restore-nativetv-home --config "$CONFIG"
 }
 
+# Start after a reboot (webOS 3.4) off: its activity cancelled and its bus grant
+# taken away, as the Home tab's switch does.
+BOOT_GRANT=${TVWEB_BOOT_GRANT:-/var/luna-service2-dev/client-permissions.d/com.tvweb.dashboard.boot.root.json}
+restore_boot() {
+  luna-send -n 1 -a com.tvweb.dashboard.boot luna://com.palm.activitymanager/cancel \
+    '{"activityName":"com.tvweb.dashboard.boot"}' >/dev/null 2>&1 </dev/null
+  if [ -e "$BOOT_GRANT" ]; then
+    rm -f "$BOOT_GRANT" && /usr/sbin/ls-control scan-services >/dev/null 2>&1
+  fi
+  return 0
+}
+
 # LG's Home back in its place, where Native Tv Home has it. home.json is left
 # as it is, so the server takes the place again when it next starts.
 release_home() {
@@ -376,6 +388,8 @@ case "$1" in
   restore-keys) restore_remote_keys ;;
   # LG's Home as the TV's Home again, and Native Tv Home switched off.
   restore-nativetv-home) restore_nativetv_home ;;
+  # Before uninstalling: no start-up activity or bus grant left behind.
+  restore-boot) restore_boot ;;
   status)
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
       echo "running (pid $(cat "$PIDFILE"))"
@@ -392,5 +406,5 @@ case "$1" in
       echo "watchdog not running"
     fi
     [ -s "$RESTARTS" ] && echo "last restart: $(tail -1 "$RESTARTS")" ;;
-  *) echo "usage: $0 {start|stop|restart|status|watch|restore-home|restore-keys|restore-nativetv-home}"; exit 2 ;;
+  *) echo "usage: $0 {start|stop|restart|status|watch|restore-home|restore-keys|restore-nativetv-home|restore-boot}"; exit 2 ;;
 esac

@@ -1798,6 +1798,43 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
 - After a power cut or a reboot nothing of Native Tv runs until its tile is
   opened (see the boot bullet above), so until then the Home button opens LG's
   ribbon.
+- Quick Start does not keep the server through every night: the TV restarted
+  itself in standby at 01:55 (`bootd.log` with `Snapshot=YES`, the last input
+  opened by the boot manager as at a cold start, 20 minutes awake, then
+  suspended), and at the next power-on no server ran. `/proc/uptime` leaves out
+  the time suspended, so it reads minutes after such a night.
+- The activity manager creates an activity only if
+  `luna://com.palm.bus/isCallAllowed {"requester":<creator>,"uri":<callback>}`
+  answers `allowed`; otherwise it returns errorCode 13, "Activity creator
+  doesn't have rights to call its callback". The hub decides that by access
+  groups, which it reads from `/usr/share/luna-service2/api-permissions.d`
+  only. The `-dev` API files of the Homebrew Channel and of other developer
+  packages therefore put their methods in no group, and only a requester with
+  `all` may call them: `org.webosbrew.hbchannel.service` is allowed by its
+  `.root.json` grant. Plain `luna-send` (no creator) and
+  `-a com.tvweb.dashboard` are refused for `autostart`, while
+  `com.webos.applicationManager` methods are allowed for the app. Adding names
+  to a role's `inbound` changed nothing. Files in
+  `/var/luna-service2-dev/client-permissions.d` are read again by
+  `ls-control scan-services`, not `scan-volatile-dirs`, and count only under a
+  wildcard key: `{"com.tvweb.dashboard*":["all"]}` let `com.tvweb.dashboard-1`
+  through but not `com.tvweb.dashboard`. A grant for
+  `com.tvweb.dashboard.boot*`, with the activity created by
+  `luna-send -a com.tvweb.dashboard.boot`, was taken.
+- The activity manager adds `$activity` to a callback's parameters, and the
+  `webos-service` library the Homebrew Channel's service runs on adopts the
+  activity and completes it, without `restart`, once the method has answered.
+  That ends the activity: a 5-minute interval calling `autostart` fired once
+  and was gone. LG's own `com.webos.service.admanager.InstantBootComplete`
+  shows the trigger for a switch-on: `palm://com.palm.bus/signal/addmatch`
+  `{"category":"/com/webos/bootManager","method":"boottime"}` with
+  `where {"op":"=","prop":"name","val":"instant-boot-complete"}`, a signal
+  `bootd` sends about a second after each wake from Quick Start's standby; a
+  cold start's `bootd.log` has `core-boot-done` to `boot-done` and no
+  `instant-boot-complete`. A persistent activity with that trigger, created
+  as above, survived `/sbin/reboot`; after a power-off to standby and a
+  Wake-on-LAN packet, SSH answered in 7 s and the server in 9 s, and Native Tv
+  Home came over HDMI 3 13 s after the boot manager opened it.
 - Switched on from Quick Start's standby, the boot manager opens the last
   input (`SAM NL_APP_LAUNCH_BEGIN {"app_id":"com.webos.app.hdmi1","caller_id":
   "com.webos.bootManager",...}`, the input card in front 44 ms later), as at a

@@ -3,6 +3,7 @@
 #include "core/json.hpp"
 #include "daemon/logger.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <sys/stat.h>
 
@@ -36,6 +37,22 @@ bool parsePowerOnLaunch(const std::string &line, std::string &appId) {
     if (end == std::string::npos) return false;
     appId = line.substr(value, end - value);
     return !appId.empty();
+}
+
+double lastPowerOnUptime(const std::string &logPath) {
+    std::ifstream input(logPath.c_str(), std::ios::binary);
+    if (!input) return -1;
+    double found = -1;
+    std::string line, appId;
+    while (std::getline(input, line)) {
+        if (!parsePowerOnLaunch(line, appId)) continue;
+        const size_t open = line.find(" [");
+        if (open == std::string::npos) continue;
+        char *end = nullptr;
+        const double seconds = std::strtod(line.c_str() + open + 2, &end);
+        if (end && *end == ']') found = seconds;
+    }
+    return found;
 }
 
 HomeKeyWatcher::HomeKeyWatcher(std::function<bool()> enabled, Opened opened, Logger *logger,
@@ -133,6 +150,7 @@ void HomeKeyWatcher::readUpdates() {
 }
 
 void HomeKeyWatcher::handle(const std::string &foregroundId, bool powerOn) {
+    if (powerOn && poweredOn_) poweredOn_();
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (std::chrono::steady_clock::now() < suppressedUntil_) return;

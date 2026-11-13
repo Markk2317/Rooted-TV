@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -69,9 +70,12 @@ int main() {
         const std::string log = pattern;
         append(log, kShownOverHdmi); // before the start: history, not a press
 
+        check(lastPowerOnUptime(log) < 0, "a log with no switch-on has no time for one");
+
         std::mutex mutex;
         std::vector<std::string> opened;
         std::atomic<bool> enabled{true}, powerOn{false};
+        std::atomic<int> poweredOn{0};
         HomeKeyWatcherOptions options;
         options.logPath = log;
         options.pollIntervalMilliseconds = 10;
@@ -82,6 +86,7 @@ int main() {
                                },
                                nullptr, options);
         watcher.setPowerOn([&powerOn]() { return powerOn.load(); });
+        watcher.setPoweredOn([&poweredOn]() { ++poweredOn; });
         const auto count = [&]() {
             std::lock_guard<std::mutex> lock(mutex);
             return opened.size();
@@ -121,6 +126,7 @@ int main() {
         append(log, kPowerOn);
         std::this_thread::sleep_for(std::chrono::milliseconds(80));
         check(count() == 2, "a power-on is left to LG with its own switch off");
+        check(poweredOn == 1, "but told as a switch-on, whatever the switches");
         powerOn = true;
         append(log, kPowerOn);
         check(waitFor([&]() { return count() == 3; }) && opened[2] == "com.webos.app.hdmi1",
@@ -128,6 +134,8 @@ int main() {
         append(log, kUserLaunch);
         std::this_thread::sleep_for(std::chrono::milliseconds(80));
         check(count() == 3, "an app the owner opens is not a power-on");
+        check(std::fabs(lastPowerOnUptime(log) - 8728.257207820) < 1e-6,
+              "the last switch-on's time is the kernel time of its line");
 
         enabled = true;
         std::ofstream(log.c_str(), std::ios::trunc) << kShownOverHdmi; // rotated: shorter, all new

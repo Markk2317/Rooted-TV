@@ -53,6 +53,7 @@ ssh root@<tv-ip>
 /var/lib/tvweb/tvwebctl restore-home
 /var/lib/tvweb/tvwebctl restore-keys
 /var/lib/tvweb/tvwebctl restore-nativetv-home
+/var/lib/tvweb/tvwebctl restore-boot
 /var/lib/tvweb/tvwebctl stop
 sh /var/lib/tvweb/assets/early-service/install.sh remove
 sh /var/lib/tvweb/assets/dashboard-app/install-app.sh remove
@@ -63,4 +64,4 @@ rm -f /var/lib/webosbrew/init.d/50-tvweb* /var/lib/webosbrew/init.d/20-tvweb-ser
 rm -f /var/lib/webosbrew/tvweb-boot.log*
 ```
 
-`restore-home` puts LG's Home screen layout back where [LG launcher layout](../dashboard/apps.md#lg-launcher-layout) changed it, `restore-keys` the remote's keys where [Remote keys](../dashboard/apps.md#remote-keys) did, and `restore-nativetv-home` LG's Home where [Native Tv Home](../dashboard/home.md) replaced it. `stop` also gives LG's Home its place back while the server is stopped. The three `sh` lines remove the boot service the remote's key filter calls, the TV dashboard app and the startup splash. The ad-block and update-block table stays mounted over `/etc/hosts` after `stop`; deleted while mounted, it keeps blocking until a reboot, and a reinstall before then takes it for its own. Uninstalling Native Tv through the Homebrew Channel restores LG Home automatically. Nothing on the TV's read-only rootfs is ever modified. [What the dashboard changes on the TV](../administration/tv-changes.md) lists everything else, including the settings that uninstalling leaves as they are.
+`restore-home` puts LG's Home screen layout back where [LG launcher layout](../dashboard/apps.md#lg-launcher-layout) changed it, `restore-keys` the remote's keys where [Remote keys](../dashboard/apps.md#remote-keys) did, `restore-nativetv-home` LG's Home where [Native Tv Home](../dashboard/home.md) replaced it, and `restore-boot` takes away the start-up activity and its bus grant that **Start after a reboot** (webOS 3.4) added. `stop` also gives LG's Home its place back while the server is stopped. The three `sh` lines remove the boot service the remote's key filter calls, the TV dashboard app and the startup splash. The ad-block and update-block table stays mounted over `/etc/hosts` after `stop`; deleted while mounted, it keeps blocking until a reboot, and a reinstall before then takes it for its own. Uninstalling Native Tv through the Homebrew Channel restores LG Home automatically. Nothing on the TV's read-only rootfs is ever modified. [What the dashboard changes on the TV](../administration/tv-changes.md) lists everything else, including the settings that uninstalling leaves as they are.

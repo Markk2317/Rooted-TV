@@ -89,6 +89,11 @@ env TVWEB_TEST_EXIT=5 sh "$CTL" restore-nativetv-home; [ $? -eq 5 ] || fail "the
 env TVWEB_DAEMON="$DIR/missing" sh "$CTL" restore-keys; [ $? -eq 1 ] || fail "restore-keys without a daemon did not fail"
 env TVWEB_DAEMON="$DIR/missing" sh "$CTL" restore-nativetv-home; [ $? -eq 1 ] || fail "restore-nativetv-home without a daemon did not fail"
 ok "restores pass the daemon's status on and are never replayed"
+echo '{"com.tvweb.dashboard.boot*":["all"]}' > "$DIR/boot-grant.json"
+env TVWEB_BOOT_GRANT="$DIR/boot-grant.json" sh "$CTL" restore-boot || fail "restore-boot failed"
+[ ! -e "$DIR/boot-grant.json" ] || fail "restore-boot left the boot activity's bus grant"
+env TVWEB_BOOT_GRANT="$DIR/boot-grant.json" sh "$CTL" restore-boot || fail "restore-boot failed with nothing to remove"
+ok "restore-boot takes the boot activity's bus grant away"
 
 # --- the native stuck-child scan, and the shell scan without the service
 SERVICE_STUB=$DIR/service

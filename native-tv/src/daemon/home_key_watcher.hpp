@@ -21,6 +21,10 @@ bool parseHomeShown(const std::string &line, std::string &foregroundId);
 // `SAM NL_APP_LAUNCH_BEGIN {"app_id":"com.webos.app.hdmi1","caller_id":"com.webos.bootManager",...}`,
 // logged at a cold start and at every wake from Quick Start's standby. False for any other line.
 bool parsePowerOnLaunch(const std::string &line, std::string &appId);
+// The kernel time of the TV's last switch-on in the log (the bracketed seconds of its line, the
+// clock /proc/uptime counts, which leaves out Quick Start's standby), or a negative number when the
+// log has none.
+double lastPowerOnUptime(const std::string &logPath);
 
 struct HomeKeyWatcherOptions {
     std::string logPath = "/var/log/messages";
@@ -45,6 +49,8 @@ class HomeKeyWatcher {
     // With `enabled` saying so, the TV being switched on is handed to `opened` too, with the input
     // the TV opened, as a Home press would be. Set before start().
     void setPowerOn(std::function<bool()> enabled) { powerOnEnabled_ = std::move(enabled); }
+    // Told of every switch-on, whatever the switches. Set before start().
+    void setPoweredOn(std::function<void()> poweredOn) { poweredOn_ = std::move(poweredOn); }
     bool start();
     void stop();
     void suppressFor(std::chrono::milliseconds duration);
@@ -58,6 +64,7 @@ class HomeKeyWatcher {
     void handle(const std::string &foregroundId, bool powerOn);
 
     std::function<bool()> enabled_, powerOnEnabled_;
+    std::function<void()> poweredOn_;
     Opened opened_;
     Logger *logger_;
     HomeKeyWatcherOptions options_;
