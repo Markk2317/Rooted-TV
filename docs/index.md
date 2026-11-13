@@ -1,19 +1,10 @@
 ---
 description: "Rooted TV: Google TV's Home, native on rooted LG webOS TVs, with a dashboard for phones and computers, privacy controls and a Home Assistant bridge."
+template: home.html
 hide:
   - navigation
   - toc
 ---
-
-![Rooted TV: Google TV's Home on an LG webOS TV, with its dashboard on a phone](assets/readme-hero.jpg)
-
-# Rooted TV
-
-**Google TV's Home, native on rooted LG webOS TVs.** Rooted TV replaces an LG webOS TV's home screen with a copy of Google TV's: the same Home with its banner and rows of titles, the Films, Shows, Apps and Inputs tabs, a page for each title, Search, Quick settings and profiles. It is a C++ and OpenGL ES app that runs on the TV itself, with no browser behind it, at the display's 60 frames a second, and it speaks the TV's menu language. Beside the app, a server on the TV gives phones and computers a dashboard, privacy tools and a Home Assistant bridge.
-
-[Take the tour](apps/launcher.md){ .md-button .md-button--primary } [Install](getting-started/install.md){ .md-button } [Source on GitHub](https://github.com/Markk2317/Rooted-TV){ .md-button }
-
-![A tour of Rooted TV Home on an LG C6: the banner, the rows with Your apps, the Films tab, a title's page and its cast, the Apps tab, Search and Quick settings](screenshots/readme-tour.gif)
 
 ## At a glance
 

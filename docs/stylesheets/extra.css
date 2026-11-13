@@ -1,159 +1,214 @@
-/* Google's Material 3 on top of mkdocs-material: the palette, shapes and state
-   layers of Google's own products. The dark primary, #A8C7FA on #062E6F, is the
-   TV kit's accent (rooted-tv/design/tokens.json), so the site and the TV share
-   one blue. Every text pair below is WCAG AA or better. Roboto, Material's own
-   typeface, stays: Google Sans is not licensed for redistribution. */
+/* Rooted TV's own look, after its launcher rather than Google's web pages: the
+   Google TV page's ink and Rooted TV's green, Google Sans Flex with the rounded
+   cut the launcher sets its big titles in, the top bar as the TV's capsule with
+   a light pill on the section shown, and the TV's focus (a card grows, takes a
+   ring and glows) on whatever can be opened. Every text pair is WCAG AA or
+   better. The fonts are the app's own cuts (tools/gen_fonts.py), OFL-1.1. */
 
-[data-md-color-scheme="default"] {
-  --gm-surface: #f8fafd;
-  --gm-container: #f0f4f9;
-  --gm-container-high: #e9eef6;
-  --gm-on-surface: #1f1f1f;
-  --gm-on-surface-variant: #444746;
-  --gm-outline: #747775;
-  --gm-outline-variant: #c4c7c5;
-  --gm-primary: #0b57d0;
-  --gm-on-primary: #fff;
-  --gm-primary-container: #d3e3fd;
-  --gm-secondary-container: #c2e7ff;
-  --gm-on-secondary-container: #001d35;
-  --gm-warning-container: #feefc3;
-  --gm-on-warning-container: #3b2f00;
-  --gm-warning: #8c5d00;
-  --gm-error-container: #f9dedc;
-  --gm-on-error-container: #410e0b;
-  --gm-error: #b3261e;
+@font-face {
+  font-family: "Google Sans Flex";
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/google-sans-flex-400.woff2") format("woff2");
 }
+@font-face {
+  font-family: "Google Sans Flex";
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("../assets/fonts/google-sans-flex-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Google Sans Flex Rounded";
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/google-sans-flex-rounded-400.woff2") format("woff2");
+}
+
 [data-md-color-scheme="slate"] {
-  --gm-surface: #131314;
-  --gm-container: #1e1f20;
-  --gm-container-high: #282a2c;
-  --gm-on-surface: #e3e3e3;
-  --gm-on-surface-variant: #c4c7c5;
-  --gm-outline: #8e918f;
-  --gm-outline-variant: #444746;
-  --gm-primary: #a8c7fa;
-  --gm-on-primary: #062e6f;
-  --gm-primary-container: #0842a0;
-  --gm-secondary-container: #004a77;
-  --gm-on-secondary-container: #c2e7ff;
-  --gm-warning-container: #4a3b00;
-  --gm-on-warning-container: #ffe9a8;
-  --gm-warning: #ffd966;
-  --gm-error-container: #8c1d18;
-  --gm-on-error-container: #f9dedc;
-  --gm-error: #f2b8b5;
+  --rt-bg: #0e0e10;
+  --rt-surface: #16171a;
+  --rt-surface-2: #1d1f23;
+  --rt-surface-3: #282b30;
+  --rt-on: #ececee;
+  --rt-on-variant: #b4b8bd;
+  --rt-outline: #34373c;
+  --rt-outline-strong: #6b7077;
+  --rt-green: #5df08a;
+  --rt-on-green: #062b13;
+  --rt-green-soft: rgba(93, 240, 138, 0.12);
+  --rt-pill: #e5f1ff;
+  --rt-on-pill: #0e0e10;
+  --rt-ring: #ffffff;
+  --rt-glow: rgba(93, 240, 138, 0.28);
+  --rt-capsule: rgba(255, 255, 255, 0.08);
+  --rt-warning-bg: #3a2f05;
+  --rt-on-warning: #ffe9a8;
+  --rt-warning: #ffd966;
+  --rt-error-bg: #4a1512;
+  --rt-on-error: #f9dedc;
+  --rt-error: #f2b8b5;
+}
+[data-md-color-scheme="default"] {
+  --rt-bg: #f6f7f5;
+  --rt-surface: #ffffff;
+  --rt-surface-2: #edf1ec;
+  --rt-surface-3: #e1e7e0;
+  --rt-on: #17191a;
+  --rt-on-variant: #464b47;
+  --rt-outline: #d3d9d2;
+  --rt-outline-strong: #737a74;
+  --rt-green: #0b6b2e;
+  --rt-on-green: #ffffff;
+  --rt-green-soft: rgba(11, 107, 46, 0.09);
+  --rt-pill: #17191a;
+  --rt-on-pill: #ffffff;
+  --rt-ring: #17191a;
+  --rt-glow: rgba(11, 107, 46, 0.22);
+  --rt-capsule: rgba(23, 25, 26, 0.06);
+  --rt-warning-bg: #fdf0c4;
+  --rt-on-warning: #3b2f00;
+  --rt-warning: #8c5d00;
+  --rt-error-bg: #f9dedc;
+  --rt-on-error: #410e0b;
+  --rt-error: #b3261e;
 }
 
-/* Material's own variables, pointed at the roles above. The header takes the
-   surface colour and not the primary: Material 3 app bars are tonal, not filled. */
+/* Material's own variables, pointed at the roles above. */
 [data-md-color-scheme="default"],
 [data-md-color-scheme="slate"] {
-  --md-default-bg-color: var(--gm-surface);
-  --md-default-fg-color: var(--gm-on-surface);
-  --md-default-fg-color--light: var(--gm-on-surface-variant);
-  --md-default-fg-color--lighter: var(--gm-outline);
-  --md-default-fg-color--lightest: var(--gm-outline-variant);
-  --md-typeset-color: var(--gm-on-surface);
-  --md-typeset-a-color: var(--gm-primary);
-  --md-primary-fg-color: var(--gm-surface);
-  --md-primary-bg-color: var(--gm-on-surface);
-  --md-primary-bg-color--light: var(--gm-on-surface-variant);
-  --md-accent-fg-color: var(--gm-primary);
-  --md-code-fg-color: var(--gm-on-surface);
-  --md-code-bg-color: var(--gm-container);
-  --md-typeset-table-color: var(--gm-outline-variant);
-  --md-footer-bg-color: var(--gm-container);
-  --md-footer-bg-color--dark: var(--gm-container);
-  --md-footer-fg-color: var(--gm-on-surface);
-  --md-footer-fg-color--light: var(--gm-on-surface-variant);
-  --md-footer-fg-color--lighter: var(--gm-on-surface-variant);
+  --md-text-font-family: "Google Sans Flex", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --md-code-font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+  --md-default-bg-color: var(--rt-bg);
+  --md-default-fg-color: var(--rt-on);
+  --md-default-fg-color--light: var(--rt-on-variant);
+  --md-default-fg-color--lighter: var(--rt-outline-strong);
+  --md-default-fg-color--lightest: var(--rt-outline);
+  --md-typeset-color: var(--rt-on);
+  --md-typeset-a-color: var(--rt-green);
+  --md-primary-fg-color: var(--rt-bg);
+  --md-primary-bg-color: var(--rt-on);
+  --md-primary-bg-color--light: var(--rt-on-variant);
+  --md-accent-fg-color: var(--rt-green);
+  --md-accent-fg-color--transparent: var(--rt-green-soft);
+  --md-code-fg-color: var(--rt-on);
+  --md-code-bg-color: var(--rt-surface-2);
+  --md-typeset-table-color: var(--rt-outline);
+  --md-footer-bg-color: var(--rt-surface);
+  --md-footer-bg-color--dark: var(--rt-surface);
+  --md-footer-fg-color: var(--rt-on);
+  --md-footer-fg-color--light: var(--rt-on-variant);
+  --md-footer-fg-color--lighter: var(--rt-on-variant);
   --md-shadow-z1: none;
-  --gm-ease: cubic-bezier(0.2, 0, 0, 1);
+  --rt-ease: cubic-bezier(0.2, 0, 0, 1);
+  --rt-focus: 0 0 0 3px var(--rt-bg), 0 0 0 6px var(--rt-ring), 0 18px 48px -12px var(--rt-glow);
 }
-[data-md-color-scheme="default"] { --md-accent-fg-color--transparent: rgba(11, 87, 208, 0.08); }
-[data-md-color-scheme="slate"] { --md-accent-fg-color--transparent: rgba(168, 199, 250, 0.08); }
+body { -webkit-font-smoothing: antialiased; }
 
-/* Type scale: headlines in regular weight, titles in medium, as Material 3 sets
-   them, with the page title in the on-surface colour and not Material's grey. */
-.md-typeset h1 {
-  font-size: 2rem;
-  line-height: 2.5rem;
+/* Type: titles in the rounded cut, as the launcher sets Home's banner and a
+   title's page; the rest in Google Sans Flex. */
+.md-typeset { font-size: 0.8rem; line-height: 1.65; }
+.md-typeset h1, .md-typeset h2 {
+  font-family: "Google Sans Flex Rounded", var(--md-text-font-family);
   font-weight: 400;
-  letter-spacing: 0;
-  color: var(--gm-on-surface);
-  margin: 0 0 1.5rem;
+  letter-spacing: -0.01em;
+  color: var(--rt-on);
 }
-.md-typeset h2 { font-size: 1.5rem; line-height: 2rem; font-weight: 400; letter-spacing: 0; margin: 2.2em 0 0.8em; }
-.md-typeset h3 { font-size: 1.25rem; line-height: 1.75rem; font-weight: 500; letter-spacing: 0; margin: 1.8em 0 0.6em; }
-.md-typeset h4 { font-size: 1rem; line-height: 1.5rem; font-weight: 500; letter-spacing: 0.01em; }
-.md-typeset h5, .md-typeset h6 {
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  text-transform: none;
-  color: var(--gm-on-surface-variant);
-}
+.md-typeset h1 { font-size: 2.4rem; line-height: 1.15; margin: 0 0 1.4rem; }
+.md-typeset h2 { font-size: 1.6rem; line-height: 1.25; margin: 2.4em 0 0.8em; }
+.md-typeset h3 { font-size: 1.1rem; line-height: 1.4; font-weight: 500; margin: 1.8em 0 0.6em; }
+.md-typeset h4 { font-size: 0.9rem; font-weight: 500; }
+.md-typeset h5, .md-typeset h6 { font-size: 0.8rem; font-weight: 500; text-transform: none; color: var(--rt-on-variant); }
 
-/* Top app bar: tonal, with the outline only once the page has scrolled under it. */
+/* The top bar is the TV's: the logo and the name in the rounded cut, a clock
+   (javascripts/tvbar.js) beside search, and the sections in a capsule under it
+   with a light pill on the one shown. */
 .md-header, .md-tabs {
-  border-bottom: 1px solid transparent;
-  transition: background-color 200ms var(--gm-ease), border-color 200ms var(--gm-ease);
+  background-color: color-mix(in srgb, var(--rt-bg) 86%, transparent);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  backdrop-filter: saturate(140%) blur(14px);
+  color: var(--rt-on);
 }
-.md-header--shadow { background-color: var(--gm-container); border-bottom-color: var(--gm-outline-variant); }
-.md-header__button { border-radius: 50%; transition: background-color 200ms var(--gm-ease); }
-.md-header__button:hover { background-color: var(--md-accent-fg-color--transparent); opacity: 1; }
-.md-footer { border-top: 1px solid var(--gm-outline-variant); }
-
-/* Search is Material 3's search bar: a full-radius field on a higher container. */
-.md-search__form {
-  border-radius: 28px;
-  background-color: var(--gm-container-high);
-  transition: background-color 200ms var(--gm-ease);
+.md-header--shadow { box-shadow: 0 1px 0 var(--rt-outline); }
+.md-header__title { font-family: "Google Sans Flex Rounded", var(--md-text-font-family); font-size: 1.05rem; }
+.md-header__button.md-logo img { height: 1.6rem; border-radius: 0.45rem; }
+.md-header__button { border-radius: 50%; }
+.rt-clock {
+  display: none;
+  align-items: center;
+  gap: 0.6rem;
+  margin-inline-end: 0.8rem;
+  color: var(--rt-on-variant);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.md-search__form:hover { background-color: var(--gm-outline-variant); }
-[data-md-toggle="search"]:checked ~ .md-header .md-search__form { border-radius: 28px 28px 0 0; background-color: var(--gm-container-high); }
-.md-search__input { color: var(--gm-on-surface); }
-.md-search__input::placeholder, .md-search__icon { color: var(--gm-on-surface-variant); }
-.md-search__output { border-radius: 0 0 28px 28px; background-color: var(--gm-container-high); }
-.md-search-result__meta { background-color: var(--gm-container); color: var(--gm-on-surface-variant); }
+.rt-clock::after { content: ""; width: 2px; height: 1rem; border-radius: 1px; background: var(--rt-outline-strong); opacity: 0.6; }
+@media screen and (min-width: 60em) { .rt-clock { display: flex; } }
 
-/* Navigation: the current page is a pill on the secondary container, as in
-   Material 3's navigation drawer. The group headings (Getting started, The
-   dashboard, Integrations) are set apart from the pages beneath them. The pill
-   geometry is for the sidebar, which has room from 76.25em up; on a phone the
-   menu is a drawer of full-width rows that shows one level at a time, so there
-   only the current row takes the colour. */
+.md-tabs { border-bottom: 1px solid var(--rt-outline); }
+.md-tabs__list {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0.45rem 0 0.55rem 0.2rem;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--rt-capsule);
+  contain: none;
+}
+.md-tabs__item { height: auto; padding: 0; }
+.md-tabs__link {
+  display: block;
+  margin: 0;
+  padding: 0.38rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--rt-on);
+  opacity: 0.66;
+  transition: background-color 200ms var(--rt-ease), color 200ms var(--rt-ease), opacity 200ms var(--rt-ease);
+}
+.md-tabs__link:hover { opacity: 1; color: var(--rt-on); background: var(--rt-capsule); }
+.md-tabs__item--active .md-tabs__link,
+.md-tabs__item--active .md-tabs__link:hover { opacity: 1; background: var(--rt-pill); color: var(--rt-on-pill); }
+
+/* Search: a pill on the capsule's tint. */
+.md-search__form { border-radius: 999px; background-color: var(--rt-capsule); }
+.md-search__form:hover { background-color: var(--rt-surface-3); }
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form { border-radius: 1.2rem 1.2rem 0 0; background-color: var(--rt-surface-2); }
+.md-search__input { color: var(--rt-on); }
+.md-search__input::placeholder, .md-search__icon { color: var(--rt-on-variant); }
+.md-search__output { border-radius: 0 0 1.2rem 1.2rem; background-color: var(--rt-surface-2); }
+.md-search-result__meta { background-color: var(--rt-surface); color: var(--rt-on-variant); }
+
+/* The side menu: the page shown is the TV's pill. */
 .md-nav--primary .md-nav__link--active:not([for^="__nav"]) {
-  background-color: var(--gm-secondary-container);
-  color: var(--gm-on-secondary-container);
+  background-color: var(--rt-pill);
+  color: var(--rt-on-pill);
   font-weight: 500;
 }
 @media screen and (min-width: 76.25em) {
   .md-nav--primary .md-nav__link {
-    border-radius: 20px;
-    padding: 0.3em 0.75em;
-    margin-top: 0.2em;
-    margin-inline: -0.75em;
-    transition: background-color 200ms var(--gm-ease), color 200ms var(--gm-ease);
+    border-radius: 999px;
+    padding: 0.32em 0.85em;
+    margin-top: 0.15em;
+    margin-inline: -0.85em;
+    transition: background-color 200ms var(--rt-ease), color 200ms var(--rt-ease);
   }
-  .md-nav--primary .md-nav__link:hover { background-color: var(--md-accent-fg-color--transparent); }
-  .md-nav--primary .md-nav__link--active:not([for^="__nav"]):hover { background-color: var(--gm-secondary-container); }
+  .md-nav--primary .md-nav__link:hover { background-color: var(--rt-capsule); }
+  .md-nav--primary .md-nav__link--active:not([for^="__nav"]):hover { background-color: var(--rt-pill); }
   .md-nav--primary > .md-nav__list > .md-nav__item--section > .md-nav__link {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 500;
-    letter-spacing: 0.01em;
-    color: var(--gm-on-surface-variant);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--rt-on-variant);
     margin-top: 1.4em;
   }
-  /* The site title's fade, which hides the pages scrolling under it, would
-     blur the top of the pill beneath it. */
   .md-nav--primary > .md-nav__title { box-shadow: none; }
 }
-.md-nav--secondary .md-nav__link--active { font-weight: 500; }
+.md-nav--secondary .md-nav__link--active { color: var(--rt-green); font-weight: 500; }
 
-/* Links keep their underline: blue against the body text is 2.6:1 in the light
-   theme, short of the 3:1 that colour alone needs. */
+/* Links keep their underline, so colour is never the only cue. */
 .md-typeset a {
   text-decoration: underline;
   text-decoration-thickness: 1px;
@@ -161,109 +216,222 @@
   text-underline-offset: 0.2em;
 }
 .md-typeset a:hover { text-decoration-color: currentColor; }
-.md-typeset a.headerlink, .md-typeset a.md-button { text-decoration: none; }
+.md-typeset a.headerlink, .md-typeset a.md-button, .md-typeset a.rt-card { text-decoration: none; }
 
-/* Buttons: filled for the main action, outlined for the rest, each a full-radius
-   pill. Hover and focus lay an 8 % state layer of the content colour on top. */
+/* Buttons: the TV's pills. The main one is the launcher's light "More info"
+   pill (dark in the light theme), the others outlined; both grow a little with
+   the focus, as the TV's do. */
 .md-typeset .md-button {
-  min-height: 40px;
+  min-height: 2.4rem;
   padding: 0.55em 1.5em;
-  border: 1px solid var(--gm-outline);
-  border-radius: 20px;
+  border: 1px solid var(--rt-outline-strong);
+  border-radius: 999px;
   background-color: transparent;
-  color: var(--gm-primary);
+  color: var(--rt-on);
   font-weight: 500;
-  letter-spacing: 0.01em;
-  transition: background-color 200ms var(--gm-ease), box-shadow 200ms var(--gm-ease);
+  transition: transform 200ms var(--rt-ease), background-color 200ms var(--rt-ease), box-shadow 200ms var(--rt-ease);
 }
 .md-typeset .md-button:hover,
 .md-typeset .md-button:focus-visible {
-  background-color: var(--md-accent-fg-color--transparent);
-  border-color: var(--gm-outline);
-  color: var(--gm-primary);
+  transform: scale(1.05);
+  background-color: var(--rt-capsule);
+  border-color: var(--rt-on);
+  color: var(--rt-on);
 }
-.md-typeset .md-button--primary {
-  border-color: transparent;
-  background-color: var(--gm-primary);
-  color: var(--gm-on-primary);
-}
+.md-typeset .md-button--primary { border-color: transparent; background-color: var(--rt-pill); color: var(--rt-on-pill); }
 .md-typeset .md-button--primary:hover,
 .md-typeset .md-button--primary:focus-visible {
   border-color: transparent;
-  background-color: var(--gm-primary);
-  background-image: linear-gradient(color-mix(in srgb, var(--gm-on-primary) 8%, transparent), color-mix(in srgb, var(--gm-on-primary) 8%, transparent));
-  color: var(--gm-on-primary);
-  box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.3);
+  background-color: var(--rt-pill);
+  color: var(--rt-on-pill);
+  box-shadow: 0 10px 30px -10px var(--rt-glow);
 }
 
-/* Notes, tips, warnings and cautions are tonal cards: a container colour, no
-   border, rounded. Notes and tips take the neutral container with a blue icon;
-   a warning is amber and a caution red, never by colour alone: the title says it. */
+/* The TV's focus on whatever opens something: cards and the home page's screens. */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card,
+.rt-card {
+  border: 1px solid var(--rt-outline) !important;
+  border-radius: 1.2rem !important;
+  background: var(--rt-surface);
+  transition: transform 220ms var(--rt-ease), box-shadow 220ms var(--rt-ease), border-color 220ms var(--rt-ease) !important;
+}
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid.cards > ul > li:focus-within,
+.rt-card:hover,
+.rt-card:focus-within {
+  transform: scale(1.03);
+  border-color: transparent !important;
+  box-shadow: var(--rt-focus) !important;
+}
+.md-typeset .grid.cards .lg { color: var(--rt-green); }
+
+/* Notes, tips, warnings and cautions: rounded tonal cards, the icon in green,
+   amber or red, and the title always saying which. */
 .md-typeset .admonition, .md-typeset details {
-  --gm-card: var(--gm-container);
-  --gm-card-on: var(--gm-on-surface);
-  --gm-card-icon: var(--gm-primary);
+  --rt-card: var(--rt-surface-2);
+  --rt-card-on: var(--rt-on);
+  --rt-card-icon: var(--rt-green);
   border: 0 !important;
-  border-radius: 12px;
+  border-radius: 1.2rem;
   box-shadow: none;
-  background-color: var(--gm-card);
-  color: var(--gm-card-on);
+  background-color: var(--rt-card);
+  color: var(--rt-card-on);
 }
-.md-typeset .admonition.warning, .md-typeset details.warning {
-  --gm-card: var(--gm-warning-container);
-  --gm-card-on: var(--gm-on-warning-container);
-  --gm-card-icon: var(--gm-warning);
-}
-.md-typeset .admonition.danger, .md-typeset details.danger {
-  --gm-card: var(--gm-error-container);
-  --gm-card-on: var(--gm-on-error-container);
-  --gm-card-icon: var(--gm-error);
-}
-.md-typeset .admonition-title, .md-typeset summary {
-  background-color: transparent !important;
-  font-weight: 500;
-}
-/* A heading that opens a card's body has the title above it already. */
+.md-typeset .admonition.warning, .md-typeset details.warning { --rt-card: var(--rt-warning-bg); --rt-card-on: var(--rt-on-warning); --rt-card-icon: var(--rt-warning); }
+.md-typeset .admonition.danger, .md-typeset details.danger { --rt-card: var(--rt-error-bg); --rt-card-on: var(--rt-on-error); --rt-card-icon: var(--rt-error); }
+.md-typeset .admonition-title, .md-typeset summary { background-color: transparent !important; font-weight: 500; }
 .md-typeset .admonition :is(h1, h2, h3, h4), .md-typeset details :is(h1, h2, h3, h4) { margin-top: 0.4em; }
-.md-typeset .admonition-title::before, .md-typeset summary::before {
-  background-color: var(--gm-card-icon) !important;
+.md-typeset .admonition-title::before, .md-typeset summary::before { background-color: var(--rt-card-icon) !important; }
+
+/* Code, tables and pictures share the cards' rounding. */
+.md-typeset code { border-radius: 0.4rem; }
+.md-typeset pre > code { border-radius: 1rem; }
+.md-typeset .highlight .filename { border-radius: 1rem 1rem 0 0; }
+.md-typeset table:not([class]) { border-radius: 1rem; border: 1px solid var(--rt-outline); }
+.md-typeset table:not([class]) th { background-color: var(--rt-surface-2); color: var(--rt-on); font-weight: 500; }
+.md-typeset img:not([src*="logo/"]):not(.twemoji):not(.rt-bare) {
+  border: 1px solid var(--rt-outline);
+  border-radius: 1rem;
 }
+.md-typeset figure img { box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.6); }
+.md-typeset figcaption { color: var(--rt-on-variant); font-size: 0.72rem; }
 
-/* Code: a container colour and a corner radius, in Material's own mono. */
-.md-typeset code { border-radius: 6px; }
-.md-typeset pre > code { border-radius: 12px; }
-.md-typeset .highlight .filename { border-radius: 12px 12px 0 0; }
+.md-footer { border-top: 1px solid var(--rt-outline); }
 
-/* Tables: a rounded outline, a tonal header row. */
-.md-typeset table:not([class]) { border-radius: 12px; }
-.md-typeset table:not([class]) th {
-  background-color: var(--gm-container);
-  color: var(--gm-on-surface);
-  font-weight: 500;
-}
-
-/* A screenshot of the dashboard's dark page would otherwise have no edge against
-   the dark site. The logo keeps its own shape. */
-.md-typeset img:not([src*="logo/"]) {
-  border: 1px solid var(--gm-outline-variant);
-  border-radius: 12px;
-}
-
-/* Keyboard focus is a 2 px ring in the primary colour, offset from the control. */
+/* Keyboard focus: the TV's ring. */
 .md-typeset a:focus-visible,
 .md-nav__link:focus-visible,
+.md-tabs__link:focus-visible,
 .md-header__button:focus-visible,
 .md-search__input:focus-visible,
 .md-top:focus-visible,
 .md-clipboard:focus-visible {
-  outline: 2px solid var(--gm-primary);
-  outline-offset: 2px;
+  outline: 3px solid var(--rt-ring);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/* ---------- The home page (overrides/home.html) ---------- */
+.rt-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 2.4rem;
+  align-items: center;
+  margin: 0.6rem 0 2rem;
+  padding: 2.4rem 2rem;
+  border-radius: 2rem;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 80% at 8% 10%, rgba(48, 222, 97, 0.28), transparent 70%),
+    radial-gradient(50% 70% at 100% 100%, rgba(59, 108, 255, 0.2), transparent 70%),
+    #0b0f0c;
+  color: #ececee;
+}
+.md-typeset .rt-hero h1 {
+  margin: 0.6rem 0 0.4rem;
+  font-size: clamp(2.6rem, 6vw, 4rem);
+  line-height: 1;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+.rt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.3rem 0.9rem 0.3rem 0.35rem;
+  border: 1px solid rgba(93, 240, 138, 0.35);
+  border-radius: 999px;
+  background: rgba(31, 182, 83, 0.12);
+  color: #bff7d0;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.md-typeset .rt-chip img { width: 1.5rem; height: 1.5rem; border: 0; border-radius: 0.4rem; }
+.rt-hero__lead {
+  margin: 0 0 0.8rem;
+  font-family: "Google Sans Flex Rounded", var(--md-text-font-family);
+  font-size: 1.45rem;
+  line-height: 1.25;
+  background: linear-gradient(90deg, #7cf5a0, #2fd36a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.rt-hero__sub { margin: 0 0 1.4rem; color: #b4b8bd; }
+.rt-hero .md-button { color: #ececee; border-color: rgba(255, 255, 255, 0.4); margin: 0 0.4rem 0.5rem 0; }
+.rt-hero .md-button:hover, .rt-hero .md-button:focus-visible { color: #ffffff; border-color: #ffffff; background: rgba(255, 255, 255, 0.08); }
+.rt-hero .md-button--primary, .rt-hero .md-button--primary:hover, .rt-hero .md-button--primary:focus-visible { background: #e5f1ff; color: #0e0e10; border-color: transparent; }
+
+/* A TV, drawn: its bezel, the tour on its screen, and its stand. */
+.rt-tv { margin: 0; }
+.rt-tv__screen {
+  padding: 0.55rem;
+  border: 1px solid #2c2f2d;
+  border-radius: 0.9rem;
+  background: #0b0b0c;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 120px -30px rgba(48, 222, 97, 0.45);
+}
+.md-typeset .rt-tv__screen img { display: block; width: 100%; border: 0; border-radius: 0.4rem; box-shadow: none; }
+.rt-tv__stand { width: 22%; height: 0.5rem; margin: 0.9rem auto 0; border-radius: 0.3rem; background: #232625; }
+
+.md-typeset ul.rt-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 0 0 2.4rem !important;
+  padding: 0 !important;
+  list-style: none;
+}
+.md-typeset ul.rt-facts > li {
+  margin: 0;
+  list-style: none;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--rt-outline);
+  border-radius: 1.2rem;
+  background: var(--rt-surface);
+}
+.rt-facts strong {
+  display: block;
+  font-family: "Google Sans Flex Rounded", var(--md-text-font-family);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--rt-green);
+}
+.rt-facts span { color: var(--rt-on-variant); font-size: 0.72rem; }
+
+/* Screens as the launcher's rows: a title, then cards that scroll sideways,
+   each with Google TV's caption lines under it. */
+.md-typeset .rt-row__title { margin: 0 0 0.8rem; font-size: 1.3rem; }
+.rt-row__cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(15rem, 1fr);
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 0.6rem 0.6rem 1.2rem;
+  margin: 0 -0.6rem 1.6rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+.rt-card { display: block; scroll-snap-align: start; overflow: hidden; color: inherit; }
+.md-typeset .rt-card img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border: 0; border-radius: 0; }
+.rt-card__text { display: block; padding: 0.7rem 0.9rem 0.85rem; }
+.rt-card__title { display: block; color: var(--rt-on); font-weight: 500; }
+.rt-card__sub { display: block; color: var(--rt-on-variant); font-size: 0.7rem; }
+
+@media screen and (max-width: 60em) {
+  .rt-hero { grid-template-columns: 1fr; padding: 1.6rem 1.2rem; gap: 1.6rem; border-radius: 1.4rem; }
+  .md-typeset ul.rt-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .md-header, .md-tabs, .md-header__button, .md-search__form, .md-nav__link, .md-button {
-    transition: none !important;
-  }
+  .md-header, .md-tabs, .md-header__button, .md-search__form, .md-nav__link, .md-tabs__link, .md-button, .rt-card,
+  .md-typeset .grid.cards > ul > li { transition: none !important; }
+  .md-typeset .md-button:hover, .md-typeset .md-button:focus-visible, .rt-card:hover, .rt-card:focus-within,
+  .md-typeset .grid.cards > ul > li:hover, .md-typeset .grid.cards > ul > li:focus-within { transform: none; }
 }
 
 /* An entity id broken across lines cannot be read or copied whole, so the

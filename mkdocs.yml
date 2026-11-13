@@ -24,10 +24,11 @@ theme:
       primary: custom
       accent: custom
       toggle: { icon: material/brightness-7, name: Dark theme }
-  font:
-    text: Roboto
-    code: Roboto Mono
+  # Google Sans Flex comes from docs/assets/fonts (stylesheets/extra.css), not Google Fonts.
+  font: false
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.indexes
     - navigation.top
@@ -102,6 +103,9 @@ exclude_docs: |
 
 extra_css:
   - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/tvbar.js
 
 extra:
   social:

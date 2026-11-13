@@ -1,0 +1,54 @@
+{% extends "main.html" %}
+
+{#- The home page (index.md sets template: home.html): a hero with a TV playing
+    the tour, four facts, and the screens as one of the launcher's rows, before
+    the page's own Markdown. -#}
+
+{% block content %}
+<section class="rt-hero">
+  <div>
+    <p class="rt-chip"><img src="{{ 'logo/rootedtv.svg' | url }}" alt="">For rooted LG webOS TVs</p>
+    <h1>Rooted TV</h1>
+    <p class="rt-hero__lead">Google TV's Home, native on the TV.</p>
+    <p class="rt-hero__sub">A launcher drawn in C++ and OpenGL ES at 60 frames a second, with a dashboard for phones and computers, privacy tools and a Home Assistant bridge beside it.</p>
+    <p>
+      <a class="md-button md-button--primary" href="{{ 'apps/launcher/' | url }}">Take the tour</a>
+      <a class="md-button" href="{{ 'getting-started/install/' | url }}">Install</a>
+      <a class="md-button" href="https://github.com/Markk2317/Rooted-TV">GitHub</a>
+    </p>
+  </div>
+  <figure class="rt-tv">
+    <div class="rt-tv__screen">
+      <img src="{{ 'screenshots/readme-tour.gif' | url }}" alt="A tour of Rooted TV Home on an LG C6: the banner, the rows with Your apps, the Films tab, a title's page and its cast, the Apps tab, Search and Quick settings" width="1280" height="720">
+    </div>
+    <div class="rt-tv__stand"></div>
+  </figure>
+</section>
+
+<ul class="rt-facts">
+  <li><strong>60 fps</strong><span>Drawn in OpenGL ES on the TV</span></li>
+  <li><strong>No browser</strong><span>C++ from the remote to the picture</span></li>
+  <li><strong>webOS 3.4+</strong><span>Tried on a 2016 LG OLED C6</span></li>
+  <li><strong>No account</strong><span>Keys only add rows of titles</span></li>
+</ul>
+
+<h2 class="rt-row__title">Screens</h2>
+<div class="rt-row__cards">
+  {%- for shot, title, sub, anchor in [
+    ("readme-home.jpg", "Home", "Trending titles, top picks and the TV's apps", "home"),
+    ("launcher-home-service.jpg", "Watch now", "Straight into Prime Video or Disney+", "home"),
+    ("launcher-films.jpg", "Films and Shows", "Large cards, then rows by kind", "films-and-shows"),
+    ("readme-details.jpg", "A title's page", "Trailer, watchlist, cast and similar titles", "a-titles-page"),
+    ("readme-search.jpg", "Search", "By title, by genre, and in LG Content Store", "search"),
+    ("readme-apps.jpg", "Apps", "As Google TV's Apps tab", "apps"),
+    ("launcher-quick-settings.jpg", "Quick settings", "Picture, sound, input and the sleep timer", "quick-settings"),
+  ] %}
+  <a class="rt-card" href="{{ 'apps/launcher/' | url }}#{{ anchor }}">
+    <img src="{{ ('screenshots/' ~ shot) | url }}" alt="{{ title }}: {{ sub }}" loading="lazy" width="1280" height="720">
+    <span class="rt-card__text"><span class="rt-card__title">{{ title }}</span><span class="rt-card__sub">{{ sub }}</span></span>
+  </a>
+  {%- endfor %}
+</div>
+
+{{ page.content }}
+{% endblock %}
