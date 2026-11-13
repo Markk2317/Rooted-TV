@@ -1,55 +1,55 @@
-<h1 align="center">Salotto</h1>
+<h1 align="center">Rooted TV</h1>
 
-<p align="center"><b>La home di Google TV sui televisori LG webOS.</b><br>Un launcher nativo per i televisori LG rootati, costruito per i modelli con webOS 3.4.</p>
-
-<p align="center">
-  <img src="docs/screenshots/salotto-home.jpg" alt="La Home di Salotto su un LG C6: il banner con un film di tendenza, Altre informazioni e la riga Scelti per te" width="100%">
-</p>
-
-**Salotto** sostituisce la home di un televisore LG webOS con una copia di quella di Google TV: la stessa Home con il banner e le righe di titoli, le schede Film, Programmi, App e Ingressi, la pagina di ogni titolo, la ricerca, le impostazioni rapide e i profili. È un'app C++ e OpenGL ES che gira sul televisore stesso, senza browser, a 60 fotogrammi al secondo, e parla la lingua dei menu del televisore.
-
-Accanto all'app, un server sul televisore offre una dashboard per telefono e computer, gli strumenti per la privacy e il collegamento a Home Assistant.
+<p align="center"><b>Google TV's home on LG webOS TVs.</b><br>A native launcher for rooted LG TVs, built for webOS 3.4.</p>
 
 <p align="center">
-  <img src="docs/screenshots/salotto-dettagli.jpg" alt="La pagina di un film: titolo, voto, genere, durata, trama e i pulsanti Guarda su Prime Video, Trailer, Lista di titoli e Già guardato" width="49%">
-  <img src="docs/screenshots/salotto-ricerca.jpg" alt="La ricerca: il campo Cerca film, serie e altro e la griglia Cerca per genere" width="49%">
+  <img src="docs/screenshots/readme-home.jpg" alt="Rooted TV's Home on an LG C6: the banner with a trending film, More info and the Top picks for you row" width="100%">
 </p>
-<p align="center"><sub>Schermate catturate su un LG OLED55C6V con i menu in italiano.</sub></p>
 
-## Cosa fa
+**Rooted TV** replaces an LG webOS TV's home screen with a copy of Google TV's: the same Home with its banner and rows of titles, the Films, Shows, Apps and Inputs tabs, a page for each title, Search, Quick settings and profiles. It is a C++ and OpenGL ES app that runs on the TV itself, with no browser behind it, at the display's 60 frames a second, and it speaks the TV's menu language.
 
-* **Home come Google TV.** Il banner con i titoli di tendenza, i loro loghi e i trailer in HD; le righe Scelti per te (scelti da Gemini, con una chiave Gemini), Continua a guardare, i titoli popolari su Netflix, Prime Video e Disney+ nel paese del televisore, YouTube di tendenza e dalle iscrizioni di ogni profilo.
-* **Schede Film, Programmi, App e Ingressi.** Le righe per genere con la didascalia della riga selezionata, le app installate disposte come su Google TV, gli ingressi HDMI con il nome del dispositivo collegato.
-* **La pagina di un titolo.** Trama, voto, cast e troupe, titoli simili e righe per genere; i pulsanti Guarda su Prime Video o Disney+, che aprono il titolo direttamente, Trailer, Lista di titoli, Già guardato e pollice su o giù.
-* **Ricerca.** Per titolo o per genere, e tra le app del LG Content Store, da installare dai risultati.
-* **Impostazioni rapide.** Il pannello di Google TV: volume, luce OLED, modalità immagine, uscita audio, ingresso, timer di sospensione, salvaschermo, schermo spento e app recenti.
-* **Profili e assistente.** La scelta dell'account di Google TV, con YouTube collegato per profilo, e un assistente Gemini.
-* **Suoni e salvaschermi.** Il suono di sistema di Google TV a ogni tasto; il salvaschermo di Google TV, la modalità ambiente con le proprie foto, l'orologio e gli altri salvaschermi al posto di quello di LG.
-* **In italiano.** L'app segue la lingua dei menu del televisore, con le parole di Google TV dove ha la stessa frase, e titoli, trame e generi da TMDB in italiano. Le impostazioni dell'app, la configurazione iniziale e gli strumenti restano in inglese.
-* **All'accensione.** Il televisore apre la Home all'accensione e con il tasto Home. Se il dispositivo sull'ingresso, come un Chromecast acceso insieme al televisore via HDMI-CEC, si riprende lo schermo nei primi 10 secondi, la Home torna davanti; se è stato quel dispositivo ad accendere il televisore, resta il dispositivo.
-* **Pensato per webOS 3.4.** Il server parte dalla tile dell'app, dato che il firmware non avvia nulla come root all'accensione; i loghi fissi si attenuano sui pannelli OLED che non lo fanno da soli; la memoria si libera per le app di streaming.
-* **Dashboard dal browser.** Da telefono o computer, con l'aspetto di Google TV: telecomando, app, privacy (ACR e tracciamento di LG, blocco dei server di pubblicità e telemetria), cura del pannello OLED, letture dell'hardware, backup e log. Il televisore appare in [Home Assistant](docs/integrations/home-assistant.md) tramite MQTT.
+Beside the app, a server on the TV gives phones and computers a dashboard, privacy tools and a Home Assistant bridge.
 
-## Compatibilità
+<p align="center">
+  <img src="docs/screenshots/readme-apps.jpg" alt="The Apps tab: favourite apps, Search apps, app categories and the Movies and TV row" width="49%">
+  <img src="docs/screenshots/readme-quick-settings.jpg" alt="Quick settings after Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps" width="49%">
+</p>
+<p align="center"><sub>Captured on an LG OLED55C6V.</sub></p>
+
+## Features
+
+* **Google TV's Home.** A banner of trending titles with their logos and HD trailers; rows of Top picks for you (chosen by Gemini when a Gemini key is set), Continue watching, what is popular on Netflix, Prime Video and Disney+ in the TV's country, and YouTube's trending videos and each profile's subscriptions.
+* **Films, Shows, Apps and Inputs tabs.** Rows by genre with a caption for the focused row, the installed apps laid out as Google TV's Apps tab, and the HDMI inputs named after the device on each.
+* **A title's page.** Overview, rating, cast and crew, similar titles and rows of its genres, with Watch on Prime Video or Disney+, which opens the title itself, Trailer, Watchlist, Watched it? and Like or Not for me.
+* **Search.** By title or genre, and in LG Content Store, whose apps install from the results.
+* **Quick settings.** Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps.
+* **Profiles and assistant.** Google TV's account chooser, with YouTube signed in for each profile, and a Gemini assistant.
+* **Sounds and screen savers.** Google TV's system sound on each key press; Google TV's screen saver, an ambient mode with the owner's photos, a clock and other savers in place of LG's.
+* **The TV's language.** The app follows the TV's menu language, Italian so far, in Google TV's own words where it has the same string, with titles, overviews and genres from TMDB in that language. The app's settings, setup and tools stay in English.
+* **Switching on.** The TV opens Home when it comes on and on the Home key. If the device on the input, such as a Chromecast woken with the TV over HDMI-CEC, takes the screen back within 10 seconds, Home comes back over it; if that device switched the TV on, the device stays in front.
+* **Built for webOS 3.4.** The server starts from the app's tile, since the firmware runs nothing as root at boot; still logos dim on OLED panels that have no logo dimming of their own; memory is freed for the streaming apps.
+* **A dashboard in the browser.** For a phone or computer, in Google TV's look: remote control, apps, privacy (LG's ACR and ad tracking, a blocker for LG's ad and telemetry servers), OLED care, hardware readings, backup and logs. The TV appears in [Home Assistant](docs/integrations/home-assistant.md) over MQTT.
+
+## Compatibility
 
 | | |
 | :-- | :-- |
-| **Provato su** | LG OLED55C6V (2016), webOS 3.4.3, firmware 05.70.45 |
-| **Altri modelli** | Non provati con Salotto. Il server e l'app sono scritti per webOS 3.4 e successivi |
-| **Requisiti** | Televisore rootato con l'[Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) e accesso SSH come root |
+| **Tested on** | LG OLED55C6V (2016), webOS 3.4.3, firmware 05.70.45 |
+| **Other models** | Untried with Rooted TV. The server and the app are written for webOS 3.4 and later |
+| **Requirements** | A rooted TV with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and root SSH access |
 
-## Installazione
+## Install
 
-Si installa da un computer sulla stessa rete del televisore, che compila l'app e la copia via SSH. Il televisore non ha bisogno di internet per l'installazione.
+Rooted TV is built on a computer on the TV's network and installed over SSH. The TV needs no internet access to install it.
 
-1. Fare il root del televisore e installare l'[Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel). Salotto non fa il root del televisore.
-2. Scaricare il codice:
+1. Root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel). Rooted TV does not root the TV.
+2. Clone the repository:
 
    ```bash
-   git clone git@github.com:Markk2317/-.git salotto && cd salotto
+   git clone git@github.com:Markk2317/-.git rooted-tv && cd rooted-tv
    ```
 
-3. Scaricare l'SDK per webOS. Su Linux x86_64:
+3. Get the webOS SDK. On Linux x86_64:
 
    ```bash
    mkdir -p ~/webos-sdk
@@ -57,50 +57,50 @@ Si installa da un computer sulla stessa rete del televisore, che compila l'app e
    ~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh
    ```
 
-   Su macOS e Linux arm64 c'è la build del [webOSbrew native SDK](docs/getting-started/install.md#get-the-sdk).
+   macOS and Linux arm64 use the [webOSbrew native SDK](docs/getting-started/install.md#get-the-sdk).
 
-4. Compilare il server e l'app:
+4. Build the server and the app:
 
    ```bash
    SDK=~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot
    PATH=$SDK/bin:$PATH python3 native-tv/build.py --sdk $SDK
    ```
 
-5. Installarli sul televisore, con la chiave SSH di root del televisore:
+5. Install them on the TV with its root SSH key:
 
    ```bash
-   NATIVETV_SSH_KEY=~/.ssh/lgtv_root bash native-tv/lifecycle/deploy.sh <ip-del-televisore>
+   NATIVETV_SSH_KEY=~/.ssh/lgtv_root bash native-tv/lifecycle/deploy.sh <tv-ip>
    ```
 
-6. Aprire l'app dalla sua tile sul televisore: avvia il server e mostra la configurazione iniziale. La dashboard è su `http://<ip-del-televisore>:8080/`.
+6. Open the app from its tile on the TV: it starts the server and runs the first-run setup. The dashboard is at `http://<tv-ip>:8080/`.
 
-La [guida all'installazione](docs/getting-started/install.md) e [cosa cambia sul televisore](docs/administration/tv-changes.md) hanno i dettagli, in inglese.
+The [installation guide](docs/getting-started/install.md) and [what it changes on the TV](docs/administration/tv-changes.md) have the details.
 
-## Chiavi facoltative
+## Optional keys
 
-L'app, la dashboard e gli strumenti funzionano senza account né chiavi. Le chiavi aggiungono le righe di titoli della Home, e si inseriscono nella scheda della Home della dashboard (`http://<ip-del-televisore>:8080/?tab=home`):
+The app, the dashboard and the tools need no account or key. Keys add Home's rows of titles, and go in the dashboard's Home tab (`http://<tv-ip>:8080/?tab=home`):
 
-| Chiave | Cosa aggiunge |
+| Key | What it adds |
 | :-- | :-- |
-| TMDB (gratuita, [themoviedb.org](https://www.themoviedb.org/settings/api)) | Le righe di film e serie, le schede Film e Programmi, i titoli popolari su Netflix, Prime Video e Disney+, le pagine dei titoli e i trailer. Senza, la Home mostra solo ciò che è sul televisore |
-| YouTube Data API (gratuita, [Google Cloud](https://console.cloud.google.com/)) | La riga YouTube di tendenza |
-| Gemini | Scelti per te scelti da Gemini e l'assistente |
-| Client OAuth di Google (TV e dispositivi con input limitato) | Le iscrizioni YouTube di ogni profilo collegato a Google |
+| TMDB (free, [themoviedb.org](https://www.themoviedb.org/settings/api)) | The film and series rows, the Films and Shows tabs, what is popular on Netflix, Prime Video and Disney+, title pages and trailers. Without it Home shows only what is on the TV |
+| YouTube Data API (free, [Google Cloud](https://console.cloud.google.com/)) | The Trending on YouTube row |
+| Gemini | Top picks chosen by Gemini, and the assistant |
+| Google OAuth client (TVs and Limited Input devices) | The YouTube subscriptions of each profile signed in with Google |
 
-Le chiavi restano sul televisore, in `/var/lib/tvweb/config.json`. Questo prodotto usa l'API di TMDB ma non è approvato né certificato da TMDB.
+The keys stay on the TV, in `/var/lib/tvweb/config.json`. This product uses the TMDB API but is not endorsed or certified by TMDB.
 
-## Sicurezza
+## Security
 
-La dashboard **non ha login** di default, per essere usata da qualsiasi telefono sulla rete di casa. **La porta 8080 non va mai aperta su internet.** [Security](docs/administration/security.md) spiega il token di accesso e come chiudere la porta alla rete.
+The dashboard has **no login by default**, so any phone on the home network can use it. **Never expose port 8080 to the internet.** [Security](docs/administration/security.md) covers the access token and closing the port to the network.
 
-## Avvertenze
+## Disclaimer
 
-Il software gira come `root` sul televisore. Si usa a proprio rischio: nessuna responsabilità per danni, televisori bloccati, garanzie perse o problemi al pannello.
+Rooted TV runs as `root` on the TV and is used at the owner's own risk: no responsibility is accepted for damage, bricked TVs, voided warranties or panel issues.
 
-Salotto è un progetto indipendente e non ufficiale, non affiliato né approvato da LG Electronics o da Google. webOS è un marchio di LG Electronics; Google TV e Chromecast sono marchi di Google LLC.
+An independent, unofficial project, not affiliated with or endorsed by LG Electronics or Google. webOS is a trademark of LG Electronics; Google TV and Chromecast are trademarks of Google LLC.
 
-## Licenza
+## License
 
-MIT, vedi [LICENSE](LICENSE). Caratteri, icone, suoni e librerie incluse hanno le loro licenze, in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+MIT, see [LICENSE](LICENSE). Bundled fonts, icons, sounds and libraries keep their own licences, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-Salotto è ispirato a [Native Tv](https://github.com/ihtisham1211/native-tv).
+Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv).
