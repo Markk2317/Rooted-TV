@@ -869,9 +869,12 @@ namespace {
 std::string durationOf(double minutes) {
     const long total = std::lround(minutes);
     if (total < 60)
-        return std::to_string(total) + " min";
-    return std::to_string(total / 60) + " h" +
-           (total % 60 ? " " + std::to_string(total % 60) + " min" : std::string());
+        return msg("tv.title.minutes", "{minutes} min", fields({{"minutes", Json::text(std::to_string(total))}}));
+    if (total % 60 == 0)
+        return msg("tv.title.hours", "{hours} h", fields({{"hours", Json::text(std::to_string(total / 60))}}));
+    return msg("tv.title.hoursMinutes", "{hours} h {minutes} min",
+               fields({{"hours", Json::text(std::to_string(total / 60))},
+                       {"minutes", Json::text(std::to_string(total % 60))}}));
 }
 // Google TV's line of facts under the title: its rating, genre, year and length, each apart.
 std::vector<std::string> factsOf(const Json &item) {
@@ -1064,7 +1067,7 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
         const names::SearchGenre *genre = shelf ? names::searchGenre(shelf->genre) : nullptr;
         label.label = !shelf ? msg("tv.details.cast", "Cast & crew")
                       : genre ? msg("tv.details.genreRow", "{genre} films and shows",
-                                    fields({{"genre", Json::text(genre->name)}}))
+                                    fields({{"genre", Json::text(genreName(genre->key))}}))
                               : msg("tv.details.ifYouLiked", "If you liked {title}",
                                     fields({{"title", Json::text(name)}}));
         kit::row(paint, label);
@@ -1108,7 +1111,7 @@ void DetailsScreen::build(ScreenHost &host, kit::Paint paint) {
     // A page with nothing to press yet (its details on the way, no trailer, no marks) shows how
     // to leave, which the pointer can click.
     if (title.actions.empty())
-        kit::keyHint(paint, layout::homeX, 1002, "Back", msg("tv.details.return", "Return"),
+        kit::keyHint(paint, layout::homeX, 1002, msg("tv.hint.back", "Back"), msg("tv.details.return", "Return"),
                      "details:back");
     float open = static_cast<float>(motion.value("details:ov"));
     if (open > .002f)

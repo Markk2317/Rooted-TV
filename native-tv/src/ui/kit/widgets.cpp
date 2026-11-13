@@ -1,5 +1,6 @@
 #include "ui/kit/widgets.hpp"
 #include "ui/kit/overlay.hpp"
+#include "domain/say.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -308,7 +309,7 @@ void topBar(Paint paint, const TopBar &bar) {
         hit(scene, tabs[i], "nav:tab:" + std::to_string(i));
     }
 
-    auto iconButton = [&](int index, const char *id, const char *icon, const char *tooltip,
+    auto iconButton = [&](int index, const char *id, const char *icon, const std::string &tooltip,
                           float focus) {
         RoundButton button;
         button.rest = geometry::iconButton(tabsRight, index);
@@ -324,8 +325,8 @@ void topBar(Paint paint, const TopBar &bar) {
         }
         roundButton(paint, button);
     };
-    iconButton(0, "tool:4", "frame", "Screensaver", bar.saverFocus);
-    iconButton(1, "nav:settings", "settings", "Settings", bar.settingsFocus);
+    iconButton(0, "tool:4", "frame", say::msg("tv.bar.screensaver", "Screensaver"), bar.saverFocus);
+    iconButton(1, "nav:settings", "settings", say::msg("tv.bar.settings", "Settings"), bar.settingsFocus);
 
     // The clock, a divider and the wordmark close the bar at the right margin, translucent. With
     // every tab on (Films, Shows, Live and Inputs) the capsules reach them, and the wordmark gives

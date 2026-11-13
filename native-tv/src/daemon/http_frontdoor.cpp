@@ -1741,6 +1741,22 @@ int64_t homeNowMilliseconds() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 }
+
+// webOS's own language for its menus ("it-IT", localeInfo's locales.UI), as learnTvLocale() keeps
+// it beside the server; "" when not known yet. Google TV shows titles and its own words in it.
+bool validLocale(const std::string &value) {
+    const auto lower = [](char letter) { return letter >= 'a' && letter <= 'z'; };
+    const auto upper = [](char letter) { return letter >= 'A' && letter <= 'Z'; };
+    return (value.size() == 2 || (value.size() == 5 && value[2] == '-' && upper(value[3]) &&
+                                  upper(value[4]))) &&
+           lower(value[0]) && lower(value[1]);
+}
+std::string tvLocale(const std::string &dataRoot) {
+    std::ifstream input(dataFilePath(dataRoot, "locale").c_str());
+    std::string value;
+    std::getline(input, value);
+    return validLocale(value) ? value : "";
+}
 } // namespace
 
 HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::string dataRoot,
@@ -1831,6 +1847,9 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
     });
     homeDiscover_.setTitledArt(true);
     homeDiscover_.setTabRows(true);
+    // TMDB's titles and overviews in the TV's language, as Google TV shows them.
+    homeDiscover_.setLanguage(tvLocale(dataRoot_));
+    homeContent_.setLanguage(tvLocale(dataRoot_));
     // The Available on Netflix row is the feed's titles that have a Netflix link (the lookup is kept for then, too).
     homeDiscover_.setNetflixCheck([this](const std::string &type, const std::string &id) {
         const Json document = currentConfigDocument();
@@ -1954,6 +1973,41 @@ HttpFrontDoor::~HttpFrontDoor() {
         subscription = std::move(homePictureVideoSubscription_);
     }
     if (subscription) subscription->stop();
+}
+
+// Read again at most once a minute, as the TV app asks for /api/caps, so a language changed in the
+// TV's settings reaches Native Tv the next time it is opened.
+void HttpFrontDoor::learnTvLocale() const {
+    const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch())
+                            .count();
+    int64_t asked = localeAskedAt_.load();
+    if ((asked && now - asked < 60000) || !localeAskedAt_.compare_exchange_strong(asked, now))
+        return;
+    Json keys = Json::array();
+    keys.add(Json::text("localeInfo"));
+    Json request = Json::object();
+    request.set("keys", keys);
+    (void)luna_.call("com.webos.settingsservice/getSystemSettings", request,
+                     [this](const LunaReply &reply) {
+        const std::string locale =
+            reply.response["settings"]["localeInfo"]["locales"]["UI"].string();
+        if (!validLocale(locale) || locale == tvLocale(dataRoot_)) return;
+        const std::string path = dataFilePath(dataRoot_, "locale");
+        const std::string staging = path + ".tmp";
+        {
+            std::ofstream output(staging.c_str(), std::ios::trunc);
+            output << locale << "\n";
+            if (!output) return;
+        }
+        if (std::rename(staging.c_str(), path.c_str()) != 0) {
+            std::remove(staging.c_str());
+            return;
+        }
+        // The feed and the details are fetched again in the new language.
+        homeContent_.setLanguage(locale);
+        homeDiscover_.setLanguage(locale);
+    });
 }
 
 void HttpFrontDoor::startHomeKeyWatcher() {
@@ -17497,7 +17551,7 @@ Json HttpFrontDoor::withGeminiPicks(const Json &rows, const std::string &profile
     const Json picks = homePicks_.picks(document["geminiKey"].string(),
                                         document["geminiModel"].string(), profile, history,
                                         homeWatching_.services(profile, homeNowMilliseconds()),
-                                        candidates, tvRegion(dataRoot_));
+                                        candidates, tvRegion(dataRoot_), tvLocale(dataRoot_));
     if (!picks.size()) return rows;
     // Home shows the feed's "trending" row as Top picks for you: the picks lead it.
     Json result = Json::array();
@@ -20045,6 +20099,9 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
             if (homeKey.isObject()) caps.set("homeKey", homeKey);
         }
         caps.set("systemSounds", Json::flag(currentConfigDocument()["systemSounds"].boolean(true)));
+        learnTvLocale();
+        const std::string locale = tvLocale(dataRoot_);
+        if (!locale.empty()) caps.set("language", Json::text(locale.substr(0, 2)));
         (void)exchange.respond(200,
                                {{"Content-Type", "application/json"},
                                 {"Cache-Control", "no-store"},

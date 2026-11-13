@@ -29,9 +29,17 @@ constexpr const char *kStats = "profiles:stats", *kGo = "profiles.go", *kStatsMe
                      *kManageMemory = "profiles.manage";
 // The avatar colours the server takes (kColors in service/home_profiles.cpp), and their names.
 constexpr const char *kColours[] = {"#a8c7fa", "#f2b8b5", "#6dd58c", "#ffb74d", "#7fcfff", "#d0bcff"};
-constexpr const char *kColourKeys[] = {"blue", "pink", "green", "orange", "lightBlue", "purple"};
-constexpr const char *kColourNames[] = {"Blue", "Pink", "Green", "Orange", "Light blue", "Purple"};
 constexpr size_t kColourCount = sizeof(kColours) / sizeof(kColours[0]);
+std::string colourName(size_t index) {
+    switch (index) {
+    case 0: return msg("tv.profiles.colour.blue", "Blue");
+    case 1: return msg("tv.profiles.colour.pink", "Pink");
+    case 2: return msg("tv.profiles.colour.green", "Green");
+    case 3: return msg("tv.profiles.colour.orange", "Orange");
+    case 4: return msg("tv.profiles.colour.lightBlue", "Light blue");
+    default: return msg("tv.profiles.colour.purple", "Purple");
+    }
+}
 constexpr float kPanelX = kit::canvas::width - layout::quickRight - layout::quickW;
 
 Color hexColour(const std::string &value) {
@@ -345,7 +353,7 @@ class ProfilesScreen final : public ScreenView {
                 item.title = msg("tv.profiles.rename", "Rename");
                 item.line = name;
             } else {
-                item.title = msg(std::string("tv.profiles.colour.") + kColourKeys[i - 1], kColourNames[i - 1]);
+                item.title = colourName(i - 1);
                 item.swatch = hexColour(kColours[i - 1]);
                 item.mark = kit::PanelItem::Mark::Radio;
                 item.on = current == kColours[i - 1] ? 1 : 0;

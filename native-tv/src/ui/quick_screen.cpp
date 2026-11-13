@@ -98,11 +98,17 @@ bool readsStats(const std::string &id) {
 }
 // "Wed 11 Nov", as the panel's head dates the clock.
 std::string dateText(const ViewState &state) {
-    static const char *const days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-    static const char *const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-    return std::string(days[((state.weekday % 7) + 7) % 7]) + " " + std::to_string(state.day) + " " +
-           months[((state.month % 12) + 12) % 12];
+    const std::string days[] = {msg("tv.date.sun", "Sun"), msg("tv.date.mon", "Mon"), msg("tv.date.tue", "Tue"),
+                                msg("tv.date.wed", "Wed"), msg("tv.date.thu", "Thu"), msg("tv.date.fri", "Fri"),
+                                msg("tv.date.sat", "Sat")};
+    const std::string months[] = {msg("tv.date.jan", "Jan"), msg("tv.date.feb", "Feb"), msg("tv.date.mar", "Mar"),
+                                  msg("tv.date.apr", "Apr"), msg("tv.date.may", "May"), msg("tv.date.jun", "Jun"),
+                                  msg("tv.date.jul", "Jul"), msg("tv.date.aug", "Aug"), msg("tv.date.sep", "Sep"),
+                                  msg("tv.date.oct", "Oct"), msg("tv.date.nov", "Nov"), msg("tv.date.dec", "Dec")};
+    return msg("tv.date.short", "{weekday} {day} {month}",
+               fields({{"weekday", Json::text(days[((state.weekday % 7) + 7) % 7])},
+                       {"day", Json::text(std::to_string(state.day))},
+                       {"month", Json::text(months[((state.month % 12) + 12) % 12])}}));
 }
 std::string clockText(const ViewState &state) {
     char text[16];

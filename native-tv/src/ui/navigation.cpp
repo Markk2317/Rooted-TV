@@ -1,4 +1,5 @@
 #include "ui/application.hpp"
+#include "domain/say.hpp"
 #include "ui/controller_helpers.hpp"
 #include <algorithm>
 
@@ -123,7 +124,7 @@ void Application::execute(const Command &command) {
         confirmId_ = id;
         confirming_ = command;
         confirmUntil_ = now_ + 5000;
-        toast("Press OK again to confirm. Back cancels.");
+        toast(say::msg("tv.confirm.again", "Press OK again to confirm. Back cancels."));
         return;
     }
     confirmId_.clear();
@@ -131,7 +132,7 @@ void Application::execute(const Command &command) {
     state_.busy = true;
     if (!services_.write("action", command.operation, command.body)) {
         state_.busy = false;
-        toast("Too many pending requests. Try again.");
+        toast(say::msg("tv.confirm.busy", "Too many pending requests. Try again."));
     }
     dirty_ = true;
 }
@@ -152,7 +153,7 @@ void Application::back() {
     Screen previous = state_.screen;
     if (!confirmId_.empty()) {
         confirmId_.clear();
-        toast("Cancelled");
+        toast(say::msg("tv.settings.cancelled", "Cancelled"));
         return;
     }
     if (state_.screen == Screen::Catalog)

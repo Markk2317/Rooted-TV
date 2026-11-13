@@ -41,6 +41,9 @@ class HomeDiscover {
     // The rows of the TV app's Films and Shows tabs too ("films:..." and "shows:..."): what is popular,
     // for families and well rated, and a few genres. Twelve more calls a refresh.
     void setTabRows(bool on);
+    // TMDB's language for titles and overviews ("it-IT", webOS's UI language): a feed in another
+    // is fetched again. Anything but a language and a country is English (en-US).
+    void setLanguage(const std::string &language);
 
   private:
     void workerLoop();
@@ -70,6 +73,7 @@ class HomeDiscover {
     std::string requestedTmdbKey_;
     std::string requestedYoutubeKey_;
     std::string requestedRegion_;
+    std::string language_ = "en-US";
     Json cache_;
 };
 

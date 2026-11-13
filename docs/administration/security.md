@@ -291,7 +291,8 @@ single biggest improvement you can make.
 A configured TMDB key (set in the dashboard's Native Tv Home tab or as `tmdbKey` in `config.json`;
 the dashboard never shows it again) enables on-demand title details and search. The server
 sends the selected movie/series ID or the entered search query to
-`api.themoviedb.org`, with the owner's API key and `en-US` language. The TV
+`api.themoviedb.org`, with the owner's API key and the TV's menu language (`it-IT`,
+or `en-US` until the server has read it). The TV
 page uses only same-origin endpoints. Search requires two characters and a
 350 ms pause; person and adult results are excluded. Search text is not
 logged or stored as a cache key; cached results still reveal the titles

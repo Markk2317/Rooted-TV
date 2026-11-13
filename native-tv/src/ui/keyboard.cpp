@@ -1,4 +1,5 @@
 #include "ui/keyboard.hpp"
+#include "domain/say.hpp"
 #include <algorithm>
 #include <cctype>
 
@@ -123,19 +124,19 @@ std::vector<std::vector<std::string>> Keyboard::tvRows() const {
 }
 std::string Keyboard::label(const std::string &key) const {
     if (key == "shift")
-        return "Shift";
+        return say::msg("tv.key.shift", "Shift");
     if (key == "delete")
-        return "Delete";
+        return say::msg("tv.key.delete", "Delete");
     if (key == "symbols")
         return symbols_ ? "ABC" : "123?";
     if (key == "space")
-        return "Space";
+        return say::msg("tv.key.space", "Space");
     if (key == "left")
         return "<";
     if (key == "right")
         return ">";
     if (key == "done")
-        return "Done";
+        return say::msg("tv.key.done", "Done");
     std::string value = key;
     if (upper_)
         for (char &c : value)

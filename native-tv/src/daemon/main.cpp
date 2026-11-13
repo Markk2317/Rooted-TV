@@ -1868,6 +1868,7 @@ int main(int argc, char **argv) {
             tvAppManager.reset(new TvAppManager(children, assetsRoot));
             frontDoor->setTvAppManager(tvAppManager.get());
             frontDoor->startHomeKeyWatcher();
+            frontDoor->learnTvLocale();
             frontDoor->startStaticDimming();
             // Only a forwarder that exists has a status to report, and the
             // Server tab's NTP save waits only on a client that is running.

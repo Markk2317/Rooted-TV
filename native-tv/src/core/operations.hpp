@@ -50,6 +50,7 @@ enum class Operation {
     CancelPackage,
     Settings, // /api/settings: the dashboard's MQTT and device settings (setup's broker entry)
     AdminUnlock, // /api/admin/unlock: the four-digit admin PIN, answered with a session
-    Assistant    // /api/assistant: a question for the Gemini assistant
+    Assistant,   // /api/assistant: a question for the Gemini assistant
+    Dictionary   // /assets/i18n/<lang>.json: the TV client's words in the TV's language
 };
 }

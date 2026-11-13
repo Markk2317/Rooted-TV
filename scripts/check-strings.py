@@ -26,7 +26,8 @@ Fails on:
   * a dictionary (native-tv/assets/i18n/<lang>.json) that does not parse, holds a key
     nothing uses, an entry without "text" and "from", a translation whose
     {placeholders} or markup differ from the English it was made from, a language
-    the loader (web/ui/i18n.js) does not list, or a listed one without a file
+    the loader (web/ui/i18n.js) does not list (unless the TV client alone speaks it,
+    TV_ONLY), or a listed one without a file
 
 Reports, and never fails on: translations made from English that has changed
 since (the page shows the new English, so editing English is not blocked on a
@@ -45,6 +46,9 @@ PAGES = ['ui.html']
 # The dictionaries the loader fetches, and the loader that lists them.
 LANG_DIR = ROOT / 'native-tv' / 'assets' / 'i18n'
 LOADER = ASSETS / 'ui' / 'i18n.js'
+# Languages only the TV client speaks, in the TV's language: the client and the daemon read their
+# files, and the dashboard does not offer them until its own strings are translated.
+TV_ONLY = {'it'}
 
 # Parts of pages whose visible text must all be keyed, by element id or, for an
 # element without one, by its tag as '<header>'. A part is added here once
@@ -333,8 +337,8 @@ def cpp_literals(src, i):
         return (''.join(val), i) if found else None
 
 
+# The daemon's messages, and the TV client's own words (src/ui and the models it shares).
 SERVER = sorted((ROOT / 'native-tv' / 'src').rglob('*.cpp'))
-SERVER = [f for f in SERVER if 'ui' not in f.relative_to(ROOT / 'native-tv' / 'src').parts[:1]]
 for path in SERVER:
     src = path.read_text(encoding='utf-8')
     if 'msg(' not in src and '"srv.' not in src:
@@ -399,8 +403,10 @@ listed = set(re.findall(r"'([a-z]{2})'", listed.group(1))) if listed else set()
 files = {p.stem: p for p in sorted(LANG_DIR.glob('*.json'))} if LANG_DIR.exists() else {}
 for lang in sorted(listed - set(files)):
     problems.append('i18n.js lists "%s" but there is no assets/i18n/%s.json' % (lang, lang))
-for lang in sorted(set(files) - listed):
+for lang in sorted(set(files) - listed - TV_ONLY):
     problems.append('assets/i18n/%s.json exists but i18n.js does not list "%s", so it is never loaded' % (lang, lang))
+for lang in sorted(TV_ONLY - set(files)):
+    problems.append('TV_ONLY lists "%s" but there is no assets/i18n/%s.json' % (lang, lang))
 
 report = []
 for lang, path in files.items():

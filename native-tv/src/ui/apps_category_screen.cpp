@@ -31,7 +31,7 @@ class AppsCategoryScreen : public ScreenView {
             if (row.key == "appkind" && row.group == kind_)
                 row_ = row;
         title_ = row_.title;
-        row_.title = "Your apps";
+        row_.title = say::msg("tv.home.yourApps", "Your apps");
         Motion &motion = host.motion();
         motion.set("appkind:in", 1);
         motion.tween("appkind:in", 0, kit::motion::ms::base, easing(kit::motion::ease::out));

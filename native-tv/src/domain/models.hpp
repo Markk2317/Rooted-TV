@@ -87,6 +87,10 @@ std::string titleFacts(const Json &item, bool withKind = true);
 std::string continueLine(const Card &card);
 // The line under a card of the Films and Shows tabs' focused row, as Google TV's says where a
 // title plays: its service where a Popular on row lists it, then its year and rating.
+// A genre of Search's grid (names::searchGenres) and an app kind ("video") by their names in the
+// TV's language; an unknown kind is `fallback`.
+std::string genreName(const std::string &key);
+std::string appKindName(const std::string &key, const std::string &fallback);
 std::string titleCaption(const Card &card);
 std::string pictureLabel(const Json &picture);
 std::vector<Tab> dashboardTabs();

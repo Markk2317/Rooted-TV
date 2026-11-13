@@ -66,7 +66,7 @@ std::string HomePicks::keyOf(const Json &item) {
 }
 
 std::string HomePicks::prompt(const Json &history, const Json &services, const Json &candidates,
-                              const std::string &region) {
+                              const std::string &region, const std::string &language) {
     std::string text =
         "You choose \"Top picks for you\" for one viewer on a TV home screen, as Google TV does.\n"
         "The viewer's titles (what they watched, liked or saved to watch):\n";
@@ -96,7 +96,9 @@ std::string HomePicks::prompt(const Json &history, const Json &services, const J
     }
     text += "Choose up to " + std::to_string(kPicksMax) +
             " titles from the offer this viewer is most likely to enjoy, best first, none they "
-            "already have, favouring the services they watch most. For each, give a short reason in English of at most six words, such as "
+            "already have, favouring the services they watch most. For each, give a short reason in " +
+            (language.empty() ? std::string("English") : "the language " + language) +
+            " of at most six words, such as "
             "\"Because you watched <title>\" naming one of their titles, or \"Popular on <service>\" "
             "or \"Trending this week\" when none fits. Answer only with a JSON array of objects "
             "{\"key\": <key from the offer>, \"because\": <reason>}.";
@@ -152,14 +154,15 @@ void HomePicks::save(const Json &document) const {
 
 Json HomePicks::picks(const std::string &key, const std::string &model, const std::string &profile,
                       const Json &history, const Json &services, const Json &candidates,
-                      const std::string &region) {
+                      const std::string &region, const std::string &language) {
     if (key.empty() || !candidates.size()) return Json::array();
     // Asked again when the profile's titles or its services' order change, not when the offer
     // moves on (the trending titles change daily, and a day is how long an answer is kept anyway)
     // nor with every minute played.
     std::string order;
     for (const Json &service : services.items()) order += service["service"].string() + ",";
-    const std::string inputs = md5Hex(history.dump() + "|" + order + "|" + region);
+    const std::string inputs =
+        md5Hex(history.dump() + "|" + order + "|" + region + (language.empty() ? "" : "|" + language));
     const int64_t now = clock_();
     std::lock_guard<std::mutex> lock(mutex_);
     const Json kept = load()[profile];
@@ -173,20 +176,21 @@ Json HomePicks::picks(const std::string &key, const std::string &model, const st
         for (const Json &item : candidates.items())
             if (limited.size() < kCandidatesMax) limited.add(item);
         worker_ = std::thread(&HomePicks::ask, this, key, model, profile, inputs, history, services,
-                              limited, region);
+                              limited, region, language);
     }
     return kept["picks"].isArray() ? kept["picks"] : Json::array();
 }
 
 void HomePicks::ask(std::string key, std::string model, std::string profile, std::string inputs,
-                    Json history, Json services, Json candidates, std::string region) {
+                    Json history, Json services, Json candidates, std::string region,
+                    std::string language) {
     Json request = Json::object();
     Json contents = Json::array();
     Json user = Json::object();
     user.set("role", Json::text("user"));
     Json parts = Json::array();
     Json part = Json::object();
-    part.set("text", Json::text(prompt(history, services, candidates, region)));
+    part.set("text", Json::text(prompt(history, services, candidates, region, language)));
     parts.add(part);
     user.set("parts", parts);
     contents.add(user);

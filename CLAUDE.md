@@ -241,7 +241,9 @@ a translation is an entry in `native-tv/assets/i18n/es.json` that records the En
 it was made from, and English that has changed since is shown as English until the
 entry is redone, so editing English never waits on a translation. Removing or
 renaming a key takes its entries with it, or the check fails. The Spanish is partly
-machine-translated; say so wherever it is described. The TV pages and the native TV
-client are English only. docs/development/strings.md has the rules, and
-`scripts/check-strings.py` checks them. The parts already converted are listed in
+machine-translated; say so wherever it is described. The TV pages are English only.
+The native TV client keys its words the same way (`msg("tv.key", "English")`) and
+shows them in the TV's menu language: Italian so far, a language listed in `TV_ONLY`
+in `check-strings.py` because the dashboard does not offer it.
+docs/development/strings.md has the rules, and `scripts/check-strings.py` checks them. The parts already converted are listed in
 `CONVERTED` in that script, and new text in one of them needs a key.

@@ -1,4 +1,5 @@
 #include "service/home_titles.hpp"
+#include "domain/say.hpp"
 #include <algorithm>
 #include <cmath>
 #include <fcntl.h>
@@ -222,7 +223,9 @@ Json HomeTitles::personalRows(const Json &rows, const Json &state) {
         if (!similar.size()) continue;
         Json row = Json::object();
         row.set("key", Json::text("liked"));
-        row.set("title", Json::text("Because you liked " + liked["title"].string()));
+        Json variables = Json::object();
+        variables.set("title", liked["title"]);
+        row.set("title", Json::text(say::msg("srv.home.becauseLiked", "Because you liked {title}", variables)));
         row.set("items", similar);
         result.add(row);
         break;

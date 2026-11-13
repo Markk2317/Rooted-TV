@@ -1606,6 +1606,27 @@ int main() {
         run(wallpaperHome, 300, 100);
         check(wallpaperHome.snapshot()["wallpaper"].string() == "transitioning",
               "The wallpaper fades in as soon as the loader has it");
+        // The TV's language: caps names it, the client asks for its words and shows Home in them.
+        FakeTransport italianTransport;
+        Application italian(italianTransport);
+        reply(italian, "catalogue", catalogue);
+        reply(italian, "discover", feed);
+        check(textNode(italian.scene(), "Apps") != nullptr, "Home starts in English");
+        reply(italian, "caps", R"({"ok":true,"language":"it"})");
+        check(italianTransport.count("dictionary") == 1 &&
+                  italianTransport.requests.back().operation == Operation::Dictionary &&
+                  italianTransport.requests.back().body["language"].string() == "it",
+              "A TV in Italian has its words asked for");
+        reply(italian, "caps", R"({"ok":true,"language":"it"})");
+        check(italianTransport.count("dictionary") == 1, "and only once");
+        reply(italian, "dictionary",
+              R"({"tv.home.topPicks":{"text":"Scelti per te","from":"Top picks for you"},)"
+              R"("tv.tab.apps":{"text":"App","from":"Apps"}})");
+        check(textNode(italian.scene(), "App") != nullptr && textNode(italian.scene(), "Apps") == nullptr,
+              "Home is made again in the TV's language");
+        reply(italian, "caps", R"({"ok":true})");
+        check(textNode(italian.scene(), "Apps") != nullptr,
+              "and in English again when the TV's language has no words");
         FakeTransport idleTransport;
         Application idle(idleTransport);
         idle.update(1000);

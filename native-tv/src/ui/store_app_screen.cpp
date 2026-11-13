@@ -194,7 +194,7 @@ void StoreAppScreen::response(ScreenHost &host, const Response &response) {
         host.services().read("catalogue", Operation::HomeCatalogue);
     }
     if (now == "failed" && was != "failed")
-        error_ = install_["error"].string().empty() ? msg("tv.store.installFailed", "The install did not finish")
+        error_ = install_["error"].string().empty() ? msg("tv.store.installUnfinished", "The install did not finish")
                                                     : install_["error"].string();
     button_ = std::min(button_, buttons().size() - 1);
     focusMoved(host, false);

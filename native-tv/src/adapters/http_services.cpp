@@ -133,6 +133,13 @@ void HttpServices::adminSession(const std::string &session) {
     std::lock_guard<std::mutex> lock(mutex_);
     adminSession_ = valid ? session : std::string();
 }
+// Two lowercase letters, as the server's dictionaries are named; anything else is English.
+void HttpServices::language(const std::string &code) {
+    const bool valid = code.size() == 2 &&
+                       code.find_first_not_of("abcdefghijklmnopqrstuvwxyz") == std::string::npos;
+    std::lock_guard<std::mutex> lock(mutex_);
+    language_ = valid ? code : std::string();
+}
 std::vector<Response> HttpServices::drain() {
     std::unique_lock<std::mutex> lock(mutex_);
     std::vector<Response> result;
@@ -167,6 +174,7 @@ void HttpServices::run(bool image) {
         Request request = std::move(queue.front());
         queue.pop_front();
         const std::string session = image ? std::string() : adminSession_;
+        const std::string language = image ? std::string() : language_;
         bool current = generations_[request.channel] == request.generation;
         if (current)
             ++working_;
@@ -223,6 +231,8 @@ void HttpServices::run(bool image) {
                     headers = curl_slist_append(headers, "Content-Type: application/json");
                 if (!session.empty())
                     headers = curl_slist_append(headers, ("X-Admin-Session: " + session).c_str());
+                if (!language.empty())
+                    headers = curl_slist_append(headers, ("X-Native-Tv-Lang: " + language).c_str());
                 if (headers)
                     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
                 if (request.post) {

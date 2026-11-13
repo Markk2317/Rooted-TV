@@ -26,6 +26,7 @@ class HttpServices final : public Services {
     std::deque<Response> completed_;
     std::map<std::string, unsigned> generations_;
     std::string adminSession_;
+    std::string language_;
     std::vector<std::thread> workers_;
     struct Progress {
         HttpServices *owner;
@@ -46,6 +47,7 @@ class HttpServices final : public Services {
     unsigned write(const std::string &channel, Operation operation, const Json &body) override;
     void cancel(const std::string &channel) override;
     void adminSession(const std::string &session) override;
+    void language(const std::string &code) override;
     std::vector<Response> drain();
     // Nothing queued, running or waiting to be drained: what a fixed-clock capture waits for.
     bool idle();

@@ -232,6 +232,15 @@ int main() {
     const size_t afterDetails = asked.size();
     assert(content.details("private-test-key", true, "movie", "7")["netflixEnabled"].boolean());
     assert(asked.size() == afterDetails);
+    assert(asked.back().find("&language=en-US") != std::string::npos);
+    // In the TV's language the title is asked for again, and kept apart from the English.
+    content.setLanguage("it-IT");
+    assert(content.details("private-test-key", false, "movie", "7")["item"]["id"].number() == 7);
+    assert(asked.size() == afterDetails + 1 &&
+           asked.back().find("&language=it-IT") != std::string::npos);
+    content.setLanguage("italian");
+    assert(content.details("private-test-key", false, "movie", "7")["item"]["id"].number() == 7);
+    assert(asked.size() == afterDetails + 1);
     // A series' Action & Adventure is the grid's Action, its first genre with that series genre.
     const Json series = content.details("private-test-key", false, "tv", "8")["item"];
     assert(series["genreKeys"].size() == 2 && series["genreKeys"][0].string() == "drama" &&

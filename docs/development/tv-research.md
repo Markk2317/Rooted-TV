@@ -1968,3 +1968,11 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   in the buffer until the next one arrives, and the two play back to back; with `prebuf` at
   10 ms each one plays at once (a recording of `pcm_output.monitor` with `parec` showed one tick
   per key).
+
+## The menu language (C6, webOS 3.4.3)
+
+- `com.webos.settingsservice/getSystemSettings {"keys":["localeInfo"]}`, with no category,
+  answers `settings.localeInfo.locales`: `UI` is the menus' language (`it-IT` on an Italian
+  C6), beside `TV`, `FMT` (`en-GB` there, the formats), `STT`, `AUD` and `AUD2`, and
+  `keyboards` (`["en","it"]`). Asked with `"category":"option"` it answers `returnValue: false`,
+  "There is no matched result from DB".

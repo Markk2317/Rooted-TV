@@ -39,19 +39,21 @@ class HomePicks {
     // `candidates`: the feed's items.
     Json picks(const std::string &key, const std::string &model, const std::string &profile,
                const Json &history, const Json &services, const Json &candidates,
-               const std::string &region);
+               const std::string &region, const std::string &language = std::string());
     // Blocks until a running request has answered (tests).
     void wait();
 
     // The request Gemini is sent, and its answer read back to picks that are in `candidates`.
+    // `language` is the TV's ("it-IT"), which the reasons are written in; "" is English.
     static std::string prompt(const Json &history, const Json &services, const Json &candidates,
-                              const std::string &region);
+                              const std::string &region, const std::string &language = std::string());
     static Json parse(const std::string &answer, const Json &candidates);
     static std::string keyOf(const Json &item);
 
   private:
     void ask(std::string key, std::string model, std::string profile, std::string inputs,
-             Json history, Json services, Json candidates, std::string region);
+             Json history, Json services, Json candidates, std::string region,
+             std::string language);
     Json load() const;
     void save(const Json &document) const;
 

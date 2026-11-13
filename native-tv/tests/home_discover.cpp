@@ -10,6 +10,7 @@
 #include <set>
 #include <string>
 #include <sys/stat.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -532,6 +533,40 @@ int main() {
     (void)unlink((tabsDir + "/home-discover.json").c_str());
     (void)unlink((tabsDir + "/home-discover.json.tmp").c_str());
     (void)rmdir(tabsDir.c_str());
+
+    // Titles in the TV's language: an English feed is fetched again in it, the same day.
+    const std::string languageDir = directory.path() + "/language";
+    assert(mkdir(languageDir.c_str(), 0700) == 0);
+    {
+        HomeDiscover english(languageDir, fetcher, [&clock] { return clock; });
+        const size_t before = asked.size();
+        (void)english.feed("tmdb", "", "IT");
+        assert(waitForAsked(before + 9)); // three trending rows, two lists for each of three services
+        for (size_t index = before; index < asked.size(); ++index)
+            assert(asked[index].find("&language=en-US") != std::string::npos);
+    }
+    {
+        HomeDiscover italian(languageDir, fetcher, [&clock] { return clock; });
+        italian.setLanguage("it-IT");
+        const size_t before = asked.size();
+        (void)italian.feed("tmdb", "", "IT");
+        assert(waitForAsked(before + 9));
+        for (size_t index = before; index < asked.size(); ++index)
+            if (asked[index].find("api.themoviedb.org") != std::string::npos &&
+                asked[index].find("/images?") == std::string::npos)
+                assert(asked[index].find("&language=it-IT") != std::string::npos);
+    }
+    {
+        HomeDiscover again(languageDir, fetcher, [&clock] { return clock; });
+        again.setLanguage("it-IT");
+        const size_t before = asked.size();
+        (void)again.feed("tmdb", "", "IT");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        assert(asked.size() == before);
+    }
+    (void)unlink((languageDir + "/home-discover.json").c_str());
+    (void)unlink((languageDir + "/home-discover.json.tmp").c_str());
+    (void)rmdir(languageDir.c_str());
 
     (void)unlink((addedDir + "/home-discover.json").c_str());
     (void)unlink((addedDir + "/home-discover.json.tmp").c_str());

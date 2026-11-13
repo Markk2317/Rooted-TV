@@ -175,6 +175,8 @@ class HttpFrontDoor {
     // Where LG's Home cannot be replaced (webOS 3.4), follows the compositor for LG's Home being
     // opened and, with `homeButtonOpensNativeHome` set, brings Native Tv Home forward instead.
     void startHomeKeyWatcher();
+    // Reads webOS's UI language into the data directory's "locale" (see tvLocale).
+    void learnTvLocale() const;
     // Where the panel is an OLED without LG's Logo Luminance (webOS 3.4), the server's own logo
     // dimming (service::StaticDimming), at the level `staticDimming` in config.json names.
     void startStaticDimming();
@@ -476,6 +478,7 @@ class HttpFrontDoor {
     mutable service::AdminPin adminPin_;
     mutable service::HomeContent homeContent_;
     mutable service::HomeDiscover homeDiscover_;
+    mutable std::atomic<int64_t> localeAskedAt_{0}; // learnTvLocale's last question, steady ms
     mutable service::HomeImageProxy homeImageProxy_;
     mutable service::YoutubeAccounts youtubeAccounts_;
     mutable service::HomeTitles homeTitles_;

@@ -182,6 +182,13 @@ std::string legacyRoute(Operation operation, const Json &arguments) {
         return "/api/settings";
     case Operation::AdminUnlock:
         return "/api/admin/unlock";
+    case Operation::Dictionary: {
+        const std::string language = arguments["language"].string();
+        if (language.size() != 2 || language.find_first_not_of("abcdefghijklmnopqrstuvwxyz") !=
+                                        std::string::npos)
+            throw std::invalid_argument("Invalid language");
+        return "/assets/i18n/" + language + ".json";
+    }
     case Operation::None:
         break;
     }

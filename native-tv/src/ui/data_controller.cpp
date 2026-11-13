@@ -1,5 +1,7 @@
 #include "ui/application.hpp"
 #include "ui/controller_helpers.hpp"
+#include "domain/say.hpp"
+#include "domain/say_translation.hpp"
 #include <algorithm>
 
 namespace nativetv {
@@ -90,7 +92,7 @@ void Application::response(const Response &response) {
     if (response.channel == "action") {
         state_.busy = false;
         if (!response.ok() || !data.valid() || (data.has("ok") && !data["ok"].boolean())) {
-            toast(data["error"].string("That did not work. Try again."));
+            toast(data["error"].string(say::msg("tv.action.failed", "That did not work. Try again.")));
             refresh();
             return;
         }
@@ -115,7 +117,7 @@ void Application::response(const Response &response) {
             rebuildMenu();
         } else if (pending_.operation != Operation::OpenHomeItem &&
                    pending_.operation != Operation::Recents)
-            toast("Saved");
+            toast(say::msg("tv.action.saved", "Saved"));
         if (pending_.operation == Operation::Recents && state_.screen == Screen::Quick &&
             state_.menu.level == "recents") {
             if (pending_.body["action"].string() == "open" ||
@@ -147,10 +149,32 @@ void Application::response(const Response &response) {
         }
         return;
     }
+    if (response.channel == "dictionary") {
+        // The words of the TV's language: the screens are made again in them, and the server's
+        // data is asked for again in them.
+        say::showIn(data);
+        services_.language(language_);
+        rebuildHome();
+        refresh();
+        return;
+    }
     if (response.channel == "caps") {
         state_.caps = data;
         capsAnswered_ = true;
         systemSoundsOn_ = data["systemSounds"].boolean(true);
+        // Google TV speaks the TV's language: the server reads webOS's own and names it here.
+        const std::string language = data["language"].string();
+        if (language != language_) {
+            language_ = language;
+            if (language.empty() || language == "en") {
+                say::showIn(Json());
+                services_.language("");
+                rebuildHome();
+                refresh();
+            } else
+                services_.read("dictionary", Operation::Dictionary,
+                               fields({{"language", Json::text(language)}}));
+        }
         // The rule of the old dashboard page: a server that says setup is needed opens setup first,
         // whichever screen the client was asked for. A setup screen already open (Settings'
         // phone link, or setup itself) stays: it is where the person was sent.

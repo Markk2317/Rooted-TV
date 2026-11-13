@@ -1,4 +1,5 @@
 // Home and Apps drawn on the kit from the controller's state and the motion engine's values.
+#include "domain/say.hpp"
 #include "ui/application.hpp"
 #include "ui/home_layout.hpp"
 #include "ui/kit/entry.hpp"
@@ -193,7 +194,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         label.y = labelY;
         label.px = home::labelPx(look);
         label.grow = look.grow;
-        label.label = home.editing && ri == home.row && home::isApps(row) ? "Moving apps" : row.title;
+        label.label = home.editing && ri == home.row && home::isApps(row) ? say::msg("tv.home.movingApps", "Moving apps") : row.title;
         label.dim = static_cast<float>(motion.value(home::id("rd", ri)));
         label.enter = enterOf(motion, home::id("ER", ri));
         // The next row's name is not shown cut by the screen's edge: it fades in as it rises.
@@ -286,7 +287,8 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 tile.name = device ? "HDMI " + portText : card.title;
                 if (device && portText.empty())
                     tile.name = card.title;
-                tile.sub = device ? (unused ? "Not connected" : card.title) : card.subtitle;
+                tile.sub = device ? (unused ? say::msg("tv.inputs.notConnected", "Not connected") : card.title)
+                                  : card.subtitle;
                 if (tile.sub == tile.name)
                     tile.sub.clear();
                 tile.icon = device ? "hdmi" : "tv";
@@ -309,7 +311,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 if (row.key == "continue") {
                     // Google TV's Continue watching: what OK does over the art, the title and
                     // its service under the card.
-                    poster.action = "RESUME";
+                    poster.action = say::msg("tv.home.resume", "RESUME");
                     poster.caption = card.title;
                     poster.captionLine = continueLine(card);
                     poster.title.clear();
@@ -346,7 +348,8 @@ void hintBand(kit::Paint paint, const std::vector<kit::Hint> &hints) {
 // The hint band while the Apps tab's rows of apps are moved among themselves.
 void arrangeHints(kit::Paint paint, const Frame &frame) {
     if (frame.state.home.arranging)
-        hintBand(paint, {{"", "Move"}, {"OK", "Save"}, {"Back", "Cancel"}});
+        hintBand(paint, {{"", say::msg("tv.hint.move", "Move")}, {"OK", say::msg("tv.hint.save", "Save")},
+                         {say::msg("tv.hint.back", "Back"), say::msg("tv.hint.cancel", "Cancel")}});
 }
 
 void banner(kit::Paint paint, float amount) {
@@ -354,10 +357,12 @@ void banner(kit::Paint paint, float amount) {
     scene.shape({0, 0, kit::canvas::width, kit::canvas::height},
                 kit::focus::withAlpha(kit::alpha::scrimStrong, amount));
     scene.pushOpacity(amount);
-    paint.glyphs.text(scene, {400, 430, 1120, kit::type::headline.line}, "Native Tv is not answering",
+    paint.glyphs.text(scene, {400, 430, 1120, kit::type::headline.line},
+                      say::msg("tv.home.silent", "Native Tv is not answering"),
                       kit::type::headline, kit::color::onSurface, Node::Align::Center);
     paint.glyphs.text(scene, {560, 500, 800, kit::type::body.line * 2},
-                      "Home comes back when Native Tv answers again.", kit::type::body,
+                      say::msg("tv.home.silentDesc", "Home comes back when Native Tv answers again."),
+                      kit::type::body,
                       kit::color::onSurface2, Node::Align::Center, 2);
     scene.popOpacity();
 }
@@ -415,8 +420,9 @@ void drawHome(kit::Paint paint, const Frame &frame) {
         scene.popTransform();
         if (home.rows.empty())
             paint.glyphs.text(scene, {kit::canvas::safeX, 800, 1600, kit::type::body.line},
-                              state.catalogue.valid() ? "No items to show. Open Settings to arrange Home."
-                                                      : "Loading Home…",
+                              state.catalogue.valid()
+                                  ? say::msg("tv.home.empty", "No items to show. Open Settings to arrange Home.")
+                                  : say::msg("tv.home.loading", "Loading Home…"),
                               kit::type::body, kit::color::onSurface2);
     }
     if (home.editing && home.row < home.rows.size() && home.column < home.rows[home.row].cards.size()) {
@@ -425,9 +431,12 @@ void drawHome(kit::Paint paint, const Frame &frame) {
         const bool hidden = home.rows[home.row].cards[home.column].hidden;
         // Home's row and the Apps page each have their own hidden apps.
         const bool onApps = home.tabs[home.tab].key == "apps";
-        const std::string label = hidden ? (onApps ? "Show on Apps" : "Show on Home")
-                                         : (onApps ? "Hide from Apps" : "Hide from Home");
-        hintBand(paint, {{"", "Move"}, {"OK", "Done"}, {"Red", label}});
+        const std::string label = hidden ? (onApps ? say::msg("tv.home.showOnApps", "Show on Apps")
+                                                   : say::msg("tv.home.showOnHome", "Show on Home"))
+                                         : (onApps ? say::msg("tv.home.hideFromApps", "Hide from Apps")
+                                                   : say::msg("tv.home.hideFromHome", "Hide from Home"));
+        hintBand(paint, {{"", say::msg("tv.hint.move", "Move")}, {"OK", say::msg("tv.hint.done", "Done")},
+                         {say::msg("tv.hint.red", "Red"), label}});
         kit::PillButton hide;
         hide.rest = {kit::canvas::width - kit::canvas::safeX - 380, 136, 380, 56};
         hide.id = "edit:hide";

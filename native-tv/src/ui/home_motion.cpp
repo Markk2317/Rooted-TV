@@ -1,6 +1,7 @@
 // Home's choreography: what moves when focus, tab, hero or data change. The view (home_view.cpp)
 // only reads the values set here.
 #include "domain/names.hpp"
+#include "domain/say.hpp"
 #include "ui/application.hpp"
 #include "ui/controller_helpers.hpp"
 #include "ui/home_layout.hpp"
@@ -129,10 +130,11 @@ HeroText linesOf(const ViewState &state, const Card &card) {
         // Google TV shows the service's own wordmark there, in white.
         if (!text.source.empty())
             text.wordmark = "wordmark-" + service;
-        text.tag = "Trending";
+        text.tag = say::msg("tv.banner.trending", "Trending");
         text.facts = card.subtitle;
         text.description = loglineOf(card.data["overview"].string());
-        text.button = text.source.empty() ? "More info" : "Watch now";
+        text.button = text.source.empty() ? say::msg("tv.banner.moreInfo", "More info")
+                                          : say::msg("tv.banner.watchNow", "Watch now");
     } else if (isTitle(card) && state.home.spotlightOwn) {
         // A focused title of a row on Google TV's banner: its logo or title, the service that has
         // it, two lines of its overview and its facts.
@@ -151,18 +153,21 @@ HeroText linesOf(const ViewState &state, const Card &card) {
         text.source = card.data["because"].string().empty() ? rowTitleOf(state, card)
                                                             : card.data["because"].string();
         if (text.source.empty())
-            text.source = card.kind == "youtube" ? "YouTube" : "Top picks for you";
+            text.source = card.kind == "youtube" ? "YouTube" : say::msg("tv.home.topPicks", "Top picks for you");
         text.facts = card.subtitle.empty() && card.kind == "youtube" ? "YouTube" : card.subtitle;
         text.description = card.data["overview"].string();
     } else if (card.kind == "dev" || card.kind == "ch") {
-        text.source = card.kind == "dev" ? "Input" : "Channel";
+        text.source = card.kind == "dev" ? say::msg("tv.banner.input", "Input")
+                                         : say::msg("tv.banner.channel", "Channel");
         text.facts = card.subtitle;
-        text.hint = card.kind == "dev" ? "Switch" : "Watch";
+        text.hint = card.kind == "dev" ? say::msg("tv.banner.switch", "Switch")
+                                       : say::msg("tv.banner.watch", "Watch");
     } else {
-        text.source = card.id == "lg-home" ? "LG Home" : "Your apps";
+        text.source = card.id == "lg-home" ? say::msg("tv.home.lgHome", "LG Home")
+                                           : say::msg("tv.home.yourApps", "Your apps");
         text.facts = card.data["description"].string();
         text.image = card.image;
-        text.hint = "Open";
+        text.hint = say::msg("tv.banner.open", "Open");
     }
     return text;
 }

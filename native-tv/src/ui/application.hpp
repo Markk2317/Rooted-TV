@@ -137,6 +137,8 @@ class Application : private ScreenHost {
     bool capsAnswered_ = false, holdForCaps_ = false;
     uint32_t capsAt_ = 0;
     double homeKeySeq_ = -1; // the server's count of Home presses it brought the app forward for
+    // The TV's language as caps last gave it ("it"), whose dictionary was asked for.
+    std::string language_;
     std::string initial_;
     unsigned recentSnapshot_ = 0;
     std::string confirmId_;

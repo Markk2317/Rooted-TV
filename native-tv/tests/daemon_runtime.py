@@ -52,13 +52,14 @@ def unused_port_pair(excluded=()):
     raise RuntimeError("could not reserve consecutive test ports")
 
 
-def without_country_learning(calls):
-    """Keep route assertions focused on their requested Luna operation."""
+def without_settings_learning(calls):
+    """Keep route assertions focused on their requested Luna operation: the daemon reads the
+    TV's country and its menu language at start, whatever the test asks."""
     return [call for call in calls
             if not (call.get("uri") == "com.webos.settingsservice/getSystemSettings" and
-                    call.get("payload", {}).get("category") == "option" and
-                    "smartServiceCountryCode2" in
-                    call.get("payload", {}).get("keys", []))]
+                    ((call.get("payload", {}).get("category") == "option" and
+                      "smartServiceCountryCode2" in call.get("payload", {}).get("keys", [])) or
+                     call.get("payload", {}).get("keys") == ["localeInfo"]))]
 
 
 def app_install_ipk():
@@ -500,7 +501,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     recorded = ([json.loads(line)
                                  for line in details.read_text().splitlines()]
                                 if details.exists() else [])
-                    calls = [call["uri"] for call in without_country_learning(recorded)]
+                    calls = [call["uri"] for call in without_settings_learning(recorded)]
                     self.assertEqual(calls, scenario["calls"], scenario["name"])
                     if scenario["name"] == "available":
                         process.send_signal(signal.SIGTERM)
@@ -2020,7 +2021,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                                   result["compCycles"], result["refresherCycles"],
                                   result["failureAlerts"]),
                                  ("Running", "Running", 23, 9, 2))
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual([call["uri"] for call in calls], [
                     "com.webos.service.tv.systemproperty/getSystemProperties",
@@ -2037,7 +2038,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(body, b"")
                 recorded = [json.loads(line) for line in details.read_text().splitlines()]
-                self.assertEqual(len(without_country_learning(recorded)), 7,
+                self.assertEqual(len(without_settings_learning(recorded)), 7,
                                  "GET and HEAD share the 30-second panel cache")
 
                 status, body = request("/api/control", "POST", {
@@ -2047,7 +2048,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, body = request("/api/oledcare")
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 recorded = [json.loads(line) for line in details.read_text().splitlines()]
-                self.assertEqual(len(without_country_learning(recorded)), 15,
+                self.assertEqual(len(without_settings_learning(recorded)), 15,
                                  "refresher writes invalidate the OLED care cache")
             finally:
                 if process.poll() is None:
@@ -2547,7 +2548,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(result["simple"]["total"], 3)
 
                 recorded = [json.loads(line) for line in details.read_text().splitlines()]
-                routeCalls = without_country_learning(recorded)
+                routeCalls = without_settings_learning(recorded)
                 uris = [call["uri"] for call in routeCalls]
                 self.assertFalse(any(uri.startswith("com.webos.service.acr/") or
                                      uri.startswith("com.webos.service.admanager/") or
@@ -2559,7 +2560,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(body, b"")
                 recorded = [json.loads(line) for line in details.read_text().splitlines()]
-                self.assertEqual(len(without_country_learning(recorded)), callCount,
+                self.assertEqual(len(without_settings_learning(recorded)), callCount,
                                  "GET and HEAD share the privacy response cache")
                 self.assertEqual(nodeRequests, [],
                                  "native privacy projection must not proxy to Node")
@@ -2587,7 +2588,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(active["advertisingId"]["present"], True)
                 self.assertNotIn("stopped", active["advertisingId"])
                 recorded = [json.loads(line) for line in details.read_text().splitlines()]
-                uris = [call["uri"] for call in without_country_learning(recorded)]
+                uris = [call["uri"] for call in without_settings_learning(recorded)]
                 self.assertIn("com.webos.service.acr/getACRSolutionStatus", uris)
                 self.assertIn("com.webos.service.acr/getVideoCaptureStatus", uris)
                 self.assertIn("com.webos.service.admanager/getAdid", uris)
@@ -2703,7 +2704,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "ok": True, "key": "acrAllowed", "enabled": False,
                     "changed": True, "alsoChanged": 1
                 })
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 consentCalls = [call for call in calls
                                 if call["uri"].startswith("com.webos.settingsservice/")]
@@ -2733,7 +2734,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "ok": False,
                     "error": "chpAllowed is not changeable from here"
                 })
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual(len(calls), before,
                                  "hidden LG Channels consent is rejected before Luna")
@@ -2847,7 +2848,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, body = request("on")
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 self.assertEqual(json.loads(body), {"ok": True, "alsoChanged": 0})
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual([call["uri"] for call in calls], [
                     "com.webos.service.settings/getSystemSettings",
@@ -2870,7 +2871,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, body = request(False)
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 self.assertEqual(json.loads(body), {"ok": True, "alsoChanged": 1})
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual([call["uri"] for call in calls[6:]], [
                     "com.webos.service.settings/getSystemSettings",
@@ -3000,7 +3001,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 })
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 self.assertEqual(json.loads(body), {"ok": True, "limitTracking": True})
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual([call["uri"] for call in calls], [
                     "com.webos.settingsservice/getSystemSettings",
@@ -3018,7 +3019,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "ok": False,
                     "error": "LG’s advertising service is not running, and this would start it."
                 })
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual(len(calls), blockedCalls,
                                  "clearing cookies must not start a stopped dynamic service")
@@ -3033,7 +3034,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 })
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 self.assertEqual(json.loads(body), {"ok": True, "limitTracking": False})
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual([call["uri"] for call in calls[3:]], [
                     "com.webos.settingsservice/getSystemSettings",
@@ -3046,7 +3047,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, body = request({"action": "clearAdCookies"})
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 self.assertEqual(json.loads(body), {"ok": True})
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual(calls[-1]["uri"],
                                  "com.webos.service.admanager/inactivateCookies")
@@ -3178,7 +3179,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, body = request()
                 self.assertEqual(status, 200, body.decode("utf-8", "replace"))
                 self.assertEqual(json.loads(body), {"ok": True, "changed": True})
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual([call["uri"] for call in calls], [
                     "com.webos.service.admanager/getAdid",
@@ -3290,7 +3291,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertTrue(result["ok"], result)
                 self.assertEqual(result["state"]["gsr"], True)
                 self.assertEqual(result["state"]["tpc"], True)
-                calls = without_country_learning(
+                calls = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()])
                 self.assertEqual([call["uri"] for call in calls], [
                     "com.webos.service.oledepl/getGlobalStressReduction",
@@ -15228,12 +15229,12 @@ class DaemonRuntimeTests(unittest.TestCase):
                     self.fail("native daemon did not start:\n" + output[-4000:])
 
                 state = {"action": "state"}
-                beforeUnauthorized = without_country_learning(
+                beforeUnauthorized = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()]
                     if details.exists() else [])
                 status, body = request(state, withSecret=False)
                 self.assertEqual(status, 403, body.decode("utf-8", "replace"))
-                afterUnauthorized = without_country_learning(
+                afterUnauthorized = without_settings_learning(
                     [json.loads(line) for line in details.read_text().splitlines()]
                     if details.exists() else [])
                 self.assertEqual(afterUnauthorized, beforeUnauthorized,

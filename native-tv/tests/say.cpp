@@ -182,6 +182,23 @@ int main() {
         check(failures[0] + failures[1] + failures[2] + failures[3] == 0,
               "Concurrent messages and translations stay consistent");
 
+        // The TV client shows its own messages in the TV's language.
+        const Json shown = Json::parse(
+            "{\"tv.home.watch\":{\"text\":\"Guarda ora\",\"from\":\"Watch now\"},"
+            "\"tv.home.popular\":{\"text\":\"Popolari su {service}\",\"from\":\"Popular on {service}\"},"
+            "\"tv.home.old\":{\"text\":\"Vecchio\",\"from\":\"Old words\"},"
+            "\"tv.home.empty\":{\"text\":\"\",\"from\":\"Never empty\"}}");
+        say::showIn(shown);
+        check(say::msg("tv.home.watch", "Watch now") == "Guarda ora", "The client shows a translated message");
+        check(say::msg("tv.home.popular", "Popular on {service}", one("service", "Netflix")) == "Popolari su Netflix",
+              "with its values filled in");
+        check(say::msg("tv.home.old", "New words") == "New words" &&
+                  say::msg("tv.home.empty", "Never empty") == "Never empty" &&
+                  say::msg("tv.home.none", "Not there") == "Not there",
+              "and the English where the entry is outdated, empty or missing");
+        say::showIn(Json());
+        check(say::msg("tv.home.watch", "Watch now") == "Watch now", "An empty dictionary is English again");
+
         // Loading nothing turns it off again.
         check(say::loadTranslations("/nonexistent/nativetv-say") == 0 && say::translateJson(body, "es") == body,
               "Without a dictionary nothing is remembered or translated");

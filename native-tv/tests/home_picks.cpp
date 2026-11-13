@@ -45,6 +45,9 @@ int main() {
     assert(text.find("movie:1 | Heat (film, 2026) [Netflix]") != std::string::npos);
     assert(text.find("tv:2 | Slow Horses (series, 2026)\n") != std::string::npos);
     assert(text.find("country IT") != std::string::npos);
+    assert(text.find("a short reason in English") != std::string::npos);
+    assert(HomePicks::prompt(history, services, candidates, "IT", "it-IT").find("a short reason in the language it-IT") !=
+           std::string::npos);
     assert(text.find("in the last 30 days: Netflix (5 h 20 min), Prime Video (40 min).\n") !=
            std::string::npos);
     assert(HomePicks::prompt(history, Json::array(), candidates, "IT").find("last 30 days") ==

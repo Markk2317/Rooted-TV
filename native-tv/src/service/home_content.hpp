@@ -23,6 +23,9 @@ class HomeContent {
     // The TV's country ("IT"): a title's details then say which streaming services have it there,
     // as "services". Empty, or anything but two capitals, leaves them out.
     void setRegion(const std::string &region);
+    // TMDB's language for titles, overviews and genres ("it-IT", webOS's UI language). Anything
+    // but a language and a country is English (en-US).
+    void setLanguage(const std::string &language);
     Json details(const std::string &tmdbKey, bool netflixEnabled,
                  const std::string &type, const std::string &id);
     Json search(const std::string &tmdbKey, const std::string &query,
@@ -67,7 +70,7 @@ class HomeContent {
     void loadCacheLocked();
     void saveCacheLocked();
     std::string urlFor(const std::string &apiKey, const std::string &resource,
-                       const std::string &query) const;
+                       const std::string &query, const std::string &language) const;
 
     std::string cachePath_;
     Fetcher fetcher_;
@@ -80,6 +83,7 @@ class HomeContent {
     size_t queued_ = 0;
     bool cacheLoaded_ = false;
     std::string region_;
+    std::string language_ = "en-US";
 };
 
 } // namespace service

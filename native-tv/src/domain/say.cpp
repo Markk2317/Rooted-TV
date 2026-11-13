@@ -80,6 +80,23 @@ std::mutex originsMutex; // msg() runs on every HTTP worker
 Origins fixedOrigins;
 Origins filledOrigins;
 std::map<std::string, Dictionary> dictionaries; // changed only by loadTranslations, before serving
+// The client's language (showIn), read by msg() on the frame thread.
+std::atomic<bool> showing(false);
+std::mutex shownMutex;
+Dictionary shown;
+
+Dictionary readDictionary(const Json &document) {
+    Dictionary dictionary;
+    if (!document.isObject())
+        return dictionary;
+    for (const std::string &key : document.keys()) {
+        const Json entry = document[key];
+        if (entry["text"].isString() && entry["from"].isString() &&
+            !entry["text"].string().empty())
+            dictionary[key] = {entry["text"].string(), entry["from"].string()};
+    }
+    return dictionary;
+}
 
 void remember(const std::string &text, const std::string &key, const std::string &english,
               const Json &variables) {
@@ -230,6 +247,12 @@ bool languageCode(const std::string &value) {
 } // namespace
 
 std::string msg(const std::string &key, const std::string &english, const Json &variables) {
+    if (showing.load(std::memory_order_acquire)) {
+        std::lock_guard<std::mutex> lock(shownMutex);
+        const Dictionary::const_iterator entry = shown.find(key);
+        if (entry != shown.end() && entry->second.from == english)
+            return fill(entry->second.text, variables);
+    }
     const std::string text = fill(english, variables);
     if (translating.load(std::memory_order_acquire))
         remember(text, key, english, variables);
@@ -260,14 +283,7 @@ size_t loadTranslations(const std::string &directory) {
             if (name.size() != 7 || name.compare(2, 5, ".json") != 0 ||
                 !languageCode(name.substr(0, 2)) || !readFile(directory + "/" + name, contents))
                 continue;
-            const Json document = Json::parse(contents);
-            Dictionary dictionary;
-            for (const std::string &key : document.keys()) {
-                const Json entry = document[key];
-                if (entry["text"].isString() && entry["from"].isString() &&
-                    !entry["text"].string().empty())
-                    dictionary[key] = {entry["text"].string(), entry["from"].string()};
-            }
+            Dictionary dictionary = readDictionary(Json::parse(contents));
             if (!dictionary.empty())
                 loaded[name.substr(0, 2)] = std::move(dictionary);
         }
@@ -293,6 +309,13 @@ std::string requestedLanguage(const std::string &headerValue) {
         !translating.load(std::memory_order_acquire) || !dictionaries.count(code))
         return std::string();
     return code;
+}
+
+void showIn(const Json &dictionary) {
+    Dictionary read = readDictionary(dictionary);
+    std::lock_guard<std::mutex> lock(shownMutex);
+    shown.swap(read);
+    showing.store(!shown.empty(), std::memory_order_release);
 }
 
 std::string translateJson(const std::string &body, const std::string &language) {

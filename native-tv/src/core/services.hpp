@@ -26,5 +26,8 @@ class Services {
     // sent as X-Admin-Session on every API request from now on. Empty forgets it. A stand-in
     // that does not speak HTTP has nothing to do.
     virtual void adminSession(const std::string &) {}
+    // The language the client shows ("it"), sent as X-Native-Tv-Lang on every API request so the
+    // server's messages come back in it. Empty is English.
+    virtual void language(const std::string &) {}
 };
 } // namespace nativetv

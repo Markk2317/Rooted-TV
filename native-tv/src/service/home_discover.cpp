@@ -29,6 +29,7 @@ const int kMorningHour = 5;
 const size_t kPerRow = 16;
 const size_t kMaximumResponseBytes = 4 * 1024 * 1024;
 const int64_t kArtLifetimeMs = 7LL * 24 * 60 * 60 * 1000;
+const char *const kEnglish = "en-US";
 
 struct RowSpec {
     const char *key;
@@ -355,6 +356,16 @@ void HomeDiscover::setTitledArt(bool on) {
     std::lock_guard<std::mutex> lock(mutex_);
     titledArt_ = on;
 }
+void HomeDiscover::setLanguage(const std::string &language) {
+    const bool valid = language.size() == 5 && language[2] == '-' &&
+                       std::islower(static_cast<unsigned char>(language[0])) &&
+                       std::islower(static_cast<unsigned char>(language[1])) &&
+                       std::isupper(static_cast<unsigned char>(language[3])) &&
+                       std::isupper(static_cast<unsigned char>(language[4]));
+    std::lock_guard<std::mutex> lock(mutex_);
+    language_ = valid ? language : kEnglish;
+}
+
 void HomeDiscover::setTabRows(bool on) {
     std::lock_guard<std::mutex> lock(mutex_);
     tabRows_ = on;
@@ -422,8 +433,10 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
 
     LinkCheck linkCheck, netflixCheck;
     bool titledArt = false, tabRows = false;
+    std::string titleLanguage;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        titleLanguage = language_;
         linkCheck = linkCheck_;
         netflixCheck = netflixCheck_;
         titledArt = titledArt_ && !tmdbKey.empty();
@@ -485,7 +498,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     for (const RowSpec &row : kRows) {
         if (tmdbKey.empty()) break;
         std::string url = "https://api.themoviedb.org/3/" + std::string(row.path) +
-            "?api_key=" + urlEncode(tmdbKey) + "&language=en-US";
+            "?api_key=" + urlEncode(tmdbKey) + "&language=" + titleLanguage;
         Json document;
         std::string error;
         bool fetched = false;
@@ -520,7 +533,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
         for (int which = 0; which < 2; ++which) {
             const std::string url = "https://api.themoviedb.org/3/discover/" +
                 std::string(types[which]) + "?api_key=" + urlEncode(tmdbKey) +
-                "&language=en-US&sort_by=popularity.desc&include_adult=false" +
+                "&language=" + titleLanguage + "&sort_by=popularity.desc&include_adult=false" +
                 "&watch_region=" + region + "&with_watch_monetization_types=flatrate" +
                 "&with_watch_providers=" + urlEncode(service.providers);
             Json document;
@@ -566,7 +579,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
         const std::string path = row.path;
         const std::string url = "https://api.themoviedb.org/3/" + path +
             (path.find('?') == std::string::npos ? "?" : "&") + "api_key=" + urlEncode(tmdbKey) +
-            "&language=en-US&include_adult=false" + (region.empty() ? "" : "&region=" + region);
+            "&language=" + titleLanguage + "&include_adult=false" + (region.empty() ? "" : "&region=" + region);
         Json document;
         std::string error;
         bool fetched = false;
@@ -633,6 +646,7 @@ void HomeDiscover::refresh(const std::string &tmdbKey,
     updated.set("youtubeAsked", Json::flag(!youtubeKey.empty()));
     updated.set("tabsAsked", Json::flag(tabRows));
     updated.set("region", Json::text(region));
+    updated.set("language", Json::text(titleLanguage));
     if (titledArt) updated.set("art", art);
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -745,6 +759,8 @@ bool HomeDiscover::dueLocked(int64_t nowMs, bool tmdbAsked, bool youtubeAsked,
     if (!cache_.isObject()) return true;
     // The rows of another country, or of none, are not this TV's.
     if (cache_["region"].string() != region) return true;
+    // Titles and overviews in another language (a feed from before languages is English).
+    if (cache_["language"].string(kEnglish) != language_) return true;
     // A key saved after the cache was made has no rows in it, so it must not wait for tomorrow. A cache
     // from before the keys were recorded is read from its rows.
     bool youtubeRows = false, titleRows = false;

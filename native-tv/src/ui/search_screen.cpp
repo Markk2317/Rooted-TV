@@ -441,7 +441,7 @@ class SearchScreen final : public ScreenView {
     }
     void openGenre(ScreenHost &host) {
         const names::SearchGenre &genre = names::searchGenres()[genreIndex_];
-        openResults(host, genre.name, genre.key);
+        openResults(host, genreName(genre.key), genre.key);
     }
     // Edit search: back to the keyboard with the words searched; a genre's are not typed.
     void editSearch(ScreenHost &host) {
@@ -738,7 +738,7 @@ class SearchScreen final : public ScreenView {
             tile.rest = {layout::homeX + column * (layout::genreW + layout::genreGapX),
                          top + row * (layout::genreH + layout::genreGapY), layout::genreW, layout::genreH};
             tile.id = "search:genre:" + std::to_string(i);
-            tile.label = genres[i].name;
+            tile.label = genreName(genres[i].key);
             tile.color = genreColor(i);
             tile.lit = rise;
             tile.focus = static_cast<float>(motion.value("search:g:" + std::to_string(i)));

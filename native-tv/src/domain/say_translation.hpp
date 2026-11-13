@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/json.hpp"
 #include <cstddef>
 #include <string>
 
@@ -20,6 +21,12 @@ size_t loadTranslations(const std::string &directory);
 // The language a request asks for in its language header, when a dictionary is
 // loaded for it. English, anything unknown and no header are all "".
 std::string requestedLanguage(const std::string &headerValue);
+
+// The TV client's own screens, in the TV's language: from now on msg() returns
+// the translation where `dictionary` (a parsed <lang>.json) has one made from
+// the same English, and the English otherwise. An empty or invalid document is
+// English again. Only the client calls it; the daemon's msg() stays English.
+void showIn(const Json &dictionary);
 
 // A JSON body with the messages in its display fields (error, label, title and
 // the like) replaced by their translations. Raw values, the strings of fields

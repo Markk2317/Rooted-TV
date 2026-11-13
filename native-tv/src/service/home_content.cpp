@@ -30,6 +30,7 @@ const size_t kMaximumCacheEntries = 40;
 const int kCacheVersion = 3; // home-content.json's format; see loadCacheLocked
 const size_t kMaximumDocumentBytes = 8 * 1024 * 1024;
 const char *const kTmdbApi = "https://api.themoviedb.org/3/";
+const char *const kEnglish = "en-US";
 
 struct CodePoint {
     uint32_t value;
@@ -649,6 +650,16 @@ Json HomeContent::details(const std::string &tmdbKey, bool netflixEnabled,
     return copy;
 }
 
+void HomeContent::setLanguage(const std::string &language) {
+    const bool valid = language.size() == 5 && language[2] == '-' &&
+                       std::islower(static_cast<unsigned char>(language[0])) &&
+                       std::islower(static_cast<unsigned char>(language[1])) &&
+                       std::isupper(static_cast<unsigned char>(language[3])) &&
+                       std::isupper(static_cast<unsigned char>(language[4]));
+    std::lock_guard<std::mutex> lock(mutex_);
+    language_ = valid ? language : kEnglish;
+}
+
 void HomeContent::setRegion(const std::string &region) {
     const bool valid = region.size() == 2 && std::all_of(region.begin(), region.end(),
         [](unsigned char c) { return c >= 'A' && c <= 'Z'; });
@@ -854,8 +865,11 @@ Json HomeContent::wikidataLookup(const std::string &tmdbKey, const std::string &
 Json HomeContent::request(const std::string &apiKey, const std::string &resource,
                           const std::string &query, int64_t lifetimeMs,
                           const Converter &convert) {
-    const std::string key = md5Hex(resource + query);
     std::unique_lock<std::mutex> lock(mutex_);
+    // Each language's answer is kept apart; English keeps the keys it had before there were others.
+    const std::string language = language_;
+    const std::string key =
+        md5Hex(resource + query + (language == kEnglish ? std::string() : "|" + language));
     loadCacheLocked();
     const auto cached = cache_.find(key);
     const bool hasEntry = cached != cache_.end();
@@ -896,7 +910,7 @@ Json HomeContent::request(const std::string &apiKey, const std::string &resource
     bool fetched = false;
     Json converted;
     try {
-        fetched = fetch(urlFor(apiKey, resource, query), document, error);
+        fetched = fetch(urlFor(apiKey, resource, query, language), document, error);
         if (fetched) converted = convert(document);
     } catch (...) {
         fetched = false;
@@ -981,9 +995,8 @@ bool HomeContent::fetch(const std::string &url, Json &document,
     return true;
 }
 
-std::string HomeContent::urlFor(const std::string &apiKey,
-                               const std::string &resource,
-                               const std::string &query) const {
+std::string HomeContent::urlFor(const std::string &apiKey, const std::string &resource,
+                               const std::string &query, const std::string &language) const {
     if (resource.compare(0, 9, "wikidata/") == 0)
         return "https://www.wikidata.org/wiki/Special:EntityData/" +
                resource.substr(9) + ".json";
@@ -998,7 +1011,7 @@ std::string HomeContent::urlFor(const std::string &apiKey,
         return "https://tv.apple.com/" + resource.substr(8, slash - 8) + "/movie/id" + resource.substr(slash + 1);
     }
     return std::string(kTmdbApi) + resource + "?api_key=" +
-           urlEncode(apiKey) + "&language=en-US" + query;
+           urlEncode(apiKey) + "&language=" + language + query;
 }
 
 void HomeContent::loadCacheLocked() {

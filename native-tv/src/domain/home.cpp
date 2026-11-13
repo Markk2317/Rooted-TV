@@ -1,11 +1,13 @@
 #include "domain/models.hpp"
 #include "domain/names.hpp"
+#include "domain/say.hpp"
 #include <algorithm>
 #include <cmath>
 #include <utility>
 #include <map>
 
 namespace nativetv {
+using say::msg;
 Json fields(std::initializer_list<std::pair<std::string, Json>> values) {
     Json result = Json::object();
     for (const auto &pair : values)
@@ -44,17 +46,21 @@ std::string artwork(const Json &item, bool hero) {
 std::string titleFacts(const Json &item, bool withKind) {
     std::vector<std::string> parts;
     if (withKind && item["type"].string() == "movie")
-        parts.push_back("Film");
+        parts.push_back(msg("tv.title.film", "Film"));
     else if (withKind && item["type"].string() == "tv")
-        parts.push_back("Series");
+        parts.push_back(msg("tv.title.series", "Series"));
     if (!item["year"].string().empty())
         parts.push_back(item["year"].string());
     if (item["rating"].number() > 0)
         parts.push_back("★ " + compactNumber(item["rating"].number(), 1));
     if (item["runtime"].number() > 0)
-        parts.push_back(compactNumber(item["runtime"].number()) + " min");
-    if (item["seasons"].number() > 0)
-        parts.push_back(compactNumber(item["seasons"].number()) + " seasons");
+        parts.push_back(msg("tv.title.minutes", "{minutes} min",
+                            fields({{"minutes", Json::text(compactNumber(item["runtime"].number()))}})));
+    if (item["seasons"].number() == 1)
+        parts.push_back(msg("tv.title.season", "1 season"));
+    else if (item["seasons"].number() > 1)
+        parts.push_back(msg("tv.title.seasons", "{seasons} seasons",
+                            fields({{"seasons", Json::text(compactNumber(item["seasons"].number()))}})));
     for (const auto &genre : item["genres"].items())
         parts.push_back(genre.string());
     std::string text;
@@ -78,7 +84,8 @@ std::string pictureLabel(const Json &picture) {
                 hz.pop_back();
             if (!hz.empty() && hz.back() == '.')
                 hz.pop_back();
-            dimensions += " at " + hz + " Hz";
+            dimensions = msg("tv.picture.rate", "{size} at {hz} Hz",
+                             fields({{"size", Json::text(dimensions)}, {"hz", Json::text(hz)}}));
         }
         parts.push_back(dimensions);
         std::string hdr = signal["hdr"].string();
@@ -103,7 +110,7 @@ bool titlesTab(const std::string &tab) {
     return tab == "films" || tab == "shows";
 }
 std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover) {
-    std::vector<Tab> tabs = {{"home", "Home", Operation::None}};
+    std::vector<Tab> tabs = {{"home", msg("tv.tab.home", "Home"), Operation::None}};
     bool films = false, shows = false;
     for (const auto &row : discover["rows"].items()) {
         const std::string key = row["key"].string();
@@ -111,15 +118,15 @@ std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover) {
         shows = shows || key.compare(0, 6, "shows:") == 0;
     }
     if (films)
-        tabs.push_back({"films", "Films", Operation::None});
+        tabs.push_back({"films", msg("tv.tab.films", "Films"), Operation::None});
     if (shows)
-        tabs.push_back({"shows", "Shows", Operation::None});
+        tabs.push_back({"shows", msg("tv.tab.shows", "Shows"), Operation::None});
     if (catalogue["layout"]["showLive"].boolean() &&
         catalogue["sources"]["channels"].number(-1) != 0)
-        tabs.push_back({"live", "Live", Operation::None});
-    tabs.push_back({"apps", "Apps", Operation::None});
+        tabs.push_back({"live", msg("tv.tab.live", "Live"), Operation::None});
+    tabs.push_back({"apps", msg("tv.tab.apps", "Apps"), Operation::None});
     if (catalogue["layout"]["showInputs"].boolean(true) && catalogue["devices"].size())
-        tabs.push_back({"inputs", "Inputs", Operation::None});
+        tabs.push_back({"inputs", msg("tv.tab.inputs", "Inputs"), Operation::None});
     return tabs;
 }
 // The ids hidden from `list`: "app", "dev" or "ch" are Home's rows, "appsTab" is the Apps tab's own
@@ -143,7 +150,9 @@ CardRow catalogueRow(const std::string &kind, const Json &catalogue, const Json 
     const Json hiddenList = hiddenIds(catalogue, list.empty() ? kind : list);
     CardRow row;
     row.key = kind;
-    row.title = kind == "app" ? "Apps" : kind == "dev" ? "Inputs" : "Channels";
+    row.title = kind == "app"   ? msg("tv.tab.apps", "Apps")
+                : kind == "dev" ? msg("tv.tab.inputs", "Inputs")
+                                : msg("tv.home.channels", "Channels");
     std::map<std::string, Json> index;
     for (const auto &item : catalogue[kind == "app"   ? "apps"
                                       : kind == "dev" ? "devices"
@@ -166,12 +175,13 @@ CardRow catalogueRow(const std::string &kind, const Json &catalogue, const Json 
         card.kind = kind;
         card.hidden = hidden;
         card.data = item;
-        card.title = id == "lg-home" ? "LG Home" : item["title"].string(item["name"].string(id));
+        card.title = id == "lg-home" ? msg("tv.home.lgHome", "LG Home")
+                                     : item["title"].string(item["name"].string(id));
         if (kind == "app" && id != "lg-home")
             card.image = "app:" + id;
         if (kind == "dev")
             card.subtitle =
-                item["unused"].boolean()   ? "Nothing connected"
+                item["unused"].boolean()   ? msg("tv.inputs.nothing", "Nothing connected")
                 : item["port"].isNumber() ? "HDMI " + compactNumber(item["port"].number())
                                           : "HDMI " + item["port"].string();
         if (kind == "ch") {
@@ -202,7 +212,7 @@ std::vector<CardRow> appRows(const Json &catalogue, const Json &guide, const std
             CardRow row;
             row.key = "app";
             row.group = kind["key"].string();
-            row.title = kind["label"].string(row.group);
+            row.title = appKindName(row.group, kind["label"].string(row.group));
             for (const Card &card : all.cards)
                 if (kindOf(card) == row.group)
                     row.cards.push_back(card);
@@ -220,7 +230,7 @@ std::string kindOf(const Card &card) {
 CardRow appsRow(const Json &catalogue, const Json &guide, bool withHidden, const std::string &list) {
     CardRow apps;
     apps.key = "app";
-    apps.title = list == "appsTab" ? "Apps" : "Your apps";
+    apps.title = list == "appsTab" ? msg("tv.tab.apps", "Apps") : msg("tv.home.yourApps", "Your apps");
     for (const CardRow &row : appRows(catalogue, guide, list))
         apps.cards.insert(apps.cards.end(), row.cards.begin(), row.cards.end());
     if (withHidden)
@@ -252,9 +262,12 @@ namespace {
 std::string playedFor(double milliseconds) {
     const long minutes = std::lround(milliseconds / 60000);
     if (minutes < 60)
-        return std::to_string(minutes) + " min";
-    return std::to_string(minutes / 60) + " h" +
-           (minutes % 60 ? " " + std::to_string(minutes % 60) + " min" : std::string());
+        return msg("tv.title.minutes", "{minutes} min", fields({{"minutes", Json::text(std::to_string(minutes))}}));
+    if (minutes % 60 == 0)
+        return msg("tv.title.hours", "{hours} h", fields({{"hours", Json::text(std::to_string(minutes / 60))}}));
+    return msg("tv.title.hoursMinutes", "{hours} h {minutes} min",
+               fields({{"hours", Json::text(std::to_string(minutes / 60))},
+                       {"minutes", Json::text(std::to_string(minutes % 60))}}));
 }
 // A title card of the feed's row `rowKey`.
 Card feedCard(const Json &item, const std::string &rowKey) {
@@ -288,7 +301,8 @@ Card feedCard(const Json &item, const std::string &rowKey) {
         // app, whose own row resumes it.
         card.image = card.backdrop =
             item["frame"].string().empty() ? "" : "frame:" + item["frame"].string();
-        card.subtitle = "Watched for " + playedFor(item["playedMs"].number());
+        card.subtitle = msg("tv.home.watchedFor", "Watched for {time}",
+                            fields({{"time", Json::text(playedFor(item["playedMs"].number()))}}));
         card.command = post(Operation::OpenHomeItem,
                             fields({{"kind", Json::text("app")}, {"id", item["appId"]}}));
     } else if (card.kind == "continue") {
@@ -318,7 +332,8 @@ std::string continueLine(const Card &card) {
     const double runtime = card.data["runtime"].number(), progress = card.data["progress"].number();
     if (runtime > 0 && progress > 0 && progress < 1) {
         const double left = runtime * (1 - progress) * 60000;
-        line += (line.empty() ? "" : " • ") + playedFor(left) + " left";
+        line += (line.empty() ? "" : " • ") +
+                msg("tv.home.timeLeft", "{time} left", fields({{"time", Json::text(playedFor(left))}}));
     }
     return line;
 }
@@ -330,18 +345,20 @@ constexpr size_t kFeaturedMax = 8;
 std::vector<CardRow> titleTabRows(const std::string &tab, const Json &discover) {
     const bool films = tab == "films";
     const std::vector<std::pair<std::string, std::string>> rows =
-        films ? std::vector<std::pair<std::string, std::string>>{{"films:popular", "Popular films"},
-                                                                 {"films:family", "Family films"},
-                                                                 {"films:top", "Top rated films"},
-                                                                 {"films:action", "Action and adventure"},
-                                                                 {"films:comedy", "Comedies"},
-                                                                 {"films:animation", "Animated films"}}
-              : std::vector<std::pair<std::string, std::string>>{{"shows:popular", "Popular shows"},
-                                                                 {"shows:animation", "Animated shows"},
-                                                                 {"shows:top", "Top rated shows"},
-                                                                 {"shows:crime", "Crime shows"},
-                                                                 {"shows:comedy", "Comedy shows"},
-                                                                 {"shows:docs", "Documentaries"}};
+        films ? std::vector<std::pair<std::string, std::string>>{
+                    {"films:popular", msg("tv.films.popular", "Popular films")},
+                    {"films:family", msg("tv.films.family", "Family films")},
+                    {"films:top", msg("tv.films.top", "Top rated films")},
+                    {"films:action", msg("tv.films.action", "Action and adventure")},
+                    {"films:comedy", msg("tv.films.comedy", "Comedies")},
+                    {"films:animation", msg("tv.films.animation", "Animated films")}}
+              : std::vector<std::pair<std::string, std::string>>{
+                    {"shows:popular", msg("tv.shows.popular", "Popular shows")},
+                    {"shows:animation", msg("tv.shows.animation", "Animated shows")},
+                    {"shows:top", msg("tv.shows.top", "Top rated shows")},
+                    {"shows:crime", msg("tv.shows.crime", "Crime shows")},
+                    {"shows:comedy", msg("tv.shows.comedy", "Comedy shows")},
+                    {"shows:docs", msg("tv.shows.docs", "Documentaries")}};
     std::map<std::string, Json> feedRows;
     std::map<std::string, std::string> services;
     for (const auto &source : discover["rows"].items()) {
@@ -393,6 +410,38 @@ std::vector<CardRow> titleTabRows(const std::string &tab, const Json &discover) 
     return result;
 }
 } // namespace
+std::string genreName(const std::string &key) {
+    if (key == "action") return msg("tv.genre.action", "Action");
+    if (key == "adventure") return msg("tv.genre.adventure", "Adventure");
+    if (key == "animation") return msg("tv.genre.animation", "Animation");
+    if (key == "comedy") return msg("tv.genre.comedy", "Comedy");
+    if (key == "crime") return msg("tv.genre.crime", "Crime");
+    if (key == "documentary") return msg("tv.genre.documentary", "Documentary");
+    if (key == "drama") return msg("tv.genre.drama", "Drama");
+    if (key == "family") return msg("tv.genre.family", "Family");
+    if (key == "fantasy") return msg("tv.genre.fantasy", "Fantasy");
+    if (key == "war") return msg("tv.genre.war", "War");
+    if (key == "history") return msg("tv.genre.history", "History");
+    if (key == "horror") return msg("tv.genre.horror", "Horror");
+    if (key == "music") return msg("tv.genre.music", "Music");
+    if (key == "mystery") return msg("tv.genre.mystery", "Mystery");
+    if (key == "reality") return msg("tv.genre.reality", "Reality");
+    if (key == "romance") return msg("tv.genre.romance", "Romance");
+    if (key == "scifi") return msg("tv.genre.scifi", "Science fiction");
+    if (key == "thriller") return msg("tv.genre.thriller", "Thriller");
+    const names::SearchGenre *genre = names::searchGenre(key);
+    return genre ? genre->name : key;
+}
+std::string appKindName(const std::string &key, const std::string &fallback) {
+    if (key == "video") return msg("tv.apps.kind.video", "Movies & TV");
+    if (key == "music") return msg("tv.apps.kind.music", "Music & audio");
+    if (key == "games") return msg("tv.apps.kind.games", "Games");
+    if (key == "home") return msg("tv.apps.kind.home", "Smart home");
+    if (key == "tv") return msg("tv.apps.kind.tv", "LG & TV");
+    if (key == "tools") return msg("tv.apps.kind.tools", "Tools");
+    if (key == "other") return msg("tv.apps.kind.other", "Other");
+    return fallback;
+}
 std::string titleCaption(const Card &card) {
     std::string line;
     if (const auto *service = nativetv::names::streamingService(card.data["service"].string()))
@@ -414,7 +463,7 @@ constexpr const char *kLgStoreApp = "com.webos.app.discovery", *kHomebrewApp = "
 CardRow storesRow(const Json &catalogue) {
     CardRow row;
     row.key = "appstore";
-    row.title = "Get more apps";
+    row.title = msg("tv.apps.getMore", "Get more apps");
     for (const auto &app : catalogue["apps"].items()) {
         const std::string id = app["id"].string();
         if (id != kLgStoreApp && id != kHomebrewApp)
@@ -439,7 +488,7 @@ CardRow storesRow(const Json &catalogue) {
 std::vector<CardRow> appsTabRows(const Json &catalogue, const Json &guide) {
     std::vector<CardRow> result;
     CardRow apps = appsRow(catalogue, guide, false, "appsTab");
-    apps.title = "Your apps";
+    apps.title = msg("tv.home.yourApps", "Your apps");
     if (apps.cards.empty())
         return result;
     CardRow banners;
@@ -457,19 +506,19 @@ std::vector<CardRow> appsTabRows(const Json &catalogue, const Json &guide) {
     Card field;
     field.id = "search";
     field.kind = "search";
-    field.title = "Search apps";
+    field.title = msg("tv.apps.search", "Search apps");
     field.command = navigate("search");
     search.cards.push_back(field);
     result.push_back(search);
     CardRow chips;
     chips.key = "chips";
-    chips.title = "App categories";
+    chips.title = msg("tv.apps.categories", "App categories");
     std::vector<CardRow> kinds;
     for (const auto &kind : catalogue["kinds"].items()) {
         CardRow row;
         row.key = "appkind";
         row.group = kind["key"].string();
-        row.title = kind["label"].string(row.group);
+        row.title = appKindName(row.group, kind["label"].string(row.group));
         for (const Card &card : apps.cards)
             if (kindOf(card) == row.group)
                 row.cards.push_back(card);
@@ -505,13 +554,14 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     }
     if (titlesTab(tab))
         return titleTabRows(tab, discover);
-    const std::map<std::string, std::string> names = {{"trending", "Top picks for you"},
-                                                      {"movies", "Trending films this week"},
-                                                      {"series", "Trending series this week"},
-                                                      {"netflix", "Available on Netflix"},
-                                                      {"watchlist", "Your watchlist"},
-                                                      {"continue", "Continue watching"},
-                                                      {"youtube", "Trending on YouTube"}};
+    const std::map<std::string, std::string> names = {
+        {"trending", msg("tv.home.topPicks", "Top picks for you")},
+        {"movies", msg("tv.home.trendingFilms", "Trending films this week")},
+        {"series", msg("tv.home.trendingSeries", "Trending series this week")},
+        {"netflix", msg("tv.home.onNetflix", "Available on Netflix")},
+        {"watchlist", msg("tv.home.watchlist", "Your watchlist")},
+        {"continue", msg("tv.home.continue", "Continue watching")},
+        {"youtube", msg("tv.home.trendingYoutube", "Trending on YouTube")}};
     std::map<std::string, Json> feedRows;
     for (const auto &source : discover["rows"].items())
         feedRows[source["key"].string()] = source;
@@ -531,14 +581,16 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         if (card.id == "youtube.leanback.v4" && feedRows.count("youtube:subscriptions") &&
             !serviceNames.count("youtube:subscriptions")) {
             keys.push_back("youtube:subscriptions");
-            serviceNames["youtube:subscriptions"] = "From your YouTube subscriptions";
+            serviceNames["youtube:subscriptions"] =
+                msg("tv.home.subscriptions", "From your YouTube subscriptions");
         }
         for (const auto &service : nativetv::names::streamingServices()) {
             const std::string key = "on:" + service.key;
             if (feedRows.count(key) && !serviceNames.count(key) &&
                 std::find(service.apps.begin(), service.apps.end(), card.id) != service.apps.end()) {
                 keys.push_back(key);
-                serviceNames[key] = "Popular on " + service.name;
+                serviceNames[key] =
+                    msg("tv.home.popularOn", "Popular on {service}", fields({{"service", Json::text(service.name)}}));
             }
         }
     }

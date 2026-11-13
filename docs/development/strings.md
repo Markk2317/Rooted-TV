@@ -5,10 +5,11 @@ used, with a key next to it. The key names the string, so the same words are use
 wherever it appears, and `scripts/check-strings.py` catches the ones that drift
 apart. A translation is a file that maps the same keys to another language, in
 `native-tv/assets/i18n/<lang>.json`. English needs no file, so reading the markup
-or the script shows the real words. [Spanish](#spanish) is the one language so far.
+or the script shows the real words. The dashboard is in [Spanish](#spanish) too, and
+the native TV client in [Italian](#the-tv-app).
 
-The pages the TV's own browser shows (`native-tv/assets/google-tv/`) and the native
-TV client are English only. So are Home Assistant entity names, MQTT topics and
+The pages the TV's own browser shows (`native-tv/assets/google-tv/`) are English only.
+So are Home Assistant entity names, MQTT topics and
 the logs, and the "Can't reach the TV" page of the dashboard's service worker
 (`assets/pwa/sw.js`), which has to work with no TV to fetch a dictionary from.
 
@@ -184,6 +185,33 @@ character Spanish needs but whose screens and glyph atlas have not been tried wi
 the pages the TV's own browser shows; names the TV reports; the Homebrew Channel
 catalogue's descriptions; and the date formats, which follow the browser's own
 language rather than the dashboard's.
+
+## The TV app
+
+The native TV client speaks the TV's own menu language, as Google TV speaks its
+device's. The daemon reads webOS's `localeInfo` (`locales.UI`, such as `it-IT`) at
+start and again at most once a minute as the client asks for `/api/caps`, keeps it
+in `locale` beside the server and names its language there (`"language": "it"`).
+The client then fetches `/assets/i18n/it.json`, from which `say::msg()` in the
+client returns the translations (`say::showIn()`), and sends `X-Native-Tv-Lang: it`
+on its requests, so the server's messages it shows, such as a row's title, come
+back translated as a dashboard's do. TMDB is asked for titles, overviews and genres
+in the same language. With no file for the TV's language, or English, the client
+shows English.
+
+The client's strings are keyed like the server's: `msg("tv.home.topPicks",
+"Top picks for you")` in `native-tv/src/ui/` and the models it shares in
+`native-tv/src/domain/`, and `check-strings.py` reads them there. A language the TV
+client alone speaks is listed in `TV_ONLY` in that script rather than in the
+dashboard's `LANGS`, so its file can hold the client's words without offering a
+half-translated dashboard.
+
+Italian (`it.json`) covers the screens Google TV has: Home and its tabs, the banner,
+a title's details, Search, the Apps tab, Quick settings, the profiles, the recent
+apps and the keyboard. Its words are Google TV's own where Google TV has the same
+string (taken from the Italian resources of a Chromecast with Google TV's launcher
+and from its screens), such as "Scelti per te", "Le tue app" and "Lista di titoli".
+Native Tv's own settings, setup and tools are still English.
 
 ## Converting part of a page
 
