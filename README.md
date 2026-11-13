@@ -11,8 +11,8 @@
 Beside the app, a server on the TV gives phones and computers a dashboard, privacy tools and a Home Assistant bridge.
 
 <p align="center">
-  <img src="docs/screenshots/readme-apps.jpg" alt="The Apps tab: favourite apps, Search apps, app categories and the Movies and TV row" width="49%">
-  <img src="docs/screenshots/readme-quick-settings.jpg" alt="Quick settings after Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps" width="49%">
+  <img src="docs/screenshots/readme-apps.jpg" alt="The Apps tab: favourite apps, Search apps, app categories and the Movies and TV row" height="300">
+  <img src="docs/screenshots/readme-quick-settings.jpg" alt="Quick settings after Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps" height="300">
 </p>
 <p align="center"><sub>Captured on an LG OLED55C6V.</sub></p>
 
