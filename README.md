@@ -1,279 +1,106 @@
-<p align="center"><img src="docs/logo/nativetv-512.png" width="128" alt="Native Tv logo: an n whose arch is a screen corner, with a green pixel"></p>
+<h1 align="center">Salotto</h1>
 
-<h1 align="center">Native Tv</h1>
-
-<p align="center"><b>Your TV, your rules.</b><br>An open-source dashboard, privacy toolkit and Home Assistant bridge for rooted LG webOS TVs.</p>
+<p align="center"><b>La home di Google TV sui televisori LG webOS.</b><br>Un launcher nativo per i televisori LG rootati, costruito per i modelli con webOS 3.4.</p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/ihtisham1211/native-tv?color=1fb653"></a>
-  <a href="https://github.com/ihtisham1211/native-tv/actions/workflows/checks.yml"><img alt="Checks" src="https://github.com/ihtisham1211/native-tv/actions/workflows/checks.yml/badge.svg"></a>
-  <a href="https://ihtisham1211.github.io/native-tv/"><img alt="Documentation" src="https://img.shields.io/badge/docs-ihtisham1211.github.io%2Fnative--tv-1fb653"></a>
-  <img alt="LG webOS 3.4 and later" src="https://img.shields.io/badge/LG%20webOS-3.4%20and%20later-a50034">
-  <img alt="Home Assistant over MQTT Discovery" src="https://img.shields.io/badge/Home%20Assistant-MQTT%20Discovery-41bdf5?logo=homeassistant&logoColor=white">
+  <img src="docs/screenshots/salotto-home.jpg" alt="La Home di Salotto su un LG C6: il banner con un film di tendenza, Altre informazioni e la riga Scelti per te" width="100%">
 </p>
+
+**Salotto** sostituisce la home di un televisore LG webOS con una copia di quella di Google TV: la stessa Home con il banner e le righe di titoli, le schede Film, Programmi, App e Ingressi, la pagina di ogni titolo, la ricerca, le impostazioni rapide e i profili. È un'app C++ e OpenGL ES che gira sul televisore stesso, senza browser, a 60 fotogrammi al secondo, e parla la lingua dei menu del televisore.
+
+Accanto all'app, un server sul televisore offre una dashboard per telefono e computer, gli strumenti per la privacy e il collegamento a Home Assistant.
 
 <p align="center">
-  <a href="https://ihtisham1211.github.io/native-tv/">Documentation</a> ·
-  <a href="https://ihtisham1211.github.io/native-tv/getting-started/install/">Install</a> ·
-  <a href="https://ihtisham1211.github.io/native-tv/getting-started/tested-tvs/">Tested TVs</a> ·
-  <a href="https://ihtisham1211.github.io/native-tv/integrations/home-assistant/">Home Assistant</a> ·
-  <a href="https://github.com/ihtisham1211/native-tv/issues">Issues</a>
+  <img src="docs/screenshots/salotto-dettagli.jpg" alt="La pagina di un film: titolo, voto, genere, durata, trama e i pulsanti Guarda su Prime Video, Trailer, Lista di titoli e Già guardato" width="49%">
+  <img src="docs/screenshots/salotto-ricerca.jpg" alt="La ricerca: il campo Cerca film, serie e altro e la griglia Cerca per genere" width="49%">
 </p>
+<p align="center"><sub>Schermate catturate su un LG OLED55C6V con i menu in italiano.</sub></p>
 
-**Native Tv** is a server that runs directly on a rooted LG webOS TV. It gives the TV a live browser dashboard for any phone or computer, a native app on the TV itself, and an MQTT bridge for Home Assistant and other smart-home software.
+## Cosa fa
 
-Use it to control an LG OLED or LCD TV without the cloud, see and switch off what LG's ACR (Live Plus), ad tracking and data agreements collect, block LG's ad and telemetry servers, debloat apps and background services, remap the remote's buttons, protect an OLED panel from burn-in, and read the TV's hardware telemetry.
+* **Home come Google TV.** Il banner con i titoli di tendenza, i loro loghi e i trailer in HD; le righe Scelti per te (scelti da Gemini, con una chiave Gemini), Continua a guardare, i titoli popolari su Netflix, Prime Video e Disney+ nel paese del televisore, YouTube di tendenza e dalle iscrizioni di ogni profilo.
+* **Schede Film, Programmi, App e Ingressi.** Le righe per genere con la didascalia della riga selezionata, le app installate disposte come su Google TV, gli ingressi HDMI con il nome del dispositivo collegato.
+* **La pagina di un titolo.** Trama, voto, cast e troupe, titoli simili e righe per genere; i pulsanti Guarda su Prime Video o Disney+, che aprono il titolo direttamente, Trailer, Lista di titoli, Già guardato e pollice su o giù.
+* **Ricerca.** Per titolo o per genere, e tra le app del LG Content Store, da installare dai risultati.
+* **Impostazioni rapide.** Il pannello di Google TV: volume, luce OLED, modalità immagine, uscita audio, ingresso, timer di sospensione, salvaschermo, schermo spento e app recenti.
+* **Profili e assistente.** La scelta dell'account di Google TV, con YouTube collegato per profilo, e un assistente Gemini.
+* **Suoni e salvaschermi.** Il suono di sistema di Google TV a ogni tasto; il salvaschermo di Google TV, la modalità ambiente con le proprie foto, l'orologio e gli altri salvaschermi al posto di quello di LG.
+* **In italiano.** L'app segue la lingua dei menu del televisore, con le parole di Google TV dove ha la stessa frase, e titoli, trame e generi da TMDB in italiano. Le impostazioni dell'app, la configurazione iniziale e gli strumenti restano in inglese.
+* **All'accensione.** Il televisore apre la Home all'accensione e con il tasto Home. Se il dispositivo sull'ingresso, come un Chromecast acceso insieme al televisore via HDMI-CEC, si riprende lo schermo nei primi 10 secondi, la Home torna davanti; se è stato quel dispositivo ad accendere il televisore, resta il dispositivo.
+* **Pensato per webOS 3.4.** Il server parte dalla tile dell'app, dato che il firmware non avvia nulla come root all'accensione; i loghi fissi si attenuano sui pannelli OLED che non lo fanno da soli; la memoria si libera per le app di streaming.
+* **Dashboard dal browser.** Da telefono o computer, con l'aspetto di Google TV: telecomando, app, privacy (ACR e tracciamento di LG, blocco dei server di pubblicità e telemetria), cura del pannello OLED, letture dell'hardware, backup e log. Il televisore appare in [Home Assistant](docs/integrations/home-assistant.md) tramite MQTT.
 
-Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshouse) by Rory Gallagher and is now its own project: the server is a C++ daemon with no Node on the TV, and the TV has a native app in Google TV's design. It supports webOS 3.4 and later; Glasshouse covers webOS 2 and the first webOS 3 releases.
-
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Native Tv dashboard in the dark theme: what the TV is showing, quick controls, processor, temperature, memory and network readings" width="49%">
-  <img src="docs/screenshots/privacy.png" alt="Native Tv Privacy tab: what LG can collect, the ad and telemetry blocker and the advertising identifier" width="49%">
-</p>
-
-> [!NOTE]
->
-> ## The TV belongs to its owner.
->
-> Native Tv is for owners who do not want a network-connected appliance used as
-> a platform for advertising, telemetry and vendor-controlled experiences. It
-> brings control, visibility and automation back to the device: ways to remove
-> ads, withdraw from agreements and services that monetise the owner's data,
-> and a simpler TV, with customisation and local smart-home integration.
->
-> Native Tv itself is local and transparent, and needs no cloud service. It
-> collects no data, shows no ads and has no dark patterns.
-
-## Features
-
-* **[Control without the cloud](https://ihtisham1211.github.io/native-tv/dashboard/control/).** D-pad, typing into the TV's text fields, volume, playback keys, app launcher, picture presets, sound output routing, power and reboot, from any browser.
-* **[Privacy: see what the TV collects, and switch it off](https://ihtisham1211.github.io/native-tv/dashboard/privacy/).** Whether LG's content-recognition engine is running, the advertising identifier, and every recorded data agreement, most of them switchable. An on-TV blocker for LG's ad and telemetry endpoints, with its list as a download for a router, Pi-hole or AdGuard Home, and a switch for the two diagnostics services that upload to LG. [What LG's ACR does](https://ihtisham1211.github.io/native-tv/administration/acr/).
-* **[Debloat and home screen cleanup](https://ihtisham1211.github.io/native-tv/dashboard/apps/).** Install apps from the Homebrew Channel catalogue, uninstall LG apps to reclaim flash storage, disable background services to free RAM and CPU ([the list](https://ihtisham1211.github.io/native-tv/dashboard/apps/#turn-off-lgs-bloatware-background-services): LG's ad service, Live Plus, the diagnostics and telemetry uploaders, the ThinQ cloud services and more), hide built-in apps from the launcher, and on webOS 9 strip LG's Home screen down to apps and inputs.
-* **[Admin PIN](https://ihtisham1211.github.io/native-tv/administration/security/).** A four-digit PIN, asked in the TV's first-run setup, guards installing and removing apps, SSH keys, restoring a backup and power actions, on the TV and in the dashboard.
-* **[TV report](https://ihtisham1211.github.io/native-tv/dashboard/server/).** The versions, model and which readings the TV answered, with nothing private in them, to paste into an issue.
-* **[Volume ceiling](https://ihtisham1211.github.io/native-tv/dashboard/advanced/#volume-ceiling).** A maximum volume that holds whoever sets it, a lower limit at night and a start-up volume for when the TV comes on.
-* **[Switch off when idle](https://ihtisham1211.github.io/native-tv/dashboard/advanced/#switch-off-when-idle).** The TV switches itself off after 15 minutes to eight hours with no key press, no change and nothing playing, with a toast a minute before. An HDMI input is never switched off.
-* **[Power and standby](https://ihtisham1211.github.io/native-tv/dashboard/advanced/#power-and-standby).** Keep the TV on the network while it is off, Quick Boot, Wake-on-LAN, Always Ready and the On and Off timers, and a switch that [blocks LG's firmware updates](https://ihtisham1211.github.io/native-tv/dashboard/advanced/#system-updates), which can take root access away.
-* **[Remote button remapping](https://ihtisham1211.github.io/native-tv/dashboard/apps/#remote-keys).** Point Netflix, Prime Video, Guide, the colour keys and other shortcut buttons at any app, an HDMI input or Live TV. The change survives reboots.
-* **[OLED care](https://ihtisham1211.github.io/native-tv/dashboard/oled-care/).** Panel hours, compensation cycle progress, Pixel Refresher scheduling and failure alerts, and switches for screen shift, logo dimming, ASBL and Global Stress Reduction, which are normally reachable only from the service menu.
-* **[Game mode](https://ihtisham1211.github.io/native-tv/dashboard/game/).** On TVs with LG's Game Optimizer, a game's frame rate in large type while the source uses VRR, beside the Optimizer's settings.
-* **[Home Assistant and MQTT](https://ihtisham1211.github.io/native-tv/integrations/home-assistant/).** The TV appears as one device through MQTT Discovery, with controls, telemetry and [remote button events](https://ihtisham1211.github.io/native-tv/integrations/home-assistant-remote-buttons/) for automations. The same topics work for any MQTT client.
-* **[Monitoring](https://ihtisham1211.github.io/native-tv/dashboard/metrics/).** SoC temperature, per-core CPU load, memory, swap, Wi-Fi signal and throughput; [Prometheus metrics](https://ihtisham1211.github.io/native-tv/integrations/prometheus/) and [syslog forwarding](https://ihtisham1211.github.io/native-tv/integrations/syslog/).
-* **[Update notice](https://ihtisham1211.github.io/native-tv/dashboard/server/).** The Server tab says when a newer release is out, when asked or once a day if switched on, with its release notes, package and SHA-256, and opens the Homebrew Channel on the TV to install it. Off until asked, so the TV contacts GitHub only on request.
-* **[Backup and logs](https://ihtisham1211.github.io/native-tv/dashboard/server/).** LG's sound, device, HDMI and ad settings and Native Tv's own, saved to a file or once a day on the TV and restored on the same TV or another. The [System, Native Tv and kernel logs](https://ihtisham1211.github.io/native-tv/dashboard/tools/) in one searchable timeline in the browser, with no SSH, and private details hidden when copied or exported.
-* **[Install as an app](https://ihtisham1211.github.io/native-tv/dashboard/#install-as-an-app).** The dashboard has a web app manifest and icons, so a phone or computer can put it on the home screen or in the app list, and a service worker, where the browser allows one, shows a retry page when the TV is off.
-* **[English and Spanish](https://ihtisham1211.github.io/native-tv/dashboard/server/).** The dashboard follows the browser's language, with a Language setting on the Server tab, and shows the TV's own messages in it too, such as errors and screen saver names. The TV app follows the TV's menu language, in [Italian](https://ihtisham1211.github.io/native-tv/development/strings/#the-tv-app) so far, with titles and overviews from TMDB in it. The Spanish is [partly machine-translated](https://ihtisham1211.github.io/native-tv/development/strings/#spanish) and open to review by native speakers.
-* **[Screen savers](https://ihtisham1211.github.io/native-tv/dashboard/screen-savers/) and [the service menu](https://ihtisham1211.github.io/native-tv/dashboard/service-menu/).** A clock, starfield, fireworks, the TV's own readings or the owner's photos with the time and weather, as Google TV's ambient mode, in place of LG's screen saver; LG's engineering menu opened from a browser, with no service remote, and unlocked where newer firmware cuts it down.
-* **[A native TV app](https://ihtisham1211.github.io/native-tv/apps/tv-app/).** A C++ and OpenGL ES client after Google TV's design puts the same readings and controls on the TV, driven by the remote, and offers [Native Tv Home](https://ihtisham1211.github.io/native-tv/dashboard/home/) as a replacement home screen, with Google TV's top picks, Continue watching and what has been watched, film trailers on a title's page, titles that play in Prime Video and Disney+ straight from Home, and apps installed from LG Content Store from its search. It is drawn on the GPU at the display's 60 frames a second with no browser behind it ([how smooth it is](https://ihtisham1211.github.io/native-tv/apps/tv-app/#how-smooth-it-is)), and it makes Google TV's system sound as the focus moves.
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/phone-overview.png" alt="Native Tv dashboard on a phone, dark theme: the Overview with what the TV is showing and quick controls" width="24%">
-  <img src="docs/screenshots/phone-overview-light.png" alt="Native Tv dashboard on a phone, light theme" width="24%">
-  <img src="docs/screenshots/phone-privacy.png" alt="Native Tv Privacy tab on a phone: one thing is still on, with a button to switch it all off" width="24%">
-</p>
-<p align="center">
-  <img src="docs/screenshots/tv-home.jpg" alt="Native Tv Home on an LG TV, laid out as Google TV's home: a featured title, the apps and top picks" width="32%">
-  <img src="docs/screenshots/tv-privacy.png" alt="The TV app's Privacy settings: the overview says tracking and ads are off, with tabs for blocking, LG ads, tracking and data" width="32%">
-  <img src="docs/screenshots/tv-quick-settings.jpg" alt="The TV app's Quick settings panel after Google TV's: volume and OLED light across the panel, then picture mode, sound output, input and sleep timer tiles" width="32%">
-</p>
-<p align="center"><sub>The dashboard shots come from the repository's TV emulator, so the readings are stand-in values. The TV app shots are captured on a real TV.</sub></p>
-
-## Compatibility
+## Compatibilità
 
 | | |
 | :-- | :-- |
-| **webOS** | 3.4 and later. webOS 2.2 and the webOS 3 releases before 3.4 ran the earlier Node release and are untried with the native server |
-| **Verified with this server** | LG B3 (OLED65B3PUA), webOS 10.3.2; LG C6 from 2016 (OLED55C6V), webOS 3.4.3. Other models and versions are untried |
-| **Reports from the earlier release** | 48 TVs across 33 series, 2015 to 2026 models, webOS 2.2 to 11 ([the table](https://ihtisham1211.github.io/native-tv/getting-started/tested-tvs/)) |
-| **Panels** | OLED (panel wear telemetry and burn-in controls) and LCD (the OLED Care tab hides itself) |
-| **Access** | Rooted, with the Homebrew Channel; SSH or telnet |
+| **Provato su** | LG OLED55C6V (2016), webOS 3.4.3, firmware 05.70.45 |
+| **Altri modelli** | Non provati con Salotto. Il server e l'app sono scritti per webOS 3.4 e successivi |
+| **Requisiti** | Televisore rootato con l'[Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) e accesso SSH come root |
 
-LG names its versions two ways; [webOS version numbers](https://ihtisham1211.github.io/native-tv/getting-started/tested-tvs/#webos-version-numbers) gives both.
+## Installazione
 
-Native Tv running on a model that is not listed? A [TV report](https://github.com/ihtisham1211/native-tv/issues/new?template=tv_report.md) with the model and webOS version adds it to the table.
+Si installa da un computer sulla stessa rete del televisore, che compila l'app e la copia via SSH. Il televisore non ha bisogno di internet per l'installazione.
 
-## Install
-
-Native Tv installs from a release package, with no build, or from a computer on the same network as the TV that builds it and installs it over SSH, or over the Homebrew Channel's telnet when no SSH key is set up. The TV needs no internet access.
-
-### Install a release (no build)
-
-1. Root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel). Native Tv does not root the TV.
-2. Download `io.github.ihtisham1211.nativetv_<version>_all.ipk` (about 12 MB) from the [latest release](https://github.com/ihtisham1211/native-tv/releases/latest).
-3. Install it on the TV with [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) or `ares-install`.
-4. Open the Native Tv app on the TV. It sets the server up and opens the dashboard, and the first run starts the setup wizard.
-
-### Build and install from source
-
-The computer needs Git, Bash, Python 3, CMake, `pkg-config`, Ninja or `make` and the [webOSbrew native SDK](https://github.com/webosbrew/native-toolchain), which is built for macOS (Apple silicon and Intel) and arm64 Linux only. The [installation guide](https://ihtisham1211.github.io/native-tv/getting-started/install/#get-the-sdk) has the commands that download the SDK.
-
-1. Root the TV and install the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel). Native Tv does not root the TV.
-2. Clone this repository on the computer: `git clone https://github.com/ihtisham1211/native-tv.git && cd native-tv`.
-3. Build the ARM server and TV app with the SDK: `python3 native-tv/build.py --sdk /path/to/arm-webos-linux-gnueabi_sdk-buildroot`. It says what to install if the computer lacks a tool.
-4. Run `native-tv/lifecycle/deploy.sh <tv-ip>` from the repository root.
-5. Open `http://<tv-ip>:8080/` in a browser.
-
-The [installation guide](https://ihtisham1211.github.io/native-tv/getting-started/install/) has the details and troubleshooting.
-
-### Try the dashboard without a TV
-
-The emulator serves the dashboard at `http://localhost:8080/` with stand-in readings. It needs Node.js on the computer, and a host build, which needs a C++ compiler, CMake, pkg-config, json-c and libcurl ([what to install](https://ihtisham1211.github.io/native-tv/development/contributing/#building-and-testing)); the TV runs no Node.
-
-```bash
-python3 native-tv/build.py --service-only
-node scripts/emulate-tv.js --open
-```
-
-## Install with an AI assistant
-
-An AI coding assistant with a shell on a computer on the TV's network (Claude Code, Codex and the like) can run the install above. Give it the TV's address and this prompt:
-
-> Install Native Tv on my rooted LG TV at `<tv-ip>`. Follow the "Install with an AI assistant" section of the README at https://github.com/ihtisham1211/native-tv, and ask me before doing anything it does not list.
-
-**Instructions for the assistant.** Ask the owner first: the TV's IP address (Settings → Network on the TV); whether the TV is already rooted with the Homebrew Channel (if not, stop: rooting is not part of this install); and whether a 150 MB SDK download is fine. The deploy logs in as `root` with the computer's SSH key, and otherwise falls back to the Homebrew Channel's telnet, which has to be switched on in that app's settings. It never prompts for a password, so do not ask for one. A key outside the default location goes in `~/.config/nativetv/deploy.env` as `NATIVETV_SSH_KEY=<path>`.
-
-1. Check the computer. `uname -sm` must say `Darwin arm64`, `Darwin x86_64` or `Linux aarch64`, because the SDK has no other build; on any other computer, stop and tell the owner. Install what is missing with the owner's OK.
+1. Fare il root del televisore e installare l'[Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel). Salotto non fa il root del televisore.
+2. Scaricare il codice:
 
    ```bash
-   uname -sm
-   for t in git python3 bash curl tar bzip2 file; do command -v "$t" >/dev/null || echo "missing: $t"; done
+   git clone git@github.com:Markk2317/-.git salotto && cd salotto
    ```
 
-2. Clone the repository: `git clone https://github.com/ihtisham1211/native-tv.git && cd native-tv`.
-3. Get the SDK the project's CI builds with, unless the owner already has a relocated one:
+3. Scaricare l'SDK per webOS. Su Linux x86_64:
 
    ```bash
-   platform=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
    mkdir -p ~/webos-sdk
-   curl -fsSL "https://github.com/webosbrew/native-toolchain/releases/download/webos-d7ed7ee.6/arm-webos-linux-gnueabi_sdk-buildroot_$platform.tar.bz2" | tar -xj -C ~/webos-sdk
+   curl -fsSL https://github.com/openlgtv/buildroot-nc4/releases/download/webos-d7ed7ee/arm-webos-linux-gnueabi_sdk-buildroot.tar.gz | tar -xz -C ~/webos-sdk
    ~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh
    ```
 
-4. Build the ARM server and TV app. The first command lists what the computer lacks (CMake, pkg-config, Ninja or make) with the install command for macOS and Debian/Ubuntu: run it with the owner's OK. Leave out `--service-only` from the second: it skips the TV app, which the deploy packages too.
+   Su macOS e Linux arm64 c'è la build del [webOSbrew native SDK](docs/getting-started/install.md#get-the-sdk).
+
+4. Compilare il server e l'app:
 
    ```bash
-   python3 native-tv/build.py --check --sdk ~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot
-   python3 native-tv/build.py --sdk ~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot
+   SDK=~/webos-sdk/arm-webos-linux-gnueabi_sdk-buildroot
+   PATH=$SDK/bin:$PATH python3 native-tv/build.py --sdk $SDK
    ```
 
-5. Deploy from the repository root. A first install also adds the Native Tv tile to the TV's home screen; `--no-app` leaves the home screen alone. The install worked when the output ends with `done - open http://<tv-ip>:8080/`. On `Nothing was installed`, run it once more and check the TV is on.
+5. Installarli sul televisore, con la chiave SSH di root del televisore:
 
    ```bash
-   native-tv/lifecycle/deploy.sh <tv-ip>
+   NATIVETV_SSH_KEY=~/.ssh/lgtv_root bash native-tv/lifecycle/deploy.sh <ip-del-televisore>
    ```
 
-6. When SSH works, `ssh root@<tv-ip> /var/lib/tvweb/tvwebctl status` shows whether the server is running, and `/var/lib/tvweb/tvweb.log` on the TV says why it is not.
-7. Give the owner the dashboard address. The Admin PIN, who can reach the dashboard and Home Assistant are the owner's to choose, in the TV app's Settings or the dashboard. Say that the dashboard has no login by default ([Security](#security)), and that the two optional [API keys](#api-keys) are theirs to get: do not create accounts for them.
+6. Aprire l'app dalla sua tile sul televisore: avvia il server e mostra la configurazione iniziale. La dashboard è su `http://<ip-del-televisore>:8080/`.
 
-Rules for the assistant:
+La [guida all'installazione](docs/getting-started/install.md) e [cosa cambia sul televisore](docs/administration/tv-changes.md) hanno i dettagli, in inglese.
 
-* Do only what is listed here. Do not reboot the TV, change its settings or switch on anything labelled experimental unless the owner asks.
-* Never print or commit the access token, the MQTT password or an API key in `/var/lib/tvweb/config.json` on the TV.
-* Never forward port 8080 to the internet.
-* If a step fails twice, stop and show the owner the output. Do not edit `deploy.sh` or try another install route.
-* To undo the install, follow [updating and uninstalling](https://ihtisham1211.github.io/native-tv/getting-started/managing/) exactly.
+## Chiavi facoltative
 
-## API keys
+L'app, la dashboard e gli strumenti funzionano senza account né chiavi. Le chiavi aggiungono le righe di titoli della Home, e si inseriscono nella scheda della Home della dashboard (`http://<ip-del-televisore>:8080/?tab=home`):
 
-Installing and running Native Tv needs no account or key: the dashboard, the TV app, the privacy tools and the Home Assistant bridge all work without one. (The MQTT bridge needs the broker's address and, if it has one, a username and password.) Optional keys switch on rows of titles in [Native Tv Home](https://ihtisham1211.github.io/native-tv/dashboard/home/), which is experimental:
+| Chiave | Cosa aggiunge |
+| :-- | :-- |
+| TMDB (gratuita, [themoviedb.org](https://www.themoviedb.org/settings/api)) | Le righe di film e serie, le schede Film e Programmi, i titoli popolari su Netflix, Prime Video e Disney+, le pagine dei titoli e i trailer. Senza, la Home mostra solo ciò che è sul televisore |
+| YouTube Data API (gratuita, [Google Cloud](https://console.cloud.google.com/)) | La riga YouTube di tendenza |
+| Gemini | Scelti per te scelti da Gemini e l'assistente |
+| Client OAuth di Google (TV e dispositivi con input limitato) | Le iscrizioni YouTube di ogni profilo collegato a Google |
 
-| Key | What it adds | Where it goes |
-| :-- | :-- | :-- |
-| TMDB API key | The film and series rows, the Films and Shows tabs, and what is popular on Netflix, Prime Video and Disney+ in the TV's country: titles, posters, details and trailers. Without it Home shows only what is on the TV | The browser dashboard: Apps, **Native Tv Home** tab, **Films and series** (or `"tmdbKey"` in `config.json`) |
-| YouTube Data API key | The **Trending on YouTube** row | The same tab, **Trending on YouTube** (or `"youtubeKey"` in `config.json`) |
-| Gemini API key | Top picks chosen by Gemini, and the assistant's question box on the dashboard's Native Tv Home tab | The same tab, **Gemini assistant** (or `"geminiKey"` in `config.json`) |
-| Google OAuth client (TVs and Limited Input devices) | **From your YouTube subscriptions**, for each profile signed in with Google | The same tab, **Your YouTube subscriptions** (or `"youtubeClientId"` and `"youtubeClientSecret"` in `config.json`) |
+Le chiavi restano sul televisore, in `/var/lib/tvweb/config.json`. Questo prodotto usa l'API di TMDB ma non è approvato né certificato da TMDB.
 
-The TV app has no field for either key. The Native Tv Home tab (`http://<tv-ip>:8080/?tab=home`) is on every TV the TV app runs on; it can switch Native Tv Home on in LG's Home's place on webOS 9 and 10, and on webOS 11 once `"allowExperimentalHome": true` is set. Elsewhere Native Tv Home is the TV app's own, opened with Back from its Settings.
+## Sicurezza
 
-**Get a TMDB key** (free):
+La dashboard **non ha login** di default, per essere usata da qualsiasi telefono sulla rete di casa. **La porta 8080 non va mai aperta su internet.** [Security](docs/administration/security.md) spiega il token di accesso e come chiudere la porta alla rete.
 
-1. Create an account at [themoviedb.org](https://www.themoviedb.org/) and confirm the email address.
-2. Open [Settings, API](https://www.themoviedb.org/settings/api), request an API key and answer the short form about how it will be used.
-3. Copy the **API Key**, which is 32 letters and digits. Do not copy the long **API Read Access Token**: Native Tv refuses it.
-4. Paste the key into **Films and series** on the dashboard's Native Tv Home tab and save it. It stays on the TV and is never shown again; **Remove** deletes it.
+## Avvertenze
 
-**Get a YouTube Data API key** (free):
+Il software gira come `root` sul televisore. Si usa a proprio rischio: nessuna responsabilità per danni, televisori bloccati, garanzie perse o problemi al pannello.
 
-1. In the [Google Cloud console](https://console.cloud.google.com/), create a project or pick one.
-2. Under APIs & Services, Library, enable **YouTube Data API v3**.
-3. Under APIs & Services, Credentials, choose Create credentials, then API key. Restricting the key to the YouTube Data API v3 is optional.
-4. Paste the key into **Trending on YouTube** on the dashboard's Native Tv Home tab, below **Films and series**, and save it. Or add `"youtubeKey": "<the key>"` to `/var/lib/tvweb/config.json` on the TV, or to `native-tv/lifecycle/config.json` before the first deploy: the server reads the file again when it changes, so no restart is needed.
+Salotto è un progetto indipendente e non ufficiale, non affiliato né approvato da LG Electronics o da Google. webOS è un marchio di LG Electronics; Google TV e Chromecast sono marchi di Google LLC.
 
-This product uses the TMDB API but is not endorsed or certified by TMDB. [Native Tv Home](https://ihtisham1211.github.io/native-tv/dashboard/home/) has the details of what is fetched and when.
+## Licenza
 
-## Security
+MIT, vedi [LICENSE](LICENSE). Caratteri, icone, suoni e librerie incluse hanno le loro licenze, in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-The dashboard has **no authentication by default**, for frictionless control from any phone or browser on a trusted local network. **Never expose port 8080 directly to the internet (do not port-forward).** [Security](https://ihtisham1211.github.io/native-tv/administration/security/) covers the token, closing the port to the network, and MQTT. Vulnerabilities are reported as set out in [SECURITY.md](SECURITY.md).
-
-## FAQ
-
-**How is ACR (Live Plus) turned off on an LG TV?**
-The Privacy tab shows whether LG's content-recognition engine is running and switches it off, with the advertising identifier, ad tracking and the data agreements recorded on the TV. [What LG's ACR does](https://ihtisham1211.github.io/native-tv/administration/acr/) sets out what it samples and which controls act on it.
-
-**Does Native Tv root the TV?**
-No. The TV has to be rooted first, and Native Tv installs through the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel)'s SSH or telnet access.
-
-**Does it need a cloud account or internet access on the TV?**
-No. It runs on the TV, serves the dashboard on the local network, collects no data and shows no ads.
-
-**How does it connect an LG TV to Home Assistant?**
-Through an MQTT broker. The TV publishes itself with MQTT Discovery as one device with its controls and telemetry, and the remote's buttons can fire automations. [Setup](https://ihtisham1211.github.io/native-tv/integrations/home-assistant/) and the [entity list](https://ihtisham1211.github.io/native-tv/integrations/home-assistant-entities/) are in the docs.
-
-**Does it work on LCD and non-OLED LG TVs?**
-Yes. The dashboard, controls and telemetry work on LCD panels; the OLED Care tab hides itself.
-
-**Is the TV app smooth, or does it lag like a slow home screen?**
-It is a native OpenGL ES client, not a web page, and it draws at the display's 60 Hz. On an LG B3 with the processor busy (load average about 32) its frames arrive 15 to 18 ms apart, against 16.7 ms ideal. [How it stays smooth](https://ihtisham1211.github.io/native-tv/apps/tv-app/#how-smooth-it-is) lists the reasons and the measurement.
-
-**Is the dashboard available in Spanish?**
-Yes. It follows the browser's language, and the Language setting on the Server tab, or `/?lang=es`, changes it. The TV's messages the dashboard shows are translated too. The TV app follows the TV's own menu language instead, in Italian so far; the pages the TV's own browser shows are English only. Much of the Spanish is machine-translated, and [corrections are welcome](https://ihtisham1211.github.io/native-tv/development/strings/#spanish).
-
-**Can the dashboard be installed as an app on a phone?**
-Yes. It is an installable web app (PWA): add it to the home screen from the browser's menu. On the TV's plain `http://` address a browser skips the service worker, so the page has its manifest and icons only; behind HTTPS, Chrome offers a full install. [Install as an app](https://ihtisham1211.github.io/native-tv/dashboard/#install-as-an-app) has the details.
-
-**What does it change on the TV?**
-[What it changes on the TV](https://ihtisham1211.github.io/native-tv/administration/tv-changes/) lists every change and how each is undone. The read-only system partition is left untouched.
-
-## Documentation
-
-* [Installing](https://ihtisham1211.github.io/native-tv/getting-started/install/), [tested TVs](https://ihtisham1211.github.io/native-tv/getting-started/tested-tvs/) and [updating and uninstalling](https://ihtisham1211.github.io/native-tv/getting-started/managing/)
-* [The dashboard](https://ihtisham1211.github.io/native-tv/dashboard/), tab by tab, and [the TV app](https://ihtisham1211.github.io/native-tv/apps/tv-app/)
-* [Home Assistant](https://ihtisham1211.github.io/native-tv/integrations/home-assistant/), [Prometheus](https://ihtisham1211.github.io/native-tv/integrations/prometheus/) and [syslog](https://ihtisham1211.github.io/native-tv/integrations/syslog/)
-* [Security](https://ihtisham1211.github.io/native-tv/administration/security/) and [what it changes on the TV](https://ihtisham1211.github.io/native-tv/administration/tv-changes/)
-* [Internals](https://ihtisham1211.github.io/native-tv/development/implementation/) and [TV research](https://ihtisham1211.github.io/native-tv/development/tv-research/)
-
-The pages are built from [docs/](docs/), so they can also be read there.
-
-## Contributing
-
-Native Tv is MIT-licensed and open to contributions. [Contributing](CONTRIBUTING.md) explains how to build, test and open a pull request. Bugs and ideas go in the [issues](https://github.com/ihtisham1211/native-tv/issues). Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
-
-## Disclaimer
-
-**Use this software at your own risk.**
-
-* **Root access and hardware.** This runs custom software with `root` privileges on an embedded TV OS. It is designed to be lightweight and to leave the read-only rootfs untouched, but the author accepts **no responsibility** for damage, bootloops, bricked devices, voided warranties, data loss or panel issues.
-* **Power and control commands.** Reboot, power off, screen blanking and Pixel Refresher scheduling issue low-level `luna-send` calls. Understand what each does before using it.
-* **Trademarks.** An independent, unofficial community project, not affiliated with or endorsed by LG Electronics. webOS is a trademark of LG Electronics.
-* **Third-party components.** Fonts, icons and libraries keep their own licences, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
-
-## License
-
-MIT. See [LICENSE](LICENSE).
-
-## Credits
-
-Native Tv grew out of [Glasshouse](https://github.com/rorygallagher2024/glasshouse) by Rory Gallagher, released under the MIT licence; his copyright notice is kept in [LICENSE](LICENSE). The dashboard's Spanish reuses Glasshouse's translations, which are also MIT. Bundled third-party work, with its licence ([THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) has the texts):
-
-* [CivetWeb](https://github.com/civetweb/civetweb): the HTTP server (MIT)
-* [json-c](https://github.com/json-c/json-c): JSON, from the webOSbrew SDK (MIT)
-* [NanoSVG](https://github.com/memononen/nanosvg): SVG rendering on the TV (zlib)
-* [QR Code generator](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki: the QR codes (MIT)
-* [StevenBlack/hosts](https://github.com/StevenBlack/hosts): the advertising hosts reviewed for the blocker (MIT)
-* [Roboto](https://github.com/googlefonts/roboto-3-classic) and [Google Sans Flex](https://github.com/googlefonts/googlesans-flex): fonts (Apache-2.0, OFL-1.1)
-* [Material Design Icons](https://pictogrammers.com/library/mdi/) and [Material Symbols](https://fonts.google.com/icons): icons (Apache-2.0)
-* [Android's UI sounds](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/data/sounds/): the TV app's system sound, as on Google TV (Apache-2.0)
-* [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons): the brand logos of the app icons (Apache-2.0)
+Salotto è ispirato a [Native Tv](https://github.com/ihtisham1211/native-tv).
