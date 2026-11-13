@@ -39,6 +39,10 @@ const char *kOther =
 const char *const kPowerOn =
     "2026-11-11T12:10:37.050798Z [8728.257207820] user.info sam [] SAM NL_APP_LAUNCH_BEGIN "
     "{\"app_id\":\"com.webos.app.hdmi1\",\"caller_id\":\"com.webos.bootManager\",\"mode\":\"normal\"} \n";
+const char *const kDeviceLaunch =
+    "2026-11-13T12:06:33.933524Z [12898.806334524] user.info sam [] SAM NL_APP_LAUNCH_BEGIN "
+    "{\"app_id\":\"com.webos.app.hdmi3\",\"caller_id\":\"com.webos.service.tv.externaldevice\","
+    "\"mode\":\"normal\"}";
 const char *const kUserLaunch =
     "2026-11-11T12:18:31.896632Z [9203.103057547] user.info sam [] SAM NL_APP_LAUNCH_BEGIN "
     "{\"app_id\":\"netflix\",\"caller_id\":\"\",\"mode\":\"normal\"} \n";
@@ -62,6 +66,10 @@ int main() {
               "the boot manager's launch is the TV switched on, with the input it opened");
         check(!parsePowerOnLaunch(kUserLaunch, foreground) && !parsePowerOnLaunch(kShownOverHdmi, foreground),
               "any other launch is not");
+        check(parseDeviceLaunch(kDeviceLaunch, foreground) && foreground == "com.webos.app.hdmi3",
+              "an input a device took over CEC names its app");
+        check(!parseDeviceLaunch(kPowerOn, foreground) && !parsePowerOnLaunch(kDeviceLaunch, foreground),
+              "and is not a switch-on");
 
         char pattern[] = "/tmp/nativetv-home-key-XXXXXX";
         const int descriptor = mkstemp(pattern);

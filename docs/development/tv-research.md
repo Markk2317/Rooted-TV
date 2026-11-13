@@ -1976,3 +1976,14 @@ mvpd-autoroot and the Homebrew Channel 0.7.3.
   C6), beside `TV`, `FMT` (`en-GB` there, the formats), `STT`, `AUD` and `AUD2`, and
   `keyboards` (`["en","it"]`). Asked with `"category":"option"` it answers `returnValue: false`,
   "There is no matched result from DB".
+
+## A device taking the screen back at a switch-on (C6, webOS 3.4.3)
+
+- Switched on from Active Standby, the C6 logs the boot manager's `NL_APP_LAUNCH_BEGIN` of the last
+  input (HDMI 3) as a wake from Quick Start's suspend does, and Native Tv Home came over it within
+  a second. 3.5 s later `com.webos.service.tv.externaldevice` launched `com.webos.app.hdmi3` again
+  (`caller_id` in the same line): the Chromecast on HDMI 3, woken over CEC with the TV, had taken
+  the screen as the active source. It does not happen at every switch-on.
+- `com.webos.service.tvpower/power/getPowerOnReason` answers why the TV came on: `wakeOnWiFi` after
+  Wake-on-LAN over Wi-Fi; `tvpowerd` also names `remoteKey`, `localKey`, `hdmiCec`, `wakeOnLan`,
+  `onTimer` and `reboot`.

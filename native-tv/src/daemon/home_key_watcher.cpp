@@ -24,10 +24,15 @@ bool parseHomeShown(const std::string &line, std::string &foregroundId) {
     return true;
 }
 
-bool parsePowerOnLaunch(const std::string &line, std::string &appId) {
+namespace {
+// How long after a switch-on a device's taking the screen is undone (deviceLaunched).
+const std::chrono::milliseconds kDeviceTakeover(10000);
+
+// The app a SAM NL_APP_LAUNCH_BEGIN line names, when `caller` launched it.
+bool parseLaunchBy(const std::string &line, const std::string &caller, std::string &appId) {
     const size_t marker = line.find("SAM NL_APP_LAUNCH_BEGIN");
     if (marker == std::string::npos ||
-        line.find("\"caller_id\":\"com.webos.bootManager\"", marker) == std::string::npos)
+        line.find("\"caller_id\":\"" + caller + "\"", marker) == std::string::npos)
         return false;
     const std::string key = "\"app_id\":\"";
     const size_t start = line.find(key, marker);
@@ -37,6 +42,15 @@ bool parsePowerOnLaunch(const std::string &line, std::string &appId) {
     if (end == std::string::npos) return false;
     appId = line.substr(value, end - value);
     return !appId.empty();
+}
+} // namespace
+
+bool parsePowerOnLaunch(const std::string &line, std::string &appId) {
+    return parseLaunchBy(line, "com.webos.bootManager", appId);
+}
+
+bool parseDeviceLaunch(const std::string &line, std::string &appId) {
+    return parseLaunchBy(line, "com.webos.service.tv.externaldevice", appId);
 }
 
 double lastPowerOnUptime(const std::string &logPath) {
@@ -142,6 +156,8 @@ void HomeKeyWatcher::readUpdates() {
             handle(foregroundId, false);
         else if (parsePowerOnLaunch(line, foregroundId))
             handle(foregroundId, true);
+        else if (parseDeviceLaunch(line, foregroundId))
+            deviceLaunched(foregroundId);
         start = end + 1;
     }
     partial_.erase(0, start);
@@ -157,9 +173,18 @@ void HomeKeyWatcher::handle(const std::string &foregroundId, bool powerOn) {
     }
     const std::function<bool()> &enabled = powerOn ? powerOnEnabled_ : enabled_;
     if (!enabled || !enabled()) return;
+    if (powerOn && byDevice_ && byDevice_()) {
+        if (logger_)
+            logger_->info("power on: a device switched the TV on over HDMI-CEC; leaving " +
+                          foregroundId + " in front");
+        return;
+    }
     {
         std::lock_guard<std::mutex> lock(mutex_);
         lastAt_ = std::chrono::steady_clock::now();
+        // The device on the input, woken with the TV, may take the screen back (see deviceLaunched).
+        deviceTakeoverUntil_ =
+            powerOn ? lastAt_ + kDeviceTakeover : std::chrono::steady_clock::time_point();
     }
     seq_.fetch_add(1);
     if (logger_)
@@ -169,6 +194,24 @@ void HomeKeyWatcher::handle(const std::string &foregroundId, bool powerOn) {
                                     (foregroundId.empty() ? std::string("unknown") : foregroundId) +
                                     "; bringing Native Tv Home forward");
     if (opened_) opened_(foregroundId);
+}
+
+// A Chromecast on HDMI 3 woken over CEC with the TV (an OLED55C6V on webOS 3.4.3) announces itself
+// as the active source and tv.externaldevice relaunches its input 3.5 s after Native Tv Home came
+// forward. Once in the seconds after a switch-on, Native Tv Home is brought back over it.
+void HomeKeyWatcher::deviceLaunched(const std::string &appId) {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        const auto now = std::chrono::steady_clock::now();
+        if (now >= deviceTakeoverUntil_) return;
+        deviceTakeoverUntil_ = std::chrono::steady_clock::time_point();
+        lastAt_ = now;
+    }
+    seq_.fetch_add(1);
+    if (logger_)
+        logger_->info("power on: the device on " + appId +
+                      " took the screen as it woke; bringing Native Tv Home forward again");
+    if (opened_) opened_(appId);
 }
 
 } // namespace daemon

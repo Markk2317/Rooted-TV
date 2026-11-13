@@ -250,6 +250,12 @@ int main(int argc, char **argv) {
         reply.set("returnValue", Json::flag(
             access(environment("NATIVETV_FAKE_HOME_STARTUP_SETTINGS_FAIL").c_str(),
                    F_OK) != 0));
+    } else if (uri == "com.webos.service.tvpower/power/getPowerOnReason" &&
+               !environment("NATIVETV_FAKE_LUNA_POWER_REASON_FILE").empty()) {
+        // Read at each call, so a test can switch the TV on another way.
+        const Json reason = readJsonFile(environment("NATIVETV_FAKE_LUNA_POWER_REASON_FILE"));
+        reply.set("returnValue", Json::flag(true));
+        reply.set("reason", Json::text(reason["reason"].string("remoteKey")));
     } else if (mode == "home-boot" &&
         uri == "com.webos.service.tvpower/power/getPowerOnReason") {
         const std::string reason = environment("NATIVETV_FAKE_HOME_BOOT_REASON");

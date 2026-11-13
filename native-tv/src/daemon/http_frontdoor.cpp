@@ -2010,6 +2010,31 @@ void HttpFrontDoor::learnTvLocale() const {
     });
 }
 
+void HttpFrontDoor::bringHomeForward(const std::string &foregroundId) const {
+    // The TV app in front already: a launch would change nothing (sam brings forward only
+    // a card that is behind), so Back closes the ribbon over it, and the app, given the
+    // focus back, opens its Home from /api/caps. Back goes as the network remote's 412:
+    // KEY_BACK written to the IR remote's input device leaves the ribbon open on webOS 3.4.
+    if (foregroundId == kHomeClientApp) {
+        Json back = Json::object();
+        back.set("keyCode", Json::numeric(412));
+        LunaReply reply;
+        (void)waitForLuna(luna_, "com.webos.service.networkinput/test/sendKeyCode", back,
+                          reply);
+        return;
+    }
+    // Launched over the ribbon, the app comes to the front within 20 ms and the ribbon
+    // goes (an OLED55C6V on webOS 3.4.3); a cold start opens on Home.
+    Json params = Json::object();
+    params.set("screen", Json::text("home"));
+    Json payload = Json::object();
+    payload.set("id", Json::text(kHomeClientApp));
+    payload.set("params", params);
+    LunaReply reply;
+    if (!waitForLuna(luna_, "com.webos.applicationManager/launch", payload, reply) && logger_)
+        logger_->warning("home key: the TV app did not open");
+}
+
 void HttpFrontDoor::startHomeKeyWatcher() {
     if (homeKeyWatcher_) return;
     // Where Native Tv Home can take LG's Home's place, the takeover does this job.
@@ -2020,33 +2045,19 @@ void HttpFrontDoor::startHomeKeyWatcher() {
     options.logPath = (systemRoot_ == "/" ? std::string() : systemRoot_) + "/var/log/messages";
     std::unique_ptr<HomeKeyWatcher> watcher(new HomeKeyWatcher(
         [this]() { return currentConfigDocument()["homeButtonOpensNativeHome"].boolean(); },
-        [this](const std::string &foregroundId) {
-            // The TV app in front already: a launch would change nothing (sam brings forward only
-            // a card that is behind), so Back closes the ribbon over it, and the app, given the
-            // focus back, opens its Home from /api/caps. Back goes as the network remote's 412:
-            // KEY_BACK written to the IR remote's input device leaves the ribbon open on webOS 3.4.
-            if (foregroundId == kHomeClientApp) {
-                Json back = Json::object();
-                back.set("keyCode", Json::numeric(412));
-                LunaReply reply;
-                (void)waitForLuna(luna_, "com.webos.service.networkinput/test/sendKeyCode", back,
-                                  reply);
-                return;
-            }
-            // Launched over the ribbon, the app comes to the front within 20 ms and the ribbon
-            // goes (an OLED55C6V on webOS 3.4.3); a cold start opens on Home.
-            Json params = Json::object();
-            params.set("screen", Json::text("home"));
-            Json payload = Json::object();
-            payload.set("id", Json::text(kHomeClientApp));
-            payload.set("params", params);
-            LunaReply reply;
-            if (!waitForLuna(luna_, "com.webos.applicationManager/launch", payload, reply) && logger_)
-                logger_->warning("home key: the TV app did not open");
-        },
+        [this](const std::string &foregroundId) { bringHomeForward(foregroundId); },
         logger_, options));
     // The TV switched on: the boot manager opens the last input, and Native Tv Home comes over it.
     watcher->setPowerOn([this]() { return currentConfigDocument()["homeOnPowerOn"].boolean(true); });
+    // Switched on by a device over HDMI-CEC (a cast to a Chromecast), the TV shows that device, as
+    // Google TV's own does: tvpower names the reason "hdmiCec" (others: "remoteKey", "localKey",
+    // "wakeOnWiFi", "wakeOnLan", "onTimer", "reboot").
+    watcher->setPoweredOnByDevice([this]() {
+        LunaReply reply;
+        return waitForLuna(luna_, "com.webos.service.tvpower/power/getPowerOnReason",
+                           Json::object(), reply) &&
+               reply.response["reason"].string() == "hdmiCec";
+    });
     // The boot activity has just fired (it is gone once it has), so it is put back.
     watcher->setPoweredOn([this]() {
         eventLoop_->scheduleAfter(std::chrono::milliseconds(15000), [this]() {

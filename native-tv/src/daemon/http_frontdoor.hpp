@@ -479,6 +479,8 @@ class HttpFrontDoor {
     mutable service::HomeContent homeContent_;
     mutable service::HomeDiscover homeDiscover_;
     mutable std::atomic<int64_t> localeAskedAt_{0}; // learnTvLocale's last question, steady ms
+    // Brings Native Tv Home forward as LG's Home button or a switch-on would (webOS 3.4).
+    void bringHomeForward(const std::string &foregroundId) const;
     mutable service::HomeImageProxy homeImageProxy_;
     mutable service::YoutubeAccounts youtubeAccounts_;
     mutable service::HomeTitles homeTitles_;

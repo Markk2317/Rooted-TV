@@ -21,6 +21,10 @@ bool parseHomeShown(const std::string &line, std::string &foregroundId);
 // `SAM NL_APP_LAUNCH_BEGIN {"app_id":"com.webos.app.hdmi1","caller_id":"com.webos.bootManager",...}`,
 // logged at a cold start and at every wake from Quick Start's standby. False for any other line.
 bool parsePowerOnLaunch(const std::string &line, std::string &appId);
+// An input that LG's external device service opened, as it does when a device on HDMI announces
+// itself the active source over CEC: `SAM NL_APP_LAUNCH_BEGIN {"app_id":"com.webos.app.hdmi3",
+// "caller_id":"com.webos.service.tv.externaldevice",...}`. False for any other line.
+bool parseDeviceLaunch(const std::string &line, std::string &appId);
 // The kernel time of the TV's last switch-on in the log (the bracketed seconds of its line, the
 // clock /proc/uptime counts, which leaves out Quick Start's standby), or a negative number when the
 // log has none.
@@ -51,6 +55,9 @@ class HomeKeyWatcher {
     void setPowerOn(std::function<bool()> enabled) { powerOnEnabled_ = std::move(enabled); }
     // Told of every switch-on, whatever the switches. Set before start().
     void setPoweredOn(std::function<void()> poweredOn) { poweredOn_ = std::move(poweredOn); }
+    // Asked at a switch-on that would be handed on: true when a device switched the TV on (over
+    // HDMI-CEC, to show itself), which leaves its input in front. Set before start().
+    void setPoweredOnByDevice(std::function<bool()> byDevice) { byDevice_ = std::move(byDevice); }
     bool start();
     void stop();
     void suppressFor(std::chrono::milliseconds duration);
@@ -62,9 +69,11 @@ class HomeKeyWatcher {
     void run();
     void readUpdates();
     void handle(const std::string &foregroundId, bool powerOn);
+    void deviceLaunched(const std::string &appId);
 
     std::function<bool()> enabled_, powerOnEnabled_;
     std::function<void()> poweredOn_;
+    std::function<bool()> byDevice_;
     Opened opened_;
     Logger *logger_;
     HomeKeyWatcherOptions options_;
@@ -76,6 +85,7 @@ class HomeKeyWatcher {
     std::string partial_;
     std::chrono::steady_clock::time_point suppressedUntil_;
     std::chrono::steady_clock::time_point lastAt_;
+    std::chrono::steady_clock::time_point deviceTakeoverUntil_;
     std::atomic<unsigned> seq_{0};
 };
 

@@ -1809,6 +1809,99 @@ class DaemonRuntimeTests(unittest.TestCase):
                         process.kill()
                         process.communicate(timeout=3)
 
+    def test_native_home_stays_over_the_device_the_tv_woke(self):
+        # webOS 3.4.3 (C6): switched on, the boot manager opens the last input and Native Tv Home
+        # comes over it; the Chromecast on it, woken over CEC, takes the screen back through
+        # tv.externaldevice 3.5 s later, and Home is brought forward once more. A TV a device
+        # switched on over CEC shows that device.
+        binary = Path(sys.argv[1]).resolve()
+        fakeLuna = binary.parent / "native-fake-luna-send"
+        publicPort = unused_port_pair()
+        nodePort = unused_port_pair((publicPort, publicPort + 1))
+        with tempfile.TemporaryDirectory(prefix="nativetv-native-wake-") as folder:
+            root = Path(folder)
+            config = root / "config.json"
+            assets = root / "assets"
+            systemRoot = root / "system"
+            lunaDetails = root / "luna-details.jsonl"
+            reasonFile = root / "reason.json"
+            assets.mkdir()
+            (systemRoot / "etc").mkdir(parents=True)
+            (systemRoot / "var/log").mkdir(parents=True)
+            (systemRoot / "etc/issue").write_text("webOS TV 3.4.3\n")
+            messages = systemRoot / "var/log/messages"
+            messages.write_text("")
+            reasonFile.write_text(json.dumps({"reason": "remoteKey"}))
+            config.write_text(json.dumps({"host": "127.0.0.1", "port": publicPort}))
+            environment = os.environ.copy()
+            environment["TVWEB_LUNA_SEND"] = str(fakeLuna)
+            environment["TVWEB_DATA_DIR"] = str(root / "data")
+            environment["TVWEB_PROXY_SECRET"] = "wake-proxy-secret-0123456789abcdef0123"
+            environment["NATIVETV_FAKE_LUNA_DETAILS"] = str(lunaDetails)
+            environment["NATIVETV_FAKE_LUNA_POWER_REASON_FILE"] = str(reasonFile)
+            process = subprocess.Popen(
+                [str(binary), "--config", str(config), "--heartbeat", str(root / "tvweb.beat"),
+                 "--workers", "4", "--listen", "--node-port", str(nodePort),
+                 "--assets-root", str(assets), "--system-root", str(systemRoot)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=environment)
+
+            def launches():
+                calls = ([json.loads(line) for line in lunaDetails.read_text().splitlines()]
+                         if lunaDetails.exists() else [])
+                return [call for call in calls
+                        if call["uri"] == "com.webos.applicationManager/launch" and
+                        call["payload"].get("id") == "com.tvweb.dashboard"]
+
+            def wait_for(count, seconds):
+                deadline = time.monotonic() + seconds
+                while time.monotonic() < deadline and process.poll() is None:
+                    if len(launches()) >= count:
+                        return True
+                    time.sleep(0.1)
+                return False
+
+            def launched_by(caller):
+                with messages.open("a") as log:
+                    log.write('2026-11-13T12:06:29.307178Z [12894.18] user.info sam [] SAM '
+                              'NL_APP_LAUNCH_BEGIN {"app_id":"com.webos.app.hdmi3",'
+                              '"caller_id":"%s","mode":"normal"}\n' % caller)
+
+            try:
+                deadline = time.monotonic() + 8
+                while time.monotonic() < deadline and process.poll() is None:
+                    try:
+                        urlopen("http://127.0.0.1:%d/api/caps" % publicPort, timeout=1).read()
+                        break
+                    except (OSError, URLError):
+                        time.sleep(0.03)
+                self.assertIsNone(process.poll(), "daemon exited early")
+                time.sleep(0.5)
+                launched_by("com.webos.bootManager")
+                self.assertTrue(wait_for(1, 5), "the switch-on opens Native Tv Home")
+                self.assertEqual(launches()[0]["payload"].get("params"), {"screen": "home"})
+                time.sleep(1)
+                launched_by("com.webos.service.tv.externaldevice")
+                self.assertTrue(wait_for(2, 5), "the woken device's input is covered again")
+                launched_by("com.webos.service.tv.externaldevice")
+                time.sleep(2)
+                self.assertEqual(len(launches()), 2, "once per switch-on")
+
+                reasonFile.write_text(json.dumps({"reason": "hdmiCec"}))
+                launched_by("com.webos.bootManager")
+                time.sleep(1)
+                launched_by("com.webos.service.tv.externaldevice")
+                time.sleep(2)
+                self.assertEqual(len(launches()), 2,
+                                 "a TV a device switched on over CEC shows that device")
+            finally:
+                if process.poll() is None:
+                    process.send_signal(signal.SIGTERM)
+                    try:
+                        process.communicate(timeout=6)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.communicate(timeout=3)
+
     def test_native_oled_care_does_not_read_a_blank_reply_as_off(self):
         binary = Path(sys.argv[1]).resolve()
         fakeLuna = binary.parent / "native-fake-luna-send"
