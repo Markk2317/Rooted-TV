@@ -140,3 +140,14 @@ Every pull request has a **Testing** section: the TV and webOS version the chang
 was tried on, what was done and seen, and what was not tested. Say so where a change
 could only be checked on the host. Names of webOS versions are as the TV reports
 them (webOS 4.4, 9, 10); see [tested TVs](../getting-started/tested-tvs.md#webos-version-numbers).
+
+## Branch and tag rules
+
+The repository's rulesets keep its history and releases in place: `main` and
+`webos3-lg-c6` cannot be deleted or force-pushed, so a change reaches them as new
+commits on top, and a release tag (`v*`) cannot be moved or deleted once it exists.
+New tags are still created, by `release.yml` among others. The rulesets are kept in
+`.github/rulesets/` as JSON, which **Settings → Rules → Rulesets → New ruleset →
+Import a ruleset** takes as it is. Rewriting history, as removing an address from
+old commits needs, means switching the branch ruleset off for the push and back on
+after it.
