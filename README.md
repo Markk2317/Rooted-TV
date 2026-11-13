@@ -301,7 +301,7 @@ Rooted TV has been tried only on an LG OLED55C6V with webOS 3.4.3. The server an
 > [!CAUTION]
 > The dashboard has **no login by default**, so any phone on the home network can use it. **Never expose port 8080 to the internet.**
 
-[Security](docs/administration/security.md) covers the access token and closing the port to the network.
+[Security](docs/administration/security.md) covers the access token and closing the port to the network. What the TV keeps and sends is in the [privacy policy](https://markk2317.github.io/Rooted-TV/privacy-policy/).
 
 ## ⚠️ Disclaimer
 

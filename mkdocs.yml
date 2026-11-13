@@ -66,6 +66,7 @@ nav:
       - Prometheus metrics: integrations/prometheus.md
       - Log forwarding (syslog): integrations/syslog.md
   - Privacy and administration:
+      - Privacy policy: privacy-policy.md
       - Security: administration/security.md
       - What LG's ACR does: administration/acr.md
       - What it changes on the TV: administration/tv-changes.md
