@@ -6,7 +6,7 @@
   <img src="docs/screenshots/readme-home.jpg" alt="Rooted TV's Home on an LG C6: the banner with a trending film, More info and the Top picks for you row" width="100%">
 </p>
 
-**Rooted TV** replaces an LG webOS TV's home screen with a copy of Google TV's: the same Home with its banner and rows of titles, the Films, Shows, Apps and Inputs tabs, a page for each title, Search, Quick settings and profiles. It is a C++ and OpenGL ES app that runs on the TV itself, with no browser behind it, at the display's 60 frames a second, and it speaks the TV's menu language.
+**Rooted TV**, inspired by [Native Tv](https://github.com/ihtisham1211/native-tv), replaces an LG webOS TV's home screen with a copy of Google TV's: the same Home with its banner and rows of titles, the Films, Shows, Apps and Inputs tabs, a page for each title, Search, Quick settings and profiles. It is a C++ and OpenGL ES app that runs on the TV itself, with no browser behind it, at the display's 60 frames a second, and it speaks the TV's menu language.
 
 Beside the app, a server on the TV gives phones and computers a dashboard, privacy tools and a Home Assistant bridge.
 
@@ -25,7 +25,7 @@ Beside the app, a server on the TV gives phones and computers a dashboard, priva
 * **Quick settings.** Google TV's panel: volume, OLED light, picture mode, sound output, input, sleep timer, screensaver, screen off and recent apps.
 * **Profiles and assistant.** Google TV's account chooser, with YouTube signed in for each profile, and a Gemini assistant.
 * **Sounds and screen savers.** Google TV's system sound on each key press; Google TV's screen saver, an ambient mode with the owner's photos, a clock and other savers in place of LG's.
-* **The TV's language.** The app follows the TV's menu language, Italian so far, in Google TV's own words where it has the same string, with titles, overviews and genres from TMDB in that language. The app's settings, setup and tools stay in English.
+* **The TV's language.** The app follows the TV's menu language where it has a translation, in Google TV's own words where it has the same string, with titles, overviews and genres from TMDB in that language. The app's settings, setup and tools stay in English.
 * **Switching on.** The TV opens Home when it comes on and on the Home key. If the device on the input, such as a Chromecast woken with the TV over HDMI-CEC, takes the screen back within 10 seconds, Home comes back over it; if that device switched the TV on, the device stays in front.
 * **Built for webOS 3.4.** The server starts from the app's tile, since the firmware runs nothing as root at boot; still logos dim on OLED panels that have no logo dimming of their own; memory is freed for the streaming apps.
 * **A dashboard in the browser.** For a phone or computer, in Google TV's look: remote control, apps, privacy (LG's ACR and ad tracking, a blocker for LG's ad and telemetry servers), OLED care, hardware readings, backup and logs. The TV appears in [Home Assistant](docs/integrations/home-assistant.md) over MQTT.
@@ -102,5 +102,3 @@ An independent, unofficial project, not affiliated with or endorsed by LG Electr
 ## License
 
 MIT, see [LICENSE](LICENSE). Bundled fonts, icons, sounds and libraries keep their own licences, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
-
-Rooted TV is inspired by [Native Tv](https://github.com/ihtisham1211/native-tv).
